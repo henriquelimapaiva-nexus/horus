@@ -5,7 +5,10 @@ export async function gerarSugestoes(empresaId) {
   try {
     const token = localStorage.getItem('token');
     
-    const response = await fetch(`http://localhost:3001/api/ia/sugestoes/${empresaId}`, {
+    // 🟢 URL FIXA DEFINITIVA - NÃO DEPENDE DE VARIÁVEL DE AMBIENTE
+    const API_URL = 'https://horus-backend-gzcp.onrender.com';
+    
+    const response = await fetch(`${API_URL}/api/ia/sugestoes/${empresaId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
