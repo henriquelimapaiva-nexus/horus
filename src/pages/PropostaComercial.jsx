@@ -163,21 +163,8 @@ export default function PropostaComercial() {
       };
 
       // 4. Chamar a IA para gerar o texto completo
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:3001/api/ia/gerar-proposta-completa', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify(dadosParaIA)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.erro || 'Erro na IA');
-      }
+      const response = await api.post('/api/ia/gerar-proposta-completa', dadosParaIA);
+      const data = response.data; // ✅ api.post já retorna os dados direto
 
       // 5. Guardar o texto gerado pela IA
       setTextoCompletoIA(data.proposta);

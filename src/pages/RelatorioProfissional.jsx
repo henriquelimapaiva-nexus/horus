@@ -435,27 +435,13 @@ export default function RelatorioProfissional() {
         };
       }
 
-      const token = localStorage.getItem('token');
-      
-      const response = await fetch('http://localhost:3001/api/ia/gerar-relatorio', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify({
-          dados: dadosParaIA,
-          tipo: dados.tipo
-        })
+      // ✅ CORREÇÃO: Objeto dentro dos parênteses do api.post
+      const response = await api.post('/api/ia/gerar-relatorio', {
+        dados: dadosParaIA,
+        tipo: dados.tipo
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.erro || "Erro ao gerar relatório com IA");
-      }
-
-      setRelatorioIA(data.relatorio);
+      setRelatorioIA(response.data.relatorio);
       toast.success("Relatório gerado com IA com sucesso!");
 
     } catch (error) {

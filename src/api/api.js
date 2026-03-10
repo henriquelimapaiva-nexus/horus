@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Pega a URL do arquivo .env ou usa localhost como fallback
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// Pega a URL do arquivo .env ou usa render como fallback
+const API_URL = import.meta.env.VITE_API_URL || 'https://horus-backend-gzcp.onrender.com';
 
 console.log('🔌 Conectando à API:', API_URL);
 
