@@ -16,24 +16,22 @@ export default function LinhaForm() {
   const { id } = useParams();
   const { clienteAtual } = useOutletContext();
 
+  // Estados para o formulário
   const [form, setForm] = useState({
     nome: "",
     empresa_id: clienteAtual || "",
-    produto_id: "",
     takt_time_segundos: "",
     meta_diaria: "",
     horas_produtivas_dia: "16"
   });
 
+  // ✅ NOVOS ESTADOS PARA MÚLTIPLOS PRODUTOS
+  const [produtosSelecionados, setProdutosSelecionados] = useState([]);
+  const [produtoAtual, setProdutoAtual] = useState("");
   const [produtos, setProdutos] = useState([]);
   const [carregando, setCarregando] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      carregarLinha();
-    }
-  }, [id]);
-
+  // Carregar lista de produtos
   useEffect(() => {
     api.get("/produtos")
       .then((res) => setProdutos(res.data))
@@ -43,6 +41,13 @@ export default function LinhaForm() {
       });
   }, []);
 
+  // Carregar dados da linha se for edição
+  useEffect(() => {
+    if (id) {
+      carregarLinha();
+    }
+  }, [id]);
+
   async function carregarLinha() {
     try {
       const res = await api.get(`/linhas/${clienteAtual}`);
@@ -51,11 +56,19 @@ export default function LinhaForm() {
         setForm({
           nome: linha.nome || "",
           empresa_id: linha.empresa_id || clienteAtual,
-          produto_id: linha.produto_id || "",
           takt_time_segundos: linha.takt_time_segundos || "",
           meta_diaria: linha.meta_diaria || "",
           horas_produtivas_dia: linha.horas_produtivas_dia || "16"
         });
+
+        // 🔥 Carregar produtos vinculados a esta linha
+        try {
+          const produtosRes = await api.get(`/linha-produto/${id}`);
+          const produtosVinculados = produtosRes.data.map(p => p.produto_id);
+          setProdutosSelecionados(produtosVinculados);
+        } catch (error) {
+          console.error("Erro ao carregar produtos da linha:", error);
+        }
       }
     } catch (error) {
       console.error("Erro ao carregar linha:", error);
@@ -70,31 +83,74 @@ export default function LinhaForm() {
     });
   };
 
+  // ✅ FUNÇÃO PARA ADICIONAR PRODUTO À LISTA
+  const adicionarProduto = () => {
+    if (!produtoAtual) {
+      toast.error("Selecione um produto");
+      return;
+    }
+    
+    // Verificar se já foi adicionado
+    if (produtosSelecionados.includes(parseInt(produtoAtual))) {
+      toast.error("Este produto já foi adicionado");
+      return;
+    }
+    
+    setProdutosSelecionados([...produtosSelecionados, parseInt(produtoAtual)]);
+    setProdutoAtual(""); // limpa a seleção
+  };
+
+  // ✅ FUNÇÃO PARA REMOVER PRODUTO DA LISTA
+  const removerProduto = (produtoId) => {
+    setProdutosSelecionados(produtosSelecionados.filter(id => id !== produtoId));
+  };
+
+  // ✅ FUNÇÃO PARA OBTER NOME DO PRODUTO PELO ID
+  const getNomeProduto = (id) => {
+    const produto = produtos.find(p => p.id === id);
+    return produto ? produto.nome : "Produto não encontrado";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // ✅ VALIDAÇÃO: pelo menos um produto selecionado
+    if (produtosSelecionados.length === 0) {
+      toast.error("Selecione pelo menos um produto para a linha");
+      return;
+    }
+
     setCarregando(true);
     
     try {
       if (id) {
-        await api.put(`/linhas/${id}`, form);
-        toast.success("Linha atualizada com sucesso! ✅");
+        // EDIÇÃO - usar rota existente (vamos manter simples por enquanto)
+        toast.error("Edição com múltiplos produtos será implementada depois");
+        // await api.put(`/linhas/${id}`, form);
+        // TODO: implementar edição com múltiplos produtos
       } else {
-        await api.post("/linhas", {
-          ...form,
-          empresa_id: clienteAtual
+        // ✅ CRIAÇÃO - usar a nova rota que criamos no backend
+        await api.post("/linhas-com-multiplos-produtos", {
+          empresa_id: clienteAtual,
+          nome: form.nome,
+          takt_time_segundos: form.takt_time_segundos,
+          meta_diaria: form.meta_diaria,
+          produtos_ids: produtosSelecionados
         });
         toast.success("Linha cadastrada com sucesso! ✅");
       }
 
       if (!id) {
+        // Limpar formulário
         setForm({
           nome: "",
           empresa_id: clienteAtual,
-          produto_id: "",
           takt_time_segundos: "",
           meta_diaria: "",
           horas_produtivas_dia: "16"
         });
+        setProdutosSelecionados([]);
+        setProdutoAtual("");
       }
 
       setTimeout(() => {
@@ -184,22 +240,101 @@ export default function LinhaForm() {
           />
         </div>
 
-        <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
-          <label style={labelStyleResponsivo}>Produto *</label>
-          <select
-            name="produto_id"
-            value={form.produto_id}
-            onChange={handleChange}
-            required
-            style={inputStyleResponsivo}
-          >
-            <option value="">Selecione um produto</option>
-            {produtos.map((prod) => (
-              <option key={prod.id} value={prod.id}>
-                {truncarTexto(prod.nome, 25)}
-              </option>
-            ))}
-          </select>
+        {/* ======================================== */}
+        {/* ✅ SEÇÃO DE MÚLTIPLOS PRODUTOS */}
+        {/* ======================================== */}
+        <div style={{ marginBottom: "clamp(20px, 3vw, 25px)" }}>
+          <label style={labelStyleResponsivo}>Produtos da Linha *</label>
+          
+          {/* Área de seleção com botão + */}
+          <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+            <select
+              value={produtoAtual}
+              onChange={(e) => setProdutoAtual(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "clamp(8px, 1.5vw, 10px) clamp(10px, 2vw, 12px)",
+                borderRadius: "4px",
+                border: "1px solid #d1d5db",
+                fontSize: "clamp(13px, 1.8vw, 14px)",
+                outline: "none"
+              }}
+            >
+              <option value="">Selecione um produto...</option>
+              {produtos.map((prod) => (
+                <option key={prod.id} value={prod.id}>
+                  {truncarTexto(prod.nome, 30)}
+                </option>
+              ))}
+            </select>
+            
+            <Botao
+              type="button"
+              variant="primary"
+              size="md"
+              onClick={adicionarProduto}
+              style={{ minWidth: "50px" }}
+            >
+              ➕
+            </Botao>
+          </div>
+          
+          {/* Lista de produtos selecionados */}
+          {produtosSelecionados.length > 0 && (
+            <div style={{ 
+              marginTop: "10px",
+              maxHeight: "200px",
+              overflowY: "auto",
+              border: "1px solid #e5e7eb",
+              borderRadius: "4px",
+              padding: "10px"
+            }}>
+              <p style={{ 
+                marginBottom: "8px", 
+                fontWeight: "bold", 
+                color: "#1E3A8A",
+                fontSize: "clamp(12px, 1.6vw, 13px)"
+              }}>
+                Produtos nesta linha ({produtosSelecionados.length}):
+              </p>
+              {produtosSelecionados.map((prodId, index) => (
+                <div key={index} style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  padding: "8px 10px",
+                  marginBottom: "5px",
+                  backgroundColor: "#f3f4f6",
+                  borderRadius: "4px",
+                  border: "1px solid #e5e7eb"
+                }}>
+                  <span style={{ fontSize: "clamp(12px, 1.6vw, 13px)" }}>
+                    {index + 1}. {truncarTexto(getNomeProduto(prodId), 35)}
+                  </span>
+                  <Botao
+                    type="button"
+                    variant="danger"
+                    size="xs"
+                    onClick={() => removerProduto(prodId)}
+                  >
+                    ✕
+                  </Botao>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Mensagem se nenhum produto selecionado */}
+          {produtosSelecionados.length === 0 && (
+            <p style={{ 
+              color: "#dc2626", 
+              fontSize: "clamp(11px, 1.5vw, 12px)",
+              marginTop: "5px",
+              fontStyle: "italic"
+            }}>
+              ⚠️ Selecione pelo menos um produto
+            </p>
+          )}
         </div>
 
         <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
@@ -266,9 +401,9 @@ export default function LinhaForm() {
             size="lg"
             fullWidth={true}
             loading={carregando}
-            disabled={carregando}
+            disabled={carregando || produtosSelecionados.length === 0}
           >
-            {id ? "Atualizar Linha" : "Cadastrar Linha"}
+            {id ? "Atualizar Linha" : `Cadastrar Linha (${produtosSelecionados.length} produto(s))`}
           </Botao>
           
           <Botao
