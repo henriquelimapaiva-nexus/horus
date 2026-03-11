@@ -25,28 +25,40 @@ export default function LinhaForm() {
     horas_produtivas_dia: "16"
   });
 
-  // ✅ NOVOS ESTADOS PARA MÚLTIPLOS PRODUTOS
+  // Estados para múltiplos produtos
   const [produtosSelecionados, setProdutosSelecionados] = useState([]);
   const [produtoAtual, setProdutoAtual] = useState("");
   const [produtos, setProdutos] = useState([]);
   const [carregando, setCarregando] = useState(false);
 
-  // Carregar lista de produtos
+  // ========================================
+  // ✅ ALTERADO: Carregar produtos da empresa selecionada
+  // ========================================
   useEffect(() => {
-    api.get("/produtos")
-      .then((res) => setProdutos(res.data))
-      .catch((err) => {
-        console.error("Erro ao carregar produtos:", err);
-        toast.error("Erro ao carregar produtos");
-      });
-  }, []);
+    if (clienteAtual) {
+      carregarProdutosDaEmpresa();
+    } else {
+      setProdutos([]);
+    }
+  }, [clienteAtual]);
+
+  async function carregarProdutosDaEmpresa() {
+    try {
+      // 🔥 Usando a nova rota com o ID da empresa
+      const res = await api.get(`/produtos/empresa/${clienteAtual}`);
+      setProdutos(res.data);
+    } catch (err) {
+      console.error("Erro ao carregar produtos:", err);
+      toast.error("Erro ao carregar produtos");
+    }
+  }
 
   // Carregar dados da linha se for edição
   useEffect(() => {
     if (id) {
       carregarLinha();
     }
-  }, [id]);
+  }, [id, clienteAtual]);
 
   async function carregarLinha() {
     try {
@@ -61,7 +73,7 @@ export default function LinhaForm() {
           horas_produtivas_dia: linha.horas_produtivas_dia || "16"
         });
 
-        // 🔥 Carregar produtos vinculados a esta linha
+        // Carregar produtos vinculados a esta linha
         try {
           const produtosRes = await api.get(`/linha-produto/${id}`);
           const produtosVinculados = produtosRes.data.map(p => p.produto_id);
@@ -83,7 +95,7 @@ export default function LinhaForm() {
     });
   };
 
-  // ✅ FUNÇÃO PARA ADICIONAR PRODUTO À LISTA
+  // Função para adicionar produto à lista
   const adicionarProduto = () => {
     if (!produtoAtual) {
       toast.error("Selecione um produto");
@@ -100,12 +112,12 @@ export default function LinhaForm() {
     setProdutoAtual(""); // limpa a seleção
   };
 
-  // ✅ FUNÇÃO PARA REMOVER PRODUTO DA LISTA
+  // Função para remover produto da lista
   const removerProduto = (produtoId) => {
     setProdutosSelecionados(produtosSelecionados.filter(id => id !== produtoId));
   };
 
-  // ✅ FUNÇÃO PARA OBTER NOME DO PRODUTO PELO ID
+  // Função para obter nome do produto pelo ID
   const getNomeProduto = (id) => {
     const produto = produtos.find(p => p.id === id);
     return produto ? produto.nome : "Produto não encontrado";
@@ -114,7 +126,7 @@ export default function LinhaForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // ✅ VALIDAÇÃO: pelo menos um produto selecionado
+    // Validação: pelo menos um produto selecionado
     if (produtosSelecionados.length === 0) {
       toast.error("Selecione pelo menos um produto para a linha");
       return;
@@ -129,7 +141,7 @@ export default function LinhaForm() {
         // await api.put(`/linhas/${id}`, form);
         // TODO: implementar edição com múltiplos produtos
       } else {
-        // ✅ CRIAÇÃO - usar a nova rota que criamos no backend
+        // CRIAÇÃO - usar a nova rota que criamos no backend
         await api.post("/linhas-com-multiplos-produtos", {
           empresa_id: clienteAtual,
           nome: form.nome,
@@ -241,7 +253,7 @@ export default function LinhaForm() {
         </div>
 
         {/* ======================================== */}
-        {/* ✅ SEÇÃO DE MÚLTIPLOS PRODUTOS */}
+        {/* SEÇÃO DE MÚLTIPLOS PRODUTOS */}
         {/* ======================================== */}
         <div style={{ marginBottom: "clamp(20px, 3vw, 25px)" }}>
           <label style={labelStyleResponsivo}>Produtos da Linha *</label>
@@ -335,6 +347,32 @@ export default function LinhaForm() {
               ⚠️ Selecione pelo menos um produto
             </p>
           )}
+
+          {/* Mensagem se não há produtos cadastrados */}
+          {produtos.length === 0 && (
+            <p style={{ 
+              color: "#f59e0b", 
+              fontSize: "clamp(11px, 1.5vw, 12px)",
+              marginTop: "5px",
+              fontStyle: "italic"
+            }}>
+              ⚠️ Nenhum produto cadastrado para esta empresa. 
+              <button 
+                type="button"
+                onClick={() => navigate("/produtos")}
+                style={{ 
+                  background: "none", 
+                  border: "none", 
+                  color: "#1E3A8A", 
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                  marginLeft: "5px"
+                }}
+              >
+                Cadastre produtos primeiro
+              </button>
+            </p>
+          )}
         </div>
 
         <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
@@ -401,7 +439,7 @@ export default function LinhaForm() {
             size="lg"
             fullWidth={true}
             loading={carregando}
-            disabled={carregando || produtosSelecionados.length === 0}
+            disabled={carregando || produtosSelecionados.length === 0 || produtos.length === 0}
           >
             {id ? "Atualizar Linha" : `Cadastrar Linha (${produtosSelecionados.length} produto(s))`}
           </Botao>

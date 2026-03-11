@@ -23,21 +23,34 @@ export default function Produtos() {
   const [carregando, setCarregando] = useState(false);
   const [filtroNome, setFiltroNome] = useState("");
   
-  // ✅ NOVO ESTADO PARA CONTROLAR A VISIBILIDADE DA LISTA
+  // ✅ ESTADO PARA CONTROLAR A VISIBILIDADE DA LISTA
   const [mostrarLista, setMostrarLista] = useState(false);
 
+  // ========================================
+  // ✅ ALTERADO: Carregar produtos da empresa selecionada
+  // ========================================
   useEffect(() => {
-    carregarProdutos();
-  }, []);
+    if (clienteAtual) {
+      carregarProdutosDaEmpresa();
+    } else {
+      setProdutos([]);
+    }
+  }, [clienteAtual]);
 
-  async function carregarProdutos() {
+  async function carregarProdutosDaEmpresa() {
     setCarregando(true);
     try {
-      const res = await api.get("/produtos");
+      // 🔥 Usando a nova rota com o ID da empresa
+      const res = await api.get(`/produtos/empresa/${clienteAtual}`);
       setProdutos(res.data);
+      
+      if (res.data.length === 0) {
+        toast.info("Nenhum produto cadastrado para esta empresa");
+      }
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
       toast.error("Erro ao carregar produtos");
+      setProdutos([]);
     } finally {
       setCarregando(false);
     }
@@ -68,15 +81,17 @@ export default function Produtos() {
         toast.success("Produto atualizado com sucesso! ✅");
         setEditId(null);
       } else {
+        // 🔥 IMPORTANTE: Ao criar produto, precisa vincular à empresa atual
         await api.post("/produtos", {
           nome: form.nome,
-          valor_unitario: form.valor_unitario ? parseFloat(form.valor_unitario) : 0
+          valor_unitario: form.valor_unitario ? parseFloat(form.valor_unitario) : 0,
+          empresa_id: clienteAtual  // ← NOVO: enviar empresa_id
         });
         toast.success("Produto cadastrado com sucesso! ✅");
       }
 
       setForm({ nome: "", valor_unitario: "" });
-      carregarProdutos();
+      carregarProdutosDaEmpresa(); // Recarrega produtos da empresa
 
     } catch (error) {
       console.error("Erro ao salvar produto:", error);
@@ -100,7 +115,7 @@ export default function Produtos() {
     setCarregando(true);
     try {
       await api.delete(`/produtos/${id}`);
-      carregarProdutos();
+      carregarProdutosDaEmpresa(); // Recarrega produtos da empresa
       toast.success("Produto excluído com sucesso ✅");
     } catch (error) {
       console.error("Erro ao excluir produto:", error);
@@ -152,146 +167,169 @@ export default function Produtos() {
           Cadastre os produtos fabricados e seus valores unitários
           {clienteAtual && ` - Cliente ativo: ${clienteAtual}`}
         </p>
+        {!clienteAtual && (
+          <p style={{ color: "#dc2626", fontSize: "14px", marginTop: "10px" }}>
+            ⚠️ Selecione uma empresa no menu superior
+          </p>
+        )}
       </div>
 
-      {/* Formulário responsivo */}
-      <div style={{ 
-        backgroundColor: "white", 
-        padding: "clamp(15px, 2vw, 25px)", 
-        borderRadius: "8px", 
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        marginBottom: "clamp(20px, 3vw, 30px)",
-        maxWidth: "600px",
-        margin: "0 auto clamp(20px, 3vw, 30px) auto",
-        width: "100%",
-        boxSizing: "border-box"
-      }}>
-        <h2 style={{ 
-          color: "#1E3A8A", 
-          marginBottom: "clamp(15px, 2vw, 20px)", 
-          fontSize: "clamp(16px, 2.5vw, 18px)" 
+      {/* Formulário responsivo - SÓ MOSTRA SE TIVER EMPRESA SELECIONADA */}
+      {clienteAtual ? (
+        <div style={{ 
+          backgroundColor: "white", 
+          padding: "clamp(15px, 2vw, 25px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          marginBottom: "clamp(20px, 3vw, 30px)",
+          maxWidth: "600px",
+          margin: "0 auto clamp(20px, 3vw, 30px) auto",
+          width: "100%",
+          boxSizing: "border-box"
         }}>
-          {editId ? "Editar Produto" : "Novo Produto"}
-        </h2>
-
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: "clamp(10px, 1.5vw, 15px)" }}>
-            <label style={labelStyleResponsivo}>Nome do Produto *</label>
-            <input
-              type="text"
-              name="nome"
-              value={form.nome}
-              onChange={handleChange}
-              style={inputStyleResponsivo}
-              placeholder="Ex: Produto A"
-              required
-            />
-          </div>
-
-          <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
-            <label style={labelStyleResponsivo}>Valor Unitário (R$)</label>
-            <input
-              type="number"
-              name="valor_unitario"
-              value={form.valor_unitario}
-              onChange={handleChange}
-              step="0.01"
-              min="0"
-              style={inputStyleResponsivo}
-              placeholder="0,00"
-            />
-            <small style={{ 
-              color: "#666", 
-              display: "block", 
-              marginTop: "4px",
-              fontSize: "clamp(11px, 1.5vw, 12px)"
-            }}>
-              Valor de venda de cada peça (para cálculos financeiros)
-            </small>
-          </div>
-
-          <div style={{ 
-            display: "flex", 
-            gap: "clamp(8px, 1.5vw, 10px)", 
-            flexWrap: "wrap"
+          <h2 style={{ 
+            color: "#1E3A8A", 
+            marginBottom: "clamp(15px, 2vw, 20px)", 
+            fontSize: "clamp(16px, 2.5vw, 18px)" 
           }}>
-            <Botao
-              type="submit"
-              variant="primary"
-              size="md"
-              fullWidth={true}
-              loading={carregando}
-              disabled={carregando}
-            >
-              {editId ? "Atualizar" : "Cadastrar"}
-            </Botao>
-            
-            {editId && (
+            {editId ? "Editar Produto" : "Novo Produto"}
+          </h2>
+
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: "clamp(10px, 1.5vw, 15px)" }}>
+              <label style={labelStyleResponsivo}>Nome do Produto *</label>
+              <input
+                type="text"
+                name="nome"
+                value={form.nome}
+                onChange={handleChange}
+                style={inputStyleResponsivo}
+                placeholder="Ex: Produto A"
+                required
+              />
+            </div>
+
+            <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
+              <label style={labelStyleResponsivo}>Valor Unitário (R$)</label>
+              <input
+                type="number"
+                name="valor_unitario"
+                value={form.valor_unitario}
+                onChange={handleChange}
+                step="0.01"
+                min="0"
+                style={inputStyleResponsivo}
+                placeholder="0,00"
+              />
+              <small style={{ 
+                color: "#666", 
+                display: "block", 
+                marginTop: "4px",
+                fontSize: "clamp(11px, 1.5vw, 12px)"
+              }}>
+                Valor de venda de cada peça (para cálculos financeiros)
+              </small>
+            </div>
+
+            <div style={{ 
+              display: "flex", 
+              gap: "clamp(8px, 1.5vw, 10px)", 
+              flexWrap: "wrap"
+            }}>
               <Botao
-                type="button"
-                variant="secondary"
+                type="submit"
+                variant="primary"
                 size="md"
                 fullWidth={true}
-                onClick={() => {
-                  setEditId(null);
-                  setForm({ nome: "", valor_unitario: "" });
-                }}
+                loading={carregando}
+                disabled={carregando}
               >
-                Cancelar
+                {editId ? "Atualizar" : "Cadastrar"}
+              </Botao>
+              
+              {editId && (
+                <Botao
+                  type="button"
+                  variant="secondary"
+                  size="md"
+                  fullWidth={true}
+                  onClick={() => {
+                    setEditId(null);
+                    setForm({ nome: "", valor_unitario: "" });
+                  }}
+                >
+                  Cancelar
+                </Botao>
+              )}
+            </div>
+          </form>
+        </div>
+      ) : (
+        <div style={{ 
+          textAlign: "center", 
+          padding: "40px", 
+          backgroundColor: "#f9fafb",
+          borderRadius: "8px",
+          marginBottom: "30px"
+        }}>
+          <p style={{ color: "#666", fontSize: "16px" }}>
+            Selecione uma empresa no menu superior para cadastrar produtos.
+          </p>
+        </div>
+      )}
+
+      {/* ======================================== */}
+      {/* ÁREA DA LISTA DE PRODUTOS */}
+      {/* ======================================== */}
+      
+      {/* Cabeçalho da seção com botão Mostrar/Esconder - SÓ MOSTRA SE TIVER PRODUTOS */}
+      {clienteAtual && (
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center",
+          marginBottom: "clamp(15px, 2vw, 20px)",
+          flexWrap: "wrap",
+          gap: "15px"
+        }}>
+          <h2 style={{ 
+            color: "#1E3A8A", 
+            fontSize: "clamp(16px, 2.5vw, 18px)" 
+          }}>
+            Lista de Produtos {produtos.length > 0 && `(${produtos.length})`}
+          </h2>
+          
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <input
+              type="text"
+              placeholder="Filtrar por nome..."
+              value={filtroNome}
+              onChange={(e) => setFiltroNome(e.target.value)}
+              style={{
+                padding: "clamp(6px, 1vw, 8px) clamp(8px, 1.5vw, 12px)",
+                borderRadius: "4px",
+                border: "1px solid #d1d5db",
+                width: "min(100%, 250px)",
+                fontSize: "clamp(13px, 1.8vw, 14px)"
+              }}
+            />
+            
+            {/* BOTÃO PARA MOSTRAR/ESCONDER LISTA */}
+            {produtos.length > 0 && (
+              <Botao
+                variant={mostrarLista ? "danger" : "secondary"}
+                size="md"
+                onClick={() => setMostrarLista(!mostrarLista)}
+              >
+                {mostrarLista ? "👁️ Esconder Lista" : "👁️ Mostrar Lista"}
               </Botao>
             )}
           </div>
-        </form>
-      </div>
-
-      {/* ======================================== */}
-      {/* ✅ ÁREA MODIFICADA - BOTÃO E LISTA CONDICIONAL */}
-      {/* ======================================== */}
-      
-      {/* Cabeçalho da seção com botão Mostrar/Esconder */}
-      <div style={{ 
-        display: "flex", 
-        justifyContent: "space-between", 
-        alignItems: "center",
-        marginBottom: "clamp(15px, 2vw, 20px)",
-        flexWrap: "wrap",
-        gap: "15px"
-      }}>
-        <h2 style={{ 
-          color: "#1E3A8A", 
-          fontSize: "clamp(16px, 2.5vw, 18px)" 
-        }}>
-          Lista de Produtos
-        </h2>
-        
-        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-          <input
-            type="text"
-            placeholder="Filtrar por nome..."
-            value={filtroNome}
-            onChange={(e) => setFiltroNome(e.target.value)}
-            style={{
-              padding: "clamp(6px, 1vw, 8px) clamp(8px, 1.5vw, 12px)",
-              borderRadius: "4px",
-              border: "1px solid #d1d5db",
-              width: "min(100%, 250px)",
-              fontSize: "clamp(13px, 1.8vw, 14px)"
-            }}
-          />
-          
-          {/* ✅ BOTÃO PARA MOSTRAR/ESCONDER LISTA */}
-          <Botao
-            variant={mostrarLista ? "danger" : "secondary"}
-            size="md"
-            onClick={() => setMostrarLista(!mostrarLista)}
-          >
-            {mostrarLista ? "👁️ Esconder Lista" : "👁️ Mostrar Lista"}
-          </Botao>
         </div>
-      </div>
+      )}
 
-      {/* ✅ LISTA SÓ APARECE SE mostrarLista = true */}
-      {mostrarLista && (
+      {/* LISTA SÓ APARECE SE mostrarLista = true */}
+      {clienteAtual && mostrarLista && (
         <>
           {carregando && produtos.length === 0 ? (
             <div style={{ 
@@ -340,7 +378,7 @@ export default function Produtos() {
                         color: "#666",
                         fontSize: "clamp(13px, 1.8vw, 14px)"
                       }}>
-                        Nenhum produto cadastrado
+                        Nenhum produto encontrado com este filtro
                       </td>
                     </tr>
                   ) : (
@@ -383,8 +421,8 @@ export default function Produtos() {
         </>
       )}
       
-      {/* ✅ Se a lista estiver escondida, mostra mensagem */}
-      {!mostrarLista && produtos.length > 0 && (
+      {/* Mensagem quando não há produtos */}
+      {clienteAtual && !mostrarLista && produtos.length > 0 && (
         <div style={{ 
           textAlign: "center", 
           padding: "clamp(20px, 3vw, 30px)", 
@@ -395,7 +433,23 @@ export default function Produtos() {
         }}>
           👁️ Lista de produtos está oculta. Clique em "Mostrar Lista" para visualizar.
           <div style={{ marginTop: "10px", fontSize: "12px", color: "#999" }}>
-            Total de produtos cadastrados: {produtos.length}
+            Total de produtos cadastrados nesta empresa: {produtos.length}
+          </div>
+        </div>
+      )}
+
+      {clienteAtual && produtos.length === 0 && !carregando && (
+        <div style={{ 
+          textAlign: "center", 
+          padding: "clamp(30px, 5vw, 50px)", 
+          backgroundColor: "#f9fafb",
+          borderRadius: "8px",
+          color: "#666",
+          fontSize: "clamp(14px, 2vw, 16px)"
+        }}>
+          📦 Nenhum produto cadastrado para esta empresa.
+          <div style={{ marginTop: "10px", fontSize: "clamp(12px, 1.6vw, 14px)" }}>
+            Use o formulário acima para cadastrar o primeiro produto.
           </div>
         </div>
       )}
