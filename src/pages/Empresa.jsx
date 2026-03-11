@@ -5,6 +5,22 @@ import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast'; // 1️⃣ IMPORT ADICIONADO
 
+// Funções de formatação
+const formatarCNPJ = (cnpj) => {
+  if (!cnpj) return "";
+  // Remove tudo que não é número
+  const cnpjLimpo = cnpj.replace(/\D/g, '');
+  // Aplica a máscara XX.XXX.XXX/XXXX-XX
+  return cnpjLimpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+};
+
+const formatarMoeda = (valor) => {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(valor || 0);
+};
+
 export default function Empresa() {
   // Pega o clienteAtual do contexto
   let clienteAtual = null;
@@ -289,12 +305,12 @@ export default function Empresa() {
               empresasFiltradas.map((e) => (
                 <tr key={e.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                   <td style={td}>{e.nome}</td>
-                  <td style={td}>{e.cnpj}</td>
+                  <td style={td}>{formatarCNPJ(e.cnpj)}</td>
                   <td style={td}>{e.segmento}</td>
                   <td style={td}>{e.regime_tributario}</td>
                   <td style={td}>{e.turnos}</td>
                   <td style={td}>{e.dias_produtivos_mes}</td>
-                  <td style={td}>R$ {Number(e.meta_mensal).toFixed(2).replace(".", ",")}</td>
+                  <td style={td}>{formatarMoeda(e.meta_mensal)}</td>
                   <td style={td}>
                     <Botao
                       variant="primary"
