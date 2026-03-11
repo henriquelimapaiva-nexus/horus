@@ -22,6 +22,9 @@ export default function Produtos() {
   const [editId, setEditId] = useState(null);
   const [carregando, setCarregando] = useState(false);
   const [filtroNome, setFiltroNome] = useState("");
+  
+  // ✅ NOVO ESTADO PARA CONTROLAR A VISIBILIDADE DA LISTA
+  const [mostrarLista, setMostrarLista] = useState(false);
 
   useEffect(() => {
     carregarProdutos();
@@ -241,7 +244,11 @@ export default function Produtos() {
         </form>
       </div>
 
-      {/* Filtro responsivo */}
+      {/* ======================================== */}
+      {/* ✅ ÁREA MODIFICADA - BOTÃO E LISTA CONDICIONAL */}
+      {/* ======================================== */}
+      
+      {/* Cabeçalho da seção com botão Mostrar/Esconder */}
       <div style={{ 
         display: "flex", 
         justifyContent: "space-between", 
@@ -256,107 +263,140 @@ export default function Produtos() {
         }}>
           Lista de Produtos
         </h2>
-        <input
-          type="text"
-          placeholder="Filtrar por nome..."
-          value={filtroNome}
-          onChange={(e) => setFiltroNome(e.target.value)}
-          style={{
-            padding: "clamp(6px, 1vw, 8px) clamp(8px, 1.5vw, 12px)",
-            borderRadius: "4px",
-            border: "1px solid #d1d5db",
-            width: "min(100%, 250px)",
-            fontSize: "clamp(13px, 1.8vw, 14px)"
-          }}
-        />
+        
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+          <input
+            type="text"
+            placeholder="Filtrar por nome..."
+            value={filtroNome}
+            onChange={(e) => setFiltroNome(e.target.value)}
+            style={{
+              padding: "clamp(6px, 1vw, 8px) clamp(8px, 1.5vw, 12px)",
+              borderRadius: "4px",
+              border: "1px solid #d1d5db",
+              width: "min(100%, 250px)",
+              fontSize: "clamp(13px, 1.8vw, 14px)"
+            }}
+          />
+          
+          {/* ✅ BOTÃO PARA MOSTRAR/ESCONDER LISTA */}
+          <Botao
+            variant={mostrarLista ? "danger" : "secondary"}
+            size="md"
+            onClick={() => setMostrarLista(!mostrarLista)}
+          >
+            {mostrarLista ? "👁️ Esconder Lista" : "👁️ Mostrar Lista"}
+          </Botao>
+        </div>
       </div>
 
-      {/* Tabela de produtos responsiva */}
-      {carregando && produtos.length === 0 ? (
+      {/* ✅ LISTA SÓ APARECE SE mostrarLista = true */}
+      {mostrarLista && (
+        <>
+          {carregando && produtos.length === 0 ? (
+            <div style={{ 
+              textAlign: "center", 
+              padding: "clamp(20px, 4vw, 40px)",
+              fontSize: "clamp(14px, 2vw, 16px)",
+              color: "#666"
+            }}>
+              Carregando produtos...
+            </div>
+          ) : (
+            <div style={{ 
+              overflowX: "auto",
+              width: "100%",
+              WebkitOverflowScrolling: "touch"
+            }}>
+              <table style={{ 
+                width: "100%", 
+                borderCollapse: "collapse", 
+                backgroundColor: "white",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                borderRadius: "8px",
+                minWidth: "500px",
+                tableLayout: "fixed"
+              }}>
+                <colgroup>
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "35%" }} />
+                  <col style={{ width: "30%" }} />
+                  <col style={{ width: "20%" }} />
+                </colgroup>
+                <thead>
+                  <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+                    <th style={thResponsivo}>ID</th>
+                    <th style={thResponsivo}>Nome</th>
+                    <th style={thResponsivo}>Valor Unitário</th>
+                    <th style={thResponsivo}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {produtosFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{ 
+                        textAlign: "center", 
+                        padding: "clamp(20px, 3vw, 30px)", 
+                        color: "#666",
+                        fontSize: "clamp(13px, 1.8vw, 14px)"
+                      }}>
+                        Nenhum produto cadastrado
+                      </td>
+                    </tr>
+                  ) : (
+                    produtosFiltrados.map((produto) => (
+                      <tr key={produto.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={tdResponsivo}>{produto.id}</td>
+                        <td style={tdResponsivo} title={produto.nome}>{truncarTexto(produto.nome, 20)}</td>
+                        <td style={tdResponsivo} title={formatarMoeda(produto.valor_unitario)}>
+                          <span style={{ 
+                            fontWeight: "bold",
+                            color: "#16a34a"
+                          }}>
+                            {truncarTexto(formatarMoeda(produto.valor_unitario), 12)}
+                          </span>
+                        </td>
+                        <td style={tdResponsivo}>
+                          <Botao
+                            variant="primary"
+                            size="sm"
+                            onClick={() => handleEdit(produto)}
+                            style={{ marginRight: "5px" }}
+                          >
+                            Editar
+                          </Botao>
+                          <Botao
+                            variant="danger"
+                            size="sm"
+                            onClick={() => handleDelete(produto.id)}
+                          >
+                            Excluir
+                          </Botao>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+      
+      {/* ✅ Se a lista estiver escondida, mostra mensagem */}
+      {!mostrarLista && produtos.length > 0 && (
         <div style={{ 
           textAlign: "center", 
-          padding: "clamp(20px, 4vw, 40px)",
-          fontSize: "clamp(14px, 2vw, 16px)",
-          color: "#666"
+          padding: "clamp(20px, 3vw, 30px)", 
+          backgroundColor: "#f9fafb",
+          borderRadius: "8px",
+          color: "#666",
+          fontSize: "clamp(13px, 1.8vw, 14px)"
         }}>
-          Carregando produtos...
-        </div>
-      ) : (
-        <div style={{ 
-          overflowX: "auto",
-          width: "100%",
-          WebkitOverflowScrolling: "touch"
-        }}>
-          <table style={{ 
-            width: "100%", 
-            borderCollapse: "collapse", 
-            backgroundColor: "white",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            borderRadius: "8px",
-            minWidth: "500px",
-            tableLayout: "fixed"
-          }}>
-            <colgroup>
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "35%" }} />
-              <col style={{ width: "30%" }} />
-              <col style={{ width: "20%" }} />
-            </colgroup>
-            <thead>
-              <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-                <th style={thResponsivo}>ID</th>
-                <th style={thResponsivo}>Nome</th>
-                <th style={thResponsivo}>Valor Unitário</th>
-                <th style={thResponsivo}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {produtosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan="4" style={{ 
-                    textAlign: "center", 
-                    padding: "clamp(20px, 3vw, 30px)", 
-                    color: "#666",
-                    fontSize: "clamp(13px, 1.8vw, 14px)"
-                  }}>
-                    Nenhum produto cadastrado
-                  </td>
-                </tr>
-              ) : (
-                produtosFiltrados.map((produto) => (
-                  <tr key={produto.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={tdResponsivo}>{produto.id}</td>
-                    <td style={tdResponsivo} title={produto.nome}>{truncarTexto(produto.nome, 20)}</td>
-                    <td style={tdResponsivo} title={formatarMoeda(produto.valor_unitario)}>
-                      <span style={{ 
-                        fontWeight: "bold",
-                        color: "#16a34a"
-                      }}>
-                        {truncarTexto(formatarMoeda(produto.valor_unitario), 12)}
-                      </span>
-                    </td>
-                    <td style={tdResponsivo}>
-                      <Botao
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleEdit(produto)}
-                        style={{ marginRight: "5px" }}
-                      >
-                        Editar
-                      </Botao>
-                      <Botao
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDelete(produto.id)}
-                      >
-                        Excluir
-                      </Botao>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          👁️ Lista de produtos está oculta. Clique em "Mostrar Lista" para visualizar.
+          <div style={{ marginTop: "10px", fontSize: "12px", color: "#999" }}>
+            Total de produtos cadastrados: {produtos.length}
+          </div>
         </div>
       )}
     </div>
