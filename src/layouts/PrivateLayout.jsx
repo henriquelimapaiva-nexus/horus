@@ -273,7 +273,7 @@ function PrivateLayout() {
               <option value="" style={{ color: "#333" }}>Selecione...</option>
               {clientes.map((cliente) => (
                 <option key={cliente.id} value={cliente.id} style={{ color: "#333" }}>
-                  {truncarTexto(cliente.nome, 20)}
+                  {cliente.nome} {/* Removida a função truncarTexto daqui */}
                 </option>
               ))}
             </select>

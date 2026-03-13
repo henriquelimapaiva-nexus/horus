@@ -5,12 +5,6 @@ import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast';
 
-// Função auxiliar para truncar texto
-const truncarTexto = (texto, maxLength = 20) => {
-  if (!texto) return "";
-  return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
-};
-
 export default function Produtos() {
   const { clienteAtual } = useOutletContext();
 
@@ -34,7 +28,7 @@ export default function Produtos() {
       carregarProdutosDaEmpresa();
     } else {
       setProdutos([]);
-      setMostrarLista(false); // Esconde a lista se trocar de empresa para "Selecione"
+      setMostrarLista(false); 
     }
   }, [clienteAtual]);
 
@@ -84,7 +78,6 @@ export default function Produtos() {
         toast.success("Produto atualizado com sucesso! ✅");
         setEditId(null);
       } else {
-        // 🔥 Vínculo com a empresa atual
         await api.post("/produtos", {
           nome: form.nome,
           valor_unitario: form.valor_unitario ? parseFloat(form.valor_unitario) : 0,
@@ -93,10 +86,7 @@ export default function Produtos() {
         toast.success("Produto cadastrado com sucesso! ✅");
       }
 
-      // ✅ RESET DO FORMULÁRIO
       setForm({ nome: "", valor_unitario: "" });
-
-      // ✅ ATUALIZAÇÃO IMEDIATA: Busca no banco e força a lista a aparecer
       await carregarProdutosDaEmpresa();
       setMostrarLista(true); 
 
@@ -114,7 +104,7 @@ export default function Produtos() {
       valor_unitario: produto.valor_unitario || ""
     });
     setEditId(produto.id);
-    window.scrollTo({ top: 0, behavior: 'smooth' }); // Sobe para o form ao editar
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function handleDelete(id) {
@@ -153,7 +143,6 @@ export default function Produtos() {
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -168,10 +157,7 @@ export default function Produtos() {
         }}>
           Produtos
         </h1>
-        <p style={{ 
-          color: "#666", 
-          fontSize: "clamp(12px, 2vw, 14px)" 
-        }}>
+        <p style={{ color: "#666", fontSize: "clamp(12px, 2vw, 14px)" }}>
           Cadastre os produtos fabricados e seus valores unitários
         </p>
         {!clienteAtual || clienteAtual === "Selecione..." ? (
@@ -181,7 +167,6 @@ export default function Produtos() {
         ) : null}
       </div>
 
-      {/* Formulário */}
       {clienteAtual && clienteAtual !== "" && clienteAtual !== "Selecione..." ? (
         <div style={{ 
           backgroundColor: "white", 
@@ -255,7 +240,6 @@ export default function Produtos() {
         </div>
       ) : null}
 
-      {/* Seção da Lista */}
       {clienteAtual && clienteAtual !== "" && clienteAtual !== "Selecione..." && (
         <>
           <div style={{ 
@@ -283,7 +267,7 @@ export default function Produtos() {
                 variant={mostrarLista ? "danger" : "secondary"}
                 onClick={() => setMostrarLista(!mostrarLista)}
               >
-                {mostrarLista ? "👁️ Esconder" : "👁️ Mostrar"}
+                {mostrarLista ? "Esconder" : "Mostrar"}
               </Botao>
             </div>
           </div>
@@ -294,7 +278,7 @@ export default function Produtos() {
                 <thead>
                   <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
                     <th style={thResponsivo}>ID</th>
-                    <th style={thResponsivo}>Nome</th>
+                    <th style={{...thResponsivo, textAlign: "left"}}>Nome</th>
                     <th style={thResponsivo}>Valor</th>
                     <th style={thResponsivo}>Ações</th>
                   </tr>
@@ -303,15 +287,20 @@ export default function Produtos() {
                   {produtosFiltrados.map((produto) => (
                     <tr key={produto.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                       <td style={tdResponsivo}>{produto.id}</td>
-                      <td style={tdResponsivo}>{truncarTexto(produto.nome, 25)}</td>
+                      {/* AJUSTE: Nome completo com quebra de linha se necessário */}
+                      <td style={{...tdResponsivo, textAlign: "left", whiteSpace: "normal", wordWrap: "break-word", maxWidth: "400px"}}>
+                        {produto.nome}
+                      </td>
                       <td style={tdResponsivo}>{formatarMoeda(produto.valor_unitario)}</td>
                       <td style={tdResponsivo}>
-                        <Botao variant="primary" size="sm" onClick={() => handleEdit(produto)} style={{marginRight: '5px'}}>
-                          Editar
-                        </Botao>
-                        <Botao variant="danger" size="sm" onClick={() => handleDelete(produto.id)}>
-                          Excluir
-                        </Botao>
+                        <div style={{display: 'flex', gap: '5px', justifyContent: 'center'}}>
+                          <Botao variant="primary" size="sm" onClick={() => handleEdit(produto)}>
+                            Editar
+                          </Botao>
+                          <Botao variant="danger" size="sm" onClick={() => handleDelete(produto.id)}>
+                            Excluir
+                          </Botao>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -325,7 +314,6 @@ export default function Produtos() {
   );
 }
 
-// Estilos mantidos conforme sua necessidade
 const labelStyleResponsivo = { display: "block", marginBottom: "6px", color: "#374151", fontSize: "14px", fontWeight: "500" };
 const inputStyleResponsivo = { padding: "8px", borderRadius: "4px", border: "1px solid #d1d5db", outline: "none", boxSizing: "border-box" };
 const thResponsivo = { padding: "12px", border: "1px solid #e5e7eb", textAlign: "center" };
