@@ -27,12 +27,16 @@ export default function Produtos() {
   const [mostrarLista, setMostrarLista] = useState(false);
 
   // ========================================
-  // ✅ ALTERADO: Carregar produtos da empresa selecionada
+  // ✅ CORREÇÃO FINAL: Só carrega se clienteAtual for válido
   // ========================================
   useEffect(() => {
-    if (clienteAtual) {
+    console.log("🔍 clienteAtual recebido:", clienteAtual);
+
+    // Verifica se clienteAtual existe, não é vazio e não é "Selecione..."
+    if (clienteAtual && clienteAtual !== "" && clienteAtual !== "Selecione...") {
       carregarProdutosDaEmpresa();
     } else {
+      // Se não tiver cliente válido, limpa a lista
       setProdutos([]);
     }
   }, [clienteAtual]);
@@ -165,17 +169,17 @@ export default function Produtos() {
           fontSize: "clamp(12px, 2vw, 14px)" 
         }}>
           Cadastre os produtos fabricados e seus valores unitários
-          {clienteAtual && ` - Cliente ativo: ${clienteAtual}`}
+          {clienteAtual && clienteAtual !== "Selecione..." && ` - Cliente ativo: ${clienteAtual}`}
         </p>
-        {!clienteAtual && (
+        {!clienteAtual || clienteAtual === "Selecione..." ? (
           <p style={{ color: "#dc2626", fontSize: "14px", marginTop: "10px" }}>
             ⚠️ Selecione uma empresa no menu superior
           </p>
-        )}
+        ) : null}
       </div>
 
-      {/* Formulário responsivo - SÓ MOSTRA SE TIVER EMPRESA SELECIONADA */}
-      {clienteAtual ? (
+      {/* Formulário responsivo - SÓ MOSTRA SE TIVER EMPRESA SELECIONADA VÁLIDA */}
+      {clienteAtual && clienteAtual !== "" && clienteAtual !== "Selecione..." ? (
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 25px)", 
@@ -282,8 +286,8 @@ export default function Produtos() {
       {/* ÁREA DA LISTA DE PRODUTOS */}
       {/* ======================================== */}
       
-      {/* Cabeçalho da seção com botão Mostrar/Esconder - SÓ MOSTRA SE TIVER PRODUTOS */}
-      {clienteAtual && (
+      {/* Cabeçalho da seção com botão Mostrar/Esconder - SÓ MOSTRA SE TIVER PRODUTOS E CLIENTE VÁLIDO */}
+      {clienteAtual && clienteAtual !== "" && clienteAtual !== "Selecione..." && (
         <div style={{ 
           display: "flex", 
           justifyContent: "space-between", 
@@ -328,8 +332,8 @@ export default function Produtos() {
         </div>
       )}
 
-      {/* LISTA SÓ APARECE SE mostrarLista = true */}
-      {clienteAtual && mostrarLista && (
+      {/* LISTA SÓ APARECE SE mostrarLista = true E cliente válido */}
+      {clienteAtual && clienteAtual !== "" && clienteAtual !== "Selecione..." && mostrarLista && (
         <>
           {carregando && produtos.length === 0 ? (
             <div style={{ 
@@ -422,7 +426,7 @@ export default function Produtos() {
       )}
       
       {/* Mensagem quando não há produtos */}
-      {clienteAtual && !mostrarLista && produtos.length > 0 && (
+      {clienteAtual && clienteAtual !== "" && clienteAtual !== "Selecione..." && !mostrarLista && produtos.length > 0 && (
         <div style={{ 
           textAlign: "center", 
           padding: "clamp(20px, 3vw, 30px)", 
@@ -438,7 +442,7 @@ export default function Produtos() {
         </div>
       )}
 
-      {clienteAtual && produtos.length === 0 && !carregando && (
+      {clienteAtual && clienteAtual !== "" && clienteAtual !== "Selecione..." && produtos.length === 0 && !carregando && (
         <div style={{ 
           textAlign: "center", 
           padding: "clamp(30px, 5vw, 50px)", 
