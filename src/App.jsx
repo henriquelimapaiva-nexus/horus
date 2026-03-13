@@ -1,6 +1,7 @@
 // src/App.jsx
 import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+// Alterado de BrowserRouter para HashRouter para evitar erro 404 no deploy Vercel
+import { HashRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
 
 import Splash from "./pages/Splash";
@@ -73,9 +74,8 @@ import { ConsultorAuthProvider } from "./context/ConsultorAuthContext";
 function App() {
   return (
     <AuthProvider>
-      <ConsultorAuthProvider> {/* 👈 Provider do consultor */}
+      <ConsultorAuthProvider>
         <Router>
-          {/* CONFIGURAÇÃO DO TOASTER */}
           <Toaster 
             position="top-right"
             toastOptions={{
@@ -89,27 +89,19 @@ function App() {
                 fontFamily: 'Arial, sans-serif',
               },
               success: {
-                style: {
-                  background: '#16a34a',
-                },
+                style: { background: '#16a34a' },
                 icon: '✅',
               },
               error: {
-                style: {
-                  background: '#dc2626',
-                },
+                style: { background: '#dc2626' },
                 icon: '❌',
               },
               loading: {
-                style: {
-                  background: '#1E3A8A',
-                },
+                style: { background: '#1E3A8A' },
                 icon: '⏳',
               },
               warning: {
-                style: {
-                  background: '#f59e0b',
-                },
+                style: { background: '#f59e0b' },
                 icon: '⚠️',
               },
             }}
@@ -120,68 +112,39 @@ function App() {
             <Route path="/" element={<Splash />} />
             <Route path="/login" element={<Login />} />
             
-            {/* 👇 NOVA ROTA DE LOGIN DO CONSULTOR */}
             <Route path="/consultor/login" element={<ConsultorLogin />} />
             
-            {/* 👇 ROTAS PROTEGIDAS DO CONSULTOR */}
             <Route element={<ConsultorPrivateLayout />}>
               <Route path="/consultor" element={<ConsultorLayout />}>
                 <Route index element={<ConsultorDashboard />} />
                 <Route path="clientes" element={<ConsultorClientes />} />
                 <Route path="relatorios" element={<ConsultorRelatorios />} />
                 <Route path="configuracoes" element={<ConsultorConfiguracoes />} />
-                {/* 🟢 ROTA - IA DE PRECIFICAÇÃO */}
                 <Route path="ias/precificacao" element={<IAPrecificacao />} />
-                {/* 🟢 ROTA - IA DE SUGESTÕES */}
                 <Route path="ias/sugestoes" element={<IASugestoes />} />
-                {/* 🟢 NOVA ROTA - CHECKLIST */}
                 <Route path="checklist" element={<Checklist />} />
               </Route>
             </Route>
             
-            {/* Rotas protegidas do sistema (clientes) - NADA MUDOU AQUI */}
             <Route element={<PrivateLayout />}>
-              {/* Rotas existentes */}
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/linhas" element={<Linhas />} />
               <Route path="/linhas/:id" element={<FichaLinha />} />
               <Route path="/empresas" element={<Empresa />} />
               <Route path="/conhecimento" element={<Conhecimento />} />
-              
-              {/* Rotas de Cadastro */}
               <Route path="/linhas/novo" element={<LinhaForm />} />
               <Route path="/linhas/editar/:id" element={<LinhaForm />} />
               <Route path="/postos/novo/:linhaId" element={<PostoForm />} />
               <Route path="/postos/editar/:postoId/linha/:linhaId" element={<PostoForm />} />
-              
-              {/* Coleta de Dados */}
               <Route path="/coleta/:linhaId" element={<ColetaDados />} />
-              
-              {/* Relatório Profissional */}
               <Route path="/relatorios" element={<RelatorioProfissional />} />
-              
-              {/* Produtos */}
               <Route path="/produtos" element={<Produtos />} />
-              
-              {/* Cargos */}
               <Route path="/cargos" element={<Cargos />} />
-              
-              {/* Colaboradores */}
               <Route path="/colaboradores" element={<Colaboradores />} />
-              
-              {/* Dashboard Financeiro */}
               <Route path="/financeiro" element={<DashboardFinanceiro />} />
-              
-              {/* Perdas */}
               <Route path="/perdas" element={<Perdas />} />
-              
-              {/* Painel Executivo */}
               <Route path="/painel" element={<PainelExecutivo />} />
-              
-              {/* Proposta Comercial */}
               <Route path="/proposta" element={<PropostaComercial />} />
-              
-              {/* Listagem de Postos */}
               <Route path="/postos" element={<Postos />} />
             </Route>
           </Routes>
