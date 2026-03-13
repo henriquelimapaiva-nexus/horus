@@ -49,7 +49,10 @@ export default function Produtos() {
       setProdutos(res.data);
       
       if (res.data.length === 0) {
-        toast.info("Nenhum produto cadastrado para esta empresa");
+        toast("Nenhum produto cadastrado para esta empresa", {
+          icon: 'ℹ️',
+          duration: 3000
+        }); 
       }
     } catch (error) {
       console.error("Erro ao carregar produtos:", error);
