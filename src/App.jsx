@@ -1,6 +1,6 @@
 // src/App.jsx
 import React from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from 'react-hot-toast';
 
 import Splash from "./pages/Splash";
@@ -184,9 +184,6 @@ function App() {
               {/* Listagem de Postos */}
               <Route path="/postos" element={<Postos />} />
             </Route>
-
-            {/* 👇 ROTA CURINGA - REDIRECIONA QUALQUER ROTA NÃO ENCONTRADA PARA HOME */}
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
       </ConsultorAuthProvider>
