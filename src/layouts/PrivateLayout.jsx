@@ -1,184 +1,240 @@
-// src/layouts/PrivateLayout.jsx
-import { Link, Outlet, useNavigate, Navigate } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Outlet, Link, useNavigate, useLocation } from "react-router-dom";
+import { 
+  LayoutDashboard, 
+  Factory, 
+  Building2, 
+  Package, 
+  Users, 
+  UserSquare2, 
+  FileText, 
+  BookOpen, 
+  LogOut, 
+  Menu, 
+  X, 
+  ChevronDown,
+  TrendingDown,
+  DollarSign,
+  PieChart,
+  FileSpreadsheet,
+  MonitorDot
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect, useRef } from "react";
 import api from "../api/api";
-import logo from "../assets/logo.png";
 
-function PrivateLayout() {
-  const { isAuthenticated, carregando, logout } = useAuth();
+export default function PrivateLayout() {
+  const { logout } = useAuth();
   const navigate = useNavigate();
-
-  const [clientes, setClientes] = useState([]);
-  const [clienteAtual, setClienteAtual] = useState("");
-  const [tamanhoLogo, setTamanhoLogo] = useState(40);
-  const [menuAberto, setMenuAberto] = useState(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [openMenus, setOpenMenus] = useState({});
+  const [clienteAtual, setClienteAtual] = useState(localStorage.getItem("clienteSelecionado") || "");
+  const [nomeCliente, setNomeCliente] = useState("Selecione um Cliente");
+  const [empresas, setEmpresas] = useState([]);
   const menuRef = useRef(null);
 
-  // 🛠️ AJUSTE: Carregar empresas para o seletor
   useEffect(() => {
-    const carregarClientes = async () => {
+    const fetchEmpresas = async () => {
       try {
-        const res = await api.get("/empresas"); 
-        if (res.data && Array.isArray(res.data)) {
-          setClientes(res.data);
-        }
-      } catch (err) {
-        console.error("❌ Erro ao buscar empresas:", err.message);
+        const response = await api.get("/empresas");
+        setEmpresas(response.data);
+        const atual = response.data.find(e => e.id === parseInt(clienteAtual));
+        if (atual) setNomeCliente(atual.nome);
+      } catch (error) {
+        console.error("Erro ao carregar empresas no layout:", error);
       }
     };
-
-    if (isAuthenticated) {
-      carregarClientes();
-    }
-  }, [isAuthenticated]);
-
-  // Recuperar cliente do localStorage
-  useEffect(() => {
-    const stored = localStorage.getItem("clienteAtual");
-    if (stored) {
-      setClienteAtual(stored);
-    }
-  }, []);
-
-  // ✅ NOVO: Encontrar o objeto da empresa selecionada para pegar o NOME
-  const empresaSelecionada = clientes.find(c => String(c.id) === String(clienteAtual));
-
-  // Ajuste responsivo do logo
-  useEffect(() => {
-    function atualizarTamanho() {
-      const altura = window.innerHeight;
-      let novo = Math.min(Math.max(altura * 0.05, 30), 60);
-      setTamanhoLogo(novo);
-    }
-    window.addEventListener('resize', atualizarTamanho);
-    atualizarTamanho();
-    return () => window.removeEventListener('resize', atualizarTamanho);
-  }, []);
+    fetchEmpresas();
+  }, [clienteAtual]);
 
   useEffect(() => {
-    function handleClickOutside(event) {
+    const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setMenuAberto(null);
-        setMobileMenuOpen(false);
+        setOpenMenus({});
       }
-    }
+    };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  if (carregando) {
-    return (
-      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#1E3A8A", color: "white" }}>
-        <h2 style={{ fontSize: "clamp(18px, 4vw, 24px)" }}>Carregando...</h2>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-
-  function handleLogout() {
-    logout();
-    navigate("/login");
-  }
-
-  const toggleMenu = (menu, event) => {
-    event.stopPropagation();
-    setMenuAberto(menuAberto === menu ? null : menu);
+  const handleMudarCliente = (id) => {
+    localStorage.setItem("clienteSelecionado", id);
+    setClienteAtual(id);
+    const atual = empresas.find(e => e.id === parseInt(id));
+    if (atual) setNomeCliente(atual.nome);
+    window.location.reload();
   };
 
-  const handleClienteChange = (e) => {
-    const valor = e.target.value;
-    setClienteAtual(valor);
-    localStorage.setItem("clienteAtual", valor);
+  const toggleSubmenu = (menu) => {
+    setOpenMenus(prev => ({
+      ...prev,
+      [menu]: !prev[menu]
+    }));
   };
 
-  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+  const navItems = [
+    { path: "/dashboard", label: "Dashboard", icon: <LayoutDashboard size={18} /> },
+    { path: "/linhas", label: "Linhas", icon: <Factory size={18} /> },
+    { path: "/empresas", label: "Empresas", icon: <Building2 size={18} /> },
+    { path: "/produtos", label: "Produtos", icon: <Package size={18} /> },
+    { path: "/cargos", label: "Cargos", icon: <UserSquare2 size={18} /> },
+    { path: "/colaboradores", label: "Colaboradores", icon: <Users size={18} /> },
+    { path: "/relatorios", label: "Relatórios", icon: <FileText size={18} /> },
+    { path: "/proposta", label: "Proposta", icon: <FileSpreadsheet size={18} /> },
+    { path: "/conhecimento", label: "Conhecimento", icon: <BookOpen size={18} /> },
+  ];
 
-  const linkStyle = { color: "white", textDecoration: "none", padding: "8px 12px", borderRadius: "4px", transition: "background-color 0.2s", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "clamp(13px, 2vw, 14px)", whiteSpace: "nowrap" };
-  const menuItemStyle = { ...linkStyle, position: "relative" };
-  const submenuStyle = { position: "absolute", top: "100%", left: 0, backgroundColor: "#1E3A8A", minWidth: "200px", borderRadius: "4px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", zIndex: 1000, marginTop: "4px" };
-  const submenuItemStyle = { ...linkStyle, borderRadius: 0, padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.1)" };
+  const analysisItems = [
+    { path: "/painel", label: "Painel Executivo", icon: <MonitorDot size={18} /> },
+    { path: "/financeiro", label: "Financeiro", icon: <DollarSign size={18} /> },
+    { path: "/perdas", label: "Perdas", icon: <TrendingDown size={18} /> },
+    { path: "/postos", label: "Postos", icon: <PieChart size={18} /> },
+  ];
+
+  const isActive = (path) => location.pathname === path;
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <header style={{ 
-        minHeight: "60px", backgroundColor: "#1E3A8A", color: "white", 
-        display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row",
-        alignItems: window.innerWidth < 768 ? "stretch" : "center",
-        justifyContent: "space-between", padding: "0 20px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", gap: "10px" 
-      }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <img src={logo} alt="Hórus" style={{ height: `${tamanhoLogo}px`, marginRight: "10px" }} />
-            <h2 style={{ margin: 0, fontSize: `${tamanhoLogo * 0.6}px` }}>HÓRUS</h2>
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      <header className="bg-[#1E3A8A] text-white shadow-lg sticky top-0 z-50">
+        <div className="max-w-full mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-8">
+            <div className="flex flex-col">
+              <span className="text-xl font-bold tracking-wider">HÓRUS</span>
+              <span className="text-[10px] opacity-70 font-light">CONSULTORIA ESTRATÉGICA</span>
+            </div>
+
+            <nav className="hidden lg:flex items-center gap-1" ref={menuRef}>
+              {navItems.map((item) => (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all ${
+                    isActive(item.path) ? "bg-white/20 font-bold" : "hover:bg-white/10"
+                  }`}
+                >
+                  {item.icon}
+                  {item.label}
+                </Link>
+              ))}
+
+              <div className="relative ml-2">
+                <button
+                  onClick={() => toggleSubmenu('analises')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-all hover:bg-white/10 ${
+                    analysisItems.some(i => isActive(i.path)) ? "bg-white/20 font-bold" : ""
+                  }`}
+                >
+                  Análises <ChevronDown size={14} />
+                </button>
+                {openMenus.analises && (
+                  <div className="absolute top-full left-0 mt-1 w-56 bg-white rounded-md shadow-xl py-2 text-gray-800 animate-in fade-in slide-in-from-top-2">
+                    {analysisItems.map((item) => (
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        onClick={() => setOpenMenus({})}
+                        className={`flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-100 ${
+                          isActive(item.path) ? "text-[#1E3A8A] font-bold bg-blue-50" : ""
+                        }`}
+                      >
+                        {item.icon}
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </nav>
           </div>
-          {window.innerWidth < 768 && (
-            <button onClick={toggleMobileMenu} style={{ background: "transparent", color: "white", border: "1px solid white", borderRadius: "4px" }}>
-              {mobileMenuOpen ? "✕" : "☰"}
+
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex flex-col items-end mr-4">
+              <span className="text-[10px] opacity-70 font-bold uppercase">Cliente Atual</span>
+              <select
+                value={clienteAtual}
+                onChange={(e) => handleMudarCliente(e.target.value)}
+                className="bg-white/10 border border-white/20 rounded px-2 py-1 text-xs font-bold outline-none cursor-pointer hover:bg-white/20 transition-all"
+              >
+                <option value="" className="text-gray-800">Selecione...</option>
+                {empresas.map((e) => (
+                  <option key={e.id} value={e.id} className="text-gray-800">{e.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={logout}
+              className="hidden md:flex items-center gap-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md text-sm font-bold transition-all shadow-md"
+            >
+              <LogOut size={16} /> Sair
             </button>
-          )}
+
+            <button 
+              className="lg:hidden p-2 hover:bg-white/10 rounded-md"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
-        {(window.innerWidth >= 768 || mobileMenuOpen) && (
-          <nav style={{ display: "flex", gap: "10px", flexDirection: window.innerWidth < 768 ? "column" : "row" }} ref={menuRef}>
-            <Link to="/consultor/login" style={{ ...linkStyle, backgroundColor: "#7c3aed" }}>👤 Consultor</Link>
-            <Link to="/dashboard" style={linkStyle}>Dashboard</Link>
-            
-            {/* Menus Dropdown (Mantidos como seu original) */}
-            <div style={{ position: "relative" }}>
-              <div style={menuItemStyle} onClick={(e) => toggleMenu('analises', e)}>Análises ▼</div>
-              {menuAberto === 'analises' && (
-                <div style={submenuStyle}>
-                  <Link to="/painel" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Painel Executivo</Link>
-                  <Link to="/financeiro" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Financeiro</Link>
-                </div>
-              )}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden bg-[#1E3A8A] border-t border-white/10 p-4 space-y-1 animate-in slide-in-from-top">
+            <div className="mb-4 pb-4 border-bottom border-white/10">
+               <select
+                value={clienteAtual}
+                onChange={(e) => handleMudarCliente(e.target.value)}
+                className="w-full bg-white/10 border border-white/20 rounded p-2 text-sm"
+              >
+                <option value="">Selecione um Cliente</option>
+                {empresas.map((e) => (
+                  <option key={e.id} value={e.id}>{e.nome}</option>
+                ))}
+              </select>
             </div>
-
-            <div style={{ position: "relative" }}>
-              <div style={menuItemStyle} onClick={(e) => toggleMenu('operacao', e)}>Operação ▼</div>
-              {menuAberto === 'operacao' && (
-                <div style={submenuStyle}>
-                  <Link to="/linhas" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Linhas</Link>
-                  <Link to="/postos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Postos</Link>
-                </div>
-              )}
-            </div>
-
-            <div style={{ position: "relative" }}>
-              <div style={menuItemStyle} onClick={(e) => toggleMenu('cadastros', e)}>Cadastros ▼</div>
-              {menuAberto === 'cadastros' && (
-                <div style={submenuStyle}>
-                  <Link to="/empresas" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Empresas</Link>
-                  <Link to="/produtos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Produtos</Link>
-                </div>
-              )}
-            </div>
-            
-            <Link to="/perdas" style={linkStyle}>Perdas</Link>
-          </nav>
+            {navItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`flex items-center gap-3 p-3 rounded-md text-sm ${
+                  isActive(item.path) ? "bg-white/20 font-bold" : "hover:bg-white/10"
+                }`}
+              >
+                {item.icon} {item.label}
+              </Link>
+            ))}
+            <hr className="my-2 border-white/10" />
+            <div className="text-[10px] px-3 font-bold opacity-50 uppercase tracking-widest">Análises</div>
+            {analysisItems.map((item) => (
+              <Link
+                key={item.path}
+                to={item.path}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className={`flex items-center gap-3 p-3 rounded-md text-sm ${
+                  isActive(item.path) ? "bg-white/20 font-bold" : "hover:bg-white/10"
+                }`}
+              >
+                {item.icon} {item.label}
+              </Link>
+            ))}
+            <button
+              onClick={logout}
+              className="w-full flex items-center justify-center gap-2 bg-red-600 p-3 rounded-md text-sm font-bold mt-4"
+            >
+              <LogOut size={16} /> Sair
+            </button>
+          </div>
         )}
-
-        <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <select value={clienteAtual} onChange={handleClienteChange} style={{ padding: "6px", borderRadius: "4px", backgroundColor: "rgba(255,255,255,0.15)", color: "white", border: "none" }}>
-            <option value="" style={{ color: "#333" }}>Selecione...</option>
-            {clientes.map(c => <option key={c.id} value={c.id} style={{ color: "#333" }}>{c.nome}</option>)}
-          </select>
-          <button onClick={handleLogout} style={{ background: "none", color: "white", border: "1px solid white", borderRadius: "4px", padding: "5px 10px", cursor: "pointer" }}>Sair</button>
-        </div>
       </header>
 
-      <main style={{ flex: 1, backgroundColor: "#f5f7fa", overflow: "auto" }}>
-        {/* ✅ AJUSTE: Enviando ID e NOME para as páginas filhas */}
-        <Outlet context={{ 
-          clienteAtual, 
-          nomeCliente: empresaSelecionada ? empresaSelecionada.nome : "Selecione uma empresa" 
-        }} />
+      <main className="flex-1 p-4 lg:p-8">
+        <Outlet context={{ clienteAtual, nomeCliente }} />
       </main>
+
+      <footer className="bg-white border-t py-4 px-8 text-center text-xs text-gray-500">
+        HÓRUS - Gestão Estratégica Industrial &copy; {new Date().getFullYear()} - Todos os direitos reservados.
+      </footer>
     </div>
   );
 }
-
-export default PrivateLayout;

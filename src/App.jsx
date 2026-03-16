@@ -17,6 +17,7 @@ import Conhecimento from "./pages/Conhecimento";
 
 // Cadastro de Linhas e Postos
 import LinhaForm from "./pages/LinhaForm";
+import NovaLinha from "./pages/NovaLinha"; // 🟢 NOVO COMPONENTE MASTER
 import PostoForm from "./pages/PostoForm";
 
 // Coleta de Dados
@@ -132,7 +133,10 @@ function App() {
               <Route path="/linhas/:id" element={<FichaLinha />} />
               <Route path="/empresas" element={<Empresa />} />
               <Route path="/conhecimento" element={<Conhecimento />} />
-              <Route path="/linhas/novo" element={<LinhaForm />} />
+              
+              {/* ✅ ROTA ATUALIZADA PARA O NÍVEL MASTER */}
+              <Route path="/linhas/novo" element={<NovaLinha />} />
+              
               <Route path="/linhas/editar/:id" element={<LinhaForm />} />
               <Route path="/postos/novo/:linhaId" element={<PostoForm />} />
               <Route path="/postos/editar/:postoId/linha/:linhaId" element={<PostoForm />} />
