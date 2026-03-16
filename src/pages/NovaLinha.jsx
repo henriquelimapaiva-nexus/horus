@@ -9,7 +9,8 @@ export default function NovaLinha() {
   const navigate = useNavigate();
 
   const [nome, setNome] = useState("");
-  const [horasProdutivas, setHorasProdutivas] = useState(8.8);
+  // Ajustado para começar vazio conforme solicitado
+  const [horasProdutivas, setHorasProdutivas] = useState(""); 
   const [produtosCadastrados, setProdutosCadastrados] = useState([]); // Todos da empresa
   const [produtosSelecionados, setProdutosSelecionados] = useState([]); // O que vai na linha
   const [salvando, setSalvando] = useState(false);
@@ -43,9 +44,10 @@ export default function NovaLinha() {
     const novosProdutos = [...produtosSelecionados];
     novosProdutos[index].takt = taktDigitado;
     
-    if (taktDigitado > 0) {
+    // Só calcula se houver horas produtivas e takt definidos
+    if (taktDigitado > 0 && horasProdutivas > 0) {
       // Fórmula: (Horas * 3600) / Takt
-      const calculoMeta = Math.floor((horasProdutivas * 3600) / taktDigitado);
+      const calculoMeta = Math.floor((parseFloat(horasProdutivas) * 3600) / parseFloat(taktDigitado));
       novosProdutos[index].meta = calculoMeta;
     } else {
       novosProdutos[index].meta = 0;
@@ -53,9 +55,22 @@ export default function NovaLinha() {
     setProdutosSelecionados(novosProdutos);
   };
 
+  // Recalcula todas as metas se as horas produtivas mudarem
+  useEffect(() => {
+    if (produtosSelecionados.length > 0) {
+      const atualizados = produtosSelecionados.map(p => {
+        if (p.takt > 0 && horasProdutivas > 0) {
+          return { ...p, meta: Math.floor((parseFloat(horasProdutivas) * 3600) / parseFloat(p.takt)) };
+        }
+        return { ...p, meta: 0 };
+      });
+      setProdutosSelecionados(atualizados);
+    }
+  }, [horasProdutivas]);
+
   const handleSalvar = async () => {
-    if (!nome || produtosSelecionados.length === 0) {
-      return toast.error("Preencha o nome e selecione ao menos um produto");
+    if (!nome || !horasProdutivas || produtosSelecionados.length === 0) {
+      return toast.error("Preencha nome, horas produtivas e selecione produtos");
     }
 
     setSalvando(true);
@@ -63,8 +78,8 @@ export default function NovaLinha() {
       const payload = {
         empresa_id: clienteAtual,
         nome,
-        horas_produtivas: horasProdutivas,
-        produtos: produtosSelecionados // Enviando o array com takt e meta
+        horas_produtivas: parseFloat(horasProdutivas),
+        produtos: produtosSelecionados 
       };
 
       await api.post("/linhas-com-multiplos-produtos", payload);
@@ -79,36 +94,41 @@ export default function NovaLinha() {
 
   return (
     <div style={{ padding: "30px", maxWidth: "800px", margin: "0 auto" }}>
-      <h1 style={{ color: "#1E3A8A" }}>Nova Linha - {nomeCliente}</h1>
+      <h1 style={{ color: "#1E3A8A", marginBottom: "20px" }}>Nova Linha - {nomeCliente}</h1>
       
       <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
         <div style={{ marginBottom: "15px" }}>
-          <label>Nome da Linha:</label>
+          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Nome da Linha:</label>
           <input 
-            style={{ width: "100%", padding: "8px", marginTop: "5px" }}
+            style={{ width: "100%", padding: "10px", border: "1px solid #ccc", borderRadius: "4px" }}
             value={nome} onChange={e => setNome(e.target.value)}
             placeholder="Ex: Extrusora Balão 01"
           />
         </div>
 
         <div style={{ marginBottom: "15px" }}>
-          <label>Horas Produtivas/Dia:</label>
+          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Horas Produtivas/Dia:</label>
           <input 
             type="number" step="0.1"
-            style={{ width: "100%", padding: "8px", marginTop: "5px" }}
-            value={horasProdutivas} onChange={e => setHorasProdutivas(e.target.value)}
+            style={{ width: "100%", padding: "10px", border: "1px solid #ccc", borderRadius: "4px" }}
+            value={horasProdutivas} 
+            onChange={e => setHorasProdutivas(e.target.value)}
+            placeholder="Ex: 8.8"
           />
         </div>
 
-        <hr />
+        <hr style={{ margin: "20px 0", border: "0", borderTop: "1px solid #eee" }} />
 
-        <div style={{ marginBottom: "15px", marginTop: "15px" }}>
-          <label>Adicionar Produto na Linha:</label>
+        <div style={{ marginBottom: "15px" }}>
+          <label style={{ fontWeight: "bold", display: "block", marginBottom: "5px" }}>Adicionar Produto na Linha:</label>
           <select 
-            onChange={(e) => adicionarProduto(e.target.value)}
-            style={{ width: "100%", padding: "8px", marginTop: "5px" }}
+            onChange={(e) => {
+              adicionarProduto(e.target.value);
+              e.target.value = ""; // Reseta o select após adicionar
+            }}
+            style={{ width: "100%", padding: "10px", border: "1px solid #ccc", borderRadius: "4px" }}
           >
-            <option value="">Selecione um produto...</option>
+            <option value="">Selecione um produto cadastrado...</option>
             {produtosCadastrados.map(p => (
               <option key={p.id} value={p.id}>{p.nome}</option>
             ))}
@@ -117,31 +137,36 @@ export default function NovaLinha() {
 
         {/* MATRIZ DE PERFORMANCE */}
         {produtosSelecionados.length > 0 && (
-          <table style={{ width: "100%", borderCollapse: "collapse", marginTop: "20px" }}>
-            <thead>
-              <tr style={{ textAlign: "left", borderBottom: "2px solid #eee" }}>
-                <th>Produto</th>
-                <th>Takt (s)</th>
-                <th>Meta (pçs)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {produtosSelecionados.map((p, index) => (
-                <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: "10px 0" }}>{p.nome}</td>
-                  <td>
-                    <input 
-                      type="number"
-                      style={{ width: "60px", padding: "5px" }}
-                      value={p.takt}
-                      onChange={(e) => atualizarPerformance(index, e.target.value)}
-                    />
-                  </td>
-                  <td style={{ fontWeight: "bold", color: "#16a34a" }}>{p.meta}</td>
+          <div style={{ marginTop: "20px", overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ textAlign: "left", borderBottom: "2px solid #eee" }}>
+                  <th style={{ padding: "10px" }}>Produto</th>
+                  <th style={{ padding: "10px" }}>Takt (s)</th>
+                  <th style={{ padding: "10px" }}>Meta (un)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {produtosSelecionados.map((p, index) => (
+                  <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
+                    <td style={{ padding: "10px" }}>{p.nome}</td>
+                    <td style={{ padding: "10px" }}>
+                      <input 
+                        type="number"
+                        style={{ width: "80px", padding: "5px", border: "1px solid #ccc", borderRadius: "4px" }}
+                        value={p.takt}
+                        placeholder="0.0"
+                        onChange={(e) => atualizarPerformance(index, e.target.value)}
+                      />
+                    </td>
+                    <td style={{ padding: "10px", fontWeight: "bold", color: "#16a34a" }}>
+                      {p.meta.toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
         <div style={{ marginTop: "30px", display: "flex", gap: "10px" }}>
