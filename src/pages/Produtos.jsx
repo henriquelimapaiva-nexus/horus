@@ -35,7 +35,7 @@ export default function Produtos() {
   async function carregarProdutosDaEmpresa() {
     setCarregando(true);
     try {
-      const res = await api.get(`/produtos/empresa/${clienteAtual}`);
+      const res = await api.get(`/produtos/filtro/empresa/${clienteAtual}`);
       setProdutos(res.data);
       
       if (res.data.length === 0) {
