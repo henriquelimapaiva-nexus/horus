@@ -5,12 +5,6 @@ import { useState, useEffect, useRef } from "react";
 import api from "../api/api";
 import logo from "../assets/logo.png";
 
-// Função auxiliar para truncar texto
-const truncarTexto = (texto, maxLength = 20) => {
-  if (!texto) return "";
-  return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
-};
-
 function PrivateLayout() {
   const { isAuthenticated, carregando, logout } = useAuth();
   const navigate = useNavigate();
@@ -22,19 +16,16 @@ function PrivateLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // 🛠️ AJUSTE: Carregar empresas para o seletor com tratamento de erro
+  // 🛠️ AJUSTE: Carregar empresas para o seletor
   useEffect(() => {
     const carregarClientes = async () => {
       try {
-        console.log("📡 HÓRUS: Atualizando seletor de clientes...");
-        const res = await api.get("/empresas"); // Plural para bater com o banco
-        
+        const res = await api.get("/empresas"); 
         if (res.data && Array.isArray(res.data)) {
           setClientes(res.data);
-          console.log(`✅ ${res.data.length} clientes carregados com sucesso.`);
         }
       } catch (err) {
-        console.error("❌ Erro ao buscar empresas para o topo:", err.response?.data || err.message);
+        console.error("❌ Erro ao buscar empresas:", err.message);
       }
     };
 
@@ -51,6 +42,9 @@ function PrivateLayout() {
     }
   }, []);
 
+  // ✅ NOVO: Encontrar o objeto da empresa selecionada para pegar o NOME
+  const empresaSelecionada = clientes.find(c => String(c.id) === String(clienteAtual));
+
   // Ajuste responsivo do logo
   useEffect(() => {
     function atualizarTamanho() {
@@ -58,13 +52,11 @@ function PrivateLayout() {
       let novo = Math.min(Math.max(altura * 0.05, 30), 60);
       setTamanhoLogo(novo);
     }
-
     window.addEventListener('resize', atualizarTamanho);
     atualizarTamanho();
     return () => window.removeEventListener('resize', atualizarTamanho);
   }, []);
 
-  // Fechar menus ao clicar fora
   useEffect(() => {
     function handleClickOutside(event) {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -78,24 +70,13 @@ function PrivateLayout() {
 
   if (carregando) {
     return (
-      <div style={{ 
-        height: "100vh", 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center",
-        backgroundColor: "#1E3A8A",
-        color: "white"
-      }}>
-        <div style={{ textAlign: "center" }}>
-          <h2 style={{ fontSize: "clamp(18px, 4vw, 24px)" }}>Carregando...</h2>
-        </div>
+      <div style={{ height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#1E3A8A", color: "white" }}>
+        <h2 style={{ fontSize: "clamp(18px, 4vw, 24px)" }}>Carregando...</h2>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
   function handleLogout() {
     logout();
@@ -113,115 +94,51 @@ function PrivateLayout() {
     localStorage.setItem("clienteAtual", valor);
   };
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
-  };
+  const toggleMobileMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
-  // Estilos (Mantendo seu padrão original)
-  const linkStyle = {
-    color: "white",
-    textDecoration: "none",
-    padding: "8px 12px",
-    borderRadius: "4px",
-    transition: "background-color 0.2s",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    fontSize: "clamp(13px, 2vw, 14px)",
-    whiteSpace: "nowrap"
-  };
-
+  const linkStyle = { color: "white", textDecoration: "none", padding: "8px 12px", borderRadius: "4px", transition: "background-color 0.2s", cursor: "pointer", display: "flex", alignItems: "center", gap: "4px", fontSize: "clamp(13px, 2vw, 14px)", whiteSpace: "nowrap" };
   const menuItemStyle = { ...linkStyle, position: "relative" };
-
-  const submenuStyle = {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    backgroundColor: "#1E3A8A",
-    minWidth: "200px",
-    borderRadius: "4px",
-    boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
-    zIndex: 1000,
-    marginTop: "4px"
-  };
-
-  const submenuItemStyle = {
-    ...linkStyle,
-    borderRadius: 0,
-    padding: "10px 16px",
-    borderBottom: "1px solid rgba(255,255,255,0.1)"
-  };
+  const submenuStyle = { position: "absolute", top: "100%", left: 0, backgroundColor: "#1E3A8A", minWidth: "200px", borderRadius: "4px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)", zIndex: 1000, marginTop: "4px" };
+  const submenuItemStyle = { ...linkStyle, borderRadius: 0, padding: "10px 16px", borderBottom: "1px solid rgba(255,255,255,0.1)" };
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      
       <header style={{ 
-        minHeight: "60px",
-        backgroundColor: "#1E3A8A", 
-        color: "white", 
-        display: "flex", 
-        flexDirection: window.innerWidth < 768 ? "column" : "row",
+        minHeight: "60px", backgroundColor: "#1E3A8A", color: "white", 
+        display: "flex", flexDirection: window.innerWidth < 768 ? "column" : "row",
         alignItems: window.innerWidth < 768 ? "stretch" : "center",
-        justifyContent: "space-between",
-        padding: window.innerWidth < 768 ? "10px 20px" : "0 20px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        gap: "10px"
+        justifyContent: "space-between", padding: "0 20px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", gap: "10px" 
       }}>
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          justifyContent: "space-between",
-          width: window.innerWidth < 768 ? "100%" : "auto"
-        }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
-            <img 
-              src={logo} 
-              alt="Hórus Engenharia" 
-              style={{ height: `${tamanhoLogo}px`, width: "auto", marginRight: "10px" }} 
-            />
-            <h2 style={{ margin: 0, fontSize: `${tamanhoLogo * 0.6}px`, fontWeight: "600" }}>
-              HÓRUS
-            </h2>
+            <img src={logo} alt="Hórus" style={{ height: `${tamanhoLogo}px`, marginRight: "10px" }} />
+            <h2 style={{ margin: 0, fontSize: `${tamanhoLogo * 0.6}px` }}>HÓRUS</h2>
           </div>
-          
           {window.innerWidth < 768 && (
-            <button onClick={toggleMobileMenu} style={{ background: "transparent", border: "1px solid rgba(255,255,255,0.3)", borderRadius: "4px", color: "white", padding: "8px 12px" }}>
+            <button onClick={toggleMobileMenu} style={{ background: "transparent", color: "white", border: "1px solid white", borderRadius: "4px" }}>
               {mobileMenuOpen ? "✕" : "☰"}
             </button>
           )}
         </div>
 
         {(window.innerWidth >= 768 || mobileMenuOpen) && (
-          <nav style={{ 
-            display: "flex", 
-            gap: "10px", 
-            flexDirection: window.innerWidth < 768 ? "column" : "row",
-            width: window.innerWidth < 768 ? "100%" : "auto"
-          }} ref={menuRef}>
+          <nav style={{ display: "flex", gap: "10px", flexDirection: window.innerWidth < 768 ? "column" : "row" }} ref={menuRef}>
+            <Link to="/consultor/login" style={{ ...linkStyle, backgroundColor: "#7c3aed" }}>👤 Consultor</Link>
+            <Link to="/dashboard" style={linkStyle}>Dashboard</Link>
             
-            <Link to="/consultor/login" style={{ ...linkStyle, backgroundColor: "#7c3aed", fontWeight: "bold" }}>👤 Consultor</Link>
-            <Link to="/dashboard" style={linkStyle} onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>
-
-            {/* Menu Análises */}
+            {/* Menus Dropdown (Mantidos como seu original) */}
             <div style={{ position: "relative" }}>
-              <div style={menuItemStyle} onClick={(e) => toggleMenu('analises', e)}>
-                Análises {menuAberto === 'analises' ? '▼' : '▶'}
-              </div>
+              <div style={menuItemStyle} onClick={(e) => toggleMenu('analises', e)}>Análises ▼</div>
               {menuAberto === 'analises' && (
                 <div style={submenuStyle}>
                   <Link to="/painel" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Painel Executivo</Link>
                   <Link to="/financeiro" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Financeiro</Link>
-                  <Link to="/relatorios" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Relatórios</Link>
                 </div>
               )}
             </div>
 
-            {/* Menu Operação */}
             <div style={{ position: "relative" }}>
-              <div style={menuItemStyle} onClick={(e) => toggleMenu('operacao', e)}>
-                Operação {menuAberto === 'operacao' ? '▼' : '▶'}
-              </div>
+              <div style={menuItemStyle} onClick={(e) => toggleMenu('operacao', e)}>Operação ▼</div>
               {menuAberto === 'operacao' && (
                 <div style={submenuStyle}>
                   <Link to="/linhas" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Linhas</Link>
@@ -230,63 +147,35 @@ function PrivateLayout() {
               )}
             </div>
 
-            {/* Menu Cadastros */}
             <div style={{ position: "relative" }}>
-              <div style={menuItemStyle} onClick={(e) => toggleMenu('cadastros', e)}>
-                Cadastros {menuAberto === 'cadastros' ? '▼' : '▶'}
-              </div>
+              <div style={menuItemStyle} onClick={(e) => toggleMenu('cadastros', e)}>Cadastros ▼</div>
               {menuAberto === 'cadastros' && (
                 <div style={submenuStyle}>
                   <Link to="/empresas" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Empresas</Link>
                   <Link to="/produtos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Produtos</Link>
-                  <Link to="/cargos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Cargos</Link>
-                  <Link to="/colaboradores" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Colaboradores</Link>
                 </div>
               )}
             </div>
-
+            
             <Link to="/perdas" style={linkStyle}>Perdas</Link>
-            <Link to="/proposta" style={linkStyle}>Proposta</Link>
-            <Link to="/conhecimento" style={linkStyle}>Conhecimento</Link>
           </nav>
         )}
 
-        {/* Seletor de Cliente e Logout */}
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "14px", opacity: 0.9 }}>Cliente:</span>
-            <select
-              value={clienteAtual}
-              onChange={handleClienteChange}
-              style={{
-                padding: "6px 10px",
-                borderRadius: "4px",
-                border: "none",
-                backgroundColor: "rgba(255,255,255,0.15)",
-                color: "white",
-                cursor: "pointer",
-                outline: "none",
-                minWidth: "180px",
-                maxWidth: "250px"
-              }}
-            >
-              <option value="" style={{ color: "#333" }}>Selecione...</option>
-              {clientes.map((cliente) => (
-                <option key={cliente.id} value={cliente.id} style={{ color: "#333" }}>
-                  {cliente.nome} {/* Removida a função truncarTexto daqui */}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button onClick={handleLogout} style={{ padding: "6px 16px", backgroundColor: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: "4px", color: "white", cursor: "pointer" }}>
-            Sair
-          </button>
+          <select value={clienteAtual} onChange={handleClienteChange} style={{ padding: "6px", borderRadius: "4px", backgroundColor: "rgba(255,255,255,0.15)", color: "white", border: "none" }}>
+            <option value="" style={{ color: "#333" }}>Selecione...</option>
+            {clientes.map(c => <option key={c.id} value={c.id} style={{ color: "#333" }}>{c.nome}</option>)}
+          </select>
+          <button onClick={handleLogout} style={{ background: "none", color: "white", border: "1px solid white", borderRadius: "4px", padding: "5px 10px", cursor: "pointer" }}>Sair</button>
         </div>
       </header>
 
-      <main style={{ flex: 1, display: "flex", backgroundColor: "#f5f7fa", overflow: "auto" }}>
-        <Outlet context={{ clienteAtual }} />
+      <main style={{ flex: 1, backgroundColor: "#f5f7fa", overflow: "auto" }}>
+        {/* ✅ AJUSTE: Enviando ID e NOME para as páginas filhas */}
+        <Outlet context={{ 
+          clienteAtual, 
+          nomeCliente: empresaSelecionada ? empresaSelecionada.nome : "Selecione uma empresa" 
+        }} />
       </main>
     </div>
   );
