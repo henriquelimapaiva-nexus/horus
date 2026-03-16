@@ -9,28 +9,48 @@ export default function NovaLinha() {
   const navigate = useNavigate();
 
   const [nome, setNome] = useState("");
-  // Ajustado para começar vazio conforme solicitado
   const [horasProdutivas, setHorasProdutivas] = useState(""); 
-  const [produtosCadastrados, setProdutosCadastrados] = useState([]); // Todos da empresa
-  const [produtosSelecionados, setProdutosSelecionados] = useState([]); // O que vai na linha
+  const [produtosCadastrados, setProdutosCadastrados] = useState([]); 
+  const [produtosSelecionados, setProdutosSelecionados] = useState([]); 
   const [salvando, setSalvando] = useState(false);
 
-  // 1. Carregar produtos da empresa atual
+  // 1. Carregar produtos com redundância de ID
   useEffect(() => {
-    if (clienteAtual) {
-      api.get(`/produtos/${clienteAtual}`)
-        .then(res => setProdutosCadastrados(res.data))
-        .catch(() => toast.error("Erro ao carregar produtos"));
-    }
+    const buscarProdutos = async () => {
+      // Tenta o contexto, se falhar, tenta o localStorage
+      const idEmpresa = clienteAtual || localStorage.getItem("clienteAtual");
+
+      if (idEmpresa) {
+        try {
+          console.log(`📡 HÓRUS: Buscando produtos para ID ${idEmpresa}...`);
+          const res = await api.get(`/produtos/${idEmpresa}`);
+          
+          if (res.data && Array.isArray(res.data)) {
+            setProdutosCadastrados(res.data);
+            console.log("✅ Produtos carregados:", res.data);
+          } else {
+            setProdutosCadastrados([]);
+          }
+        } catch (err) {
+          console.error("❌ Erro na API de produtos:", err);
+          toast.error("Erro ao carregar produtos desta empresa.");
+        }
+      }
+    };
+
+    buscarProdutos();
   }, [clienteAtual]);
 
-  // 2. Adicionar produto à matriz de performance
+  // 2. Adicionar produto à matriz
   const adicionarProduto = (id) => {
     if (!id) return;
-    const jaExiste = produtosSelecionados.find(p => p.id === parseInt(id));
-    if (jaExiste) return toast.error("Produto já adicionado");
-
     const prod = produtosCadastrados.find(p => p.id === parseInt(id));
+    
+    if (!prod) return;
+
+    const jaExiste = produtosSelecionados.find(p => p.id === prod.id);
+    if (jaExiste) return toast.error("Produto já está na lista");
+
     setProdutosSelecionados([...produtosSelecionados, { 
       id: prod.id, 
       nome: prod.nome, 
@@ -39,15 +59,16 @@ export default function NovaLinha() {
     }]);
   };
 
-  // 3. Cálculo de Engenharia (Meta Automática)
+  // 3. Cálculo de Performance
   const atualizarPerformance = (index, taktDigitado) => {
     const novosProdutos = [...produtosSelecionados];
     novosProdutos[index].takt = taktDigitado;
     
-    // Só calcula se houver horas produtivas e takt definidos
-    if (taktDigitado > 0 && horasProdutivas > 0) {
-      // Fórmula: (Horas * 3600) / Takt
-      const calculoMeta = Math.floor((parseFloat(horasProdutivas) * 3600) / parseFloat(taktDigitado));
+    const horas = parseFloat(horasProdutivas);
+    const takt = parseFloat(taktDigitado);
+
+    if (takt > 0 && horas > 0) {
+      const calculoMeta = Math.floor((horas * 3600) / takt);
       novosProdutos[index].meta = calculoMeta;
     } else {
       novosProdutos[index].meta = 0;
@@ -55,28 +76,28 @@ export default function NovaLinha() {
     setProdutosSelecionados(novosProdutos);
   };
 
-  // Recalcula todas as metas se as horas produtivas mudarem
+  // Recalcular metas se as horas mudarem
   useEffect(() => {
-    if (produtosSelecionados.length > 0) {
-      const atualizados = produtosSelecionados.map(p => {
-        if (p.takt > 0 && horasProdutivas > 0) {
-          return { ...p, meta: Math.floor((parseFloat(horasProdutivas) * 3600) / parseFloat(p.takt)) };
-        }
-        return { ...p, meta: 0 };
-      });
+    if (produtosSelecionados.length > 0 && horasProdutivas > 0) {
+      const atualizados = produtosSelecionados.map(p => ({
+        ...p,
+        meta: p.takt > 0 ? Math.floor((parseFloat(horasProdutivas) * 3600) / parseFloat(p.takt)) : 0
+      }));
       setProdutosSelecionados(atualizados);
     }
   }, [horasProdutivas]);
 
   const handleSalvar = async () => {
+    const idEmpresa = clienteAtual || localStorage.getItem("clienteAtual");
+
     if (!nome || !horasProdutivas || produtosSelecionados.length === 0) {
-      return toast.error("Preencha nome, horas produtivas e selecione produtos");
+      return toast.error("Preencha todos os campos e adicione produtos");
     }
 
     setSalvando(true);
     try {
       const payload = {
-        empresa_id: clienteAtual,
+        empresa_id: idEmpresa,
         nome,
         horas_produtivas: parseFloat(horasProdutivas),
         produtos: produtosSelecionados 
@@ -124,7 +145,7 @@ export default function NovaLinha() {
           <select 
             onChange={(e) => {
               adicionarProduto(e.target.value);
-              e.target.value = ""; // Reseta o select após adicionar
+              e.target.value = ""; 
             }}
             style={{ width: "100%", padding: "10px", border: "1px solid #ccc", borderRadius: "4px" }}
           >
@@ -133,9 +154,13 @@ export default function NovaLinha() {
               <option key={p.id} value={p.id}>{p.nome}</option>
             ))}
           </select>
+          {produtosCadastrados.length === 0 && (
+            <p style={{ fontSize: "12px", color: "#ef4444", marginTop: "5px" }}>
+              Nenhum produto encontrado para esta empresa.
+            </p>
+          )}
         </div>
 
-        {/* MATRIZ DE PERFORMANCE */}
         {produtosSelecionados.length > 0 && (
           <div style={{ marginTop: "20px", overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
