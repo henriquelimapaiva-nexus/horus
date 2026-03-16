@@ -23,7 +23,7 @@ export default function NovaLinha() {
         try {
           console.log(`📡 HÓRUS: Buscando lista da empresa em -> /produtos/empresa/${idEmpresa}`);
           // ROTA ATUALIZADA: /produtos/empresa/ID
-          const res = await api.get(`/produtos/filtro/empresas/${idEmpresa}`);
+          const res = await api.get(`/produtos/filtro/empresa/${idEmpresa}`);
           
           if (res.data && Array.isArray(res.data)) {
             setProdutosCadastrados(res.data);
