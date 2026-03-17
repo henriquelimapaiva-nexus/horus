@@ -71,14 +71,20 @@ export default function LinhaForm() {
           empresa_id: linha.empresa_id || clienteAtual,
           takt_time_segundos: linha.takt_time_segundos || "",
           meta_diaria: linha.meta_diaria || "",
-          horas_produtivas_dia: linha.horas_produtivas_dia || "16"
+          horas_produtivas_dia: horas
         });
 
         // ✅ CORRIGIDO: /linha-produto/${id} → /line-products/${id}
         try {
           const produtosRes = await api.get(`/line-products/${id}`);
           const produtosData = produtosRes.data.dados || produtosRes.data || [];
-          const produtosVinculados = produtosData.map(p => p.produto_id);
+          // 👇 AQUI ESTÁ A CORREÇÃO
+          const produtosVinculados = produtosData.map(p => ({
+            id: p.produto_id,
+            nome: p.produto_nome,
+            takt: p.takt_configurado || "",
+            meta: p.meta_diaria || 0
+          }));
           setProdutosSelecionados(produtosVinculados);
         } catch (error) {
           console.error("Erro ao carregar produtos da linha:", error);
@@ -105,24 +111,45 @@ export default function LinhaForm() {
     }
     
     // Verificar se já foi adicionado
-    if (produtosSelecionados.includes(parseInt(produtoAtual))) {
+    if (produtosSelecionados.some(p => p.id === parseInt(produtoAtual))) {
       toast.error("Este produto já foi adicionado");
       return;
     }
     
-    setProdutosSelecionados([...produtosSelecionados, parseInt(produtoAtual)]);
+    const prod = produtos.find(p => p.id === parseInt(produtoAtual));
+    setProdutosSelecionados([...produtosSelecionados, { 
+      id: prod.id, 
+      nome: prod.nome, 
+      takt: "", 
+      meta: 0 
+    }]);
     setProdutoAtual(""); // limpa a seleção
   };
 
   // Função para remover produto da lista
   const removerProduto = (produtoId) => {
-    setProdutosSelecionados(produtosSelecionados.filter(id => id !== produtoId));
+    setProdutosSelecionados(produtosSelecionados.filter(p => p.id !== produtoId));
   };
 
   // Função para obter nome do produto pelo ID
   const getNomeProduto = (id) => {
     const produto = produtos.find(p => p.id === id);
     return produto ? produto.nome : "Produto não encontrado";
+  };
+
+  // Atualizar takt e meta de um produto
+  const atualizarProduto = (index, campo, valor) => {
+    const novos = [...produtosSelecionados];
+    novos[index][campo] = campo === 'takt' ? valor : parseInt(valor) || 0;
+    
+    // Se tiver takt e horas, recalcula meta
+    if (campo === 'takt' && parseFloat(valor) > 0 && parseFloat(form.horas_produtivas_dia) > 0) {
+      const horas = parseFloat(form.horas_produtivas_dia);
+      const takt = parseFloat(valor);
+      novos[index].meta = Math.floor((horas * 3600) / takt);
+    }
+    
+    setProdutosSelecionados(novos);
   };
 
   const handleSubmit = async (e) => {
@@ -148,10 +175,10 @@ export default function LinhaForm() {
           empresa_id: parseInt(clienteAtual),
           nome: form.nome,
           horas_produtivas: parseFloat(form.horas_produtivas_dia),
-          produtos: produtosSelecionados.map(prodId => ({
-            id: prodId,
-            takt: parseFloat(form.takt_time_segundos) || 0,
-            meta: parseInt(form.meta_diaria) || 0
+          produtos: produtosSelecionados.map(p => ({
+            id: p.id,
+            takt: parseFloat(p.takt) || 0,
+            meta: p.meta || 0
           }))
         });
         toast.success("Linha cadastrada com sucesso! ✅");
@@ -302,48 +329,54 @@ export default function LinhaForm() {
             </Botao>
           </div>
           
-          {/* Lista de produtos selecionados */}
+          {/* TABELA DE PRODUTOS COM TAKT E META */}
           {produtosSelecionados.length > 0 && (
-            <div style={{ 
-              marginTop: "10px",
-              maxHeight: "200px",
-              overflowY: "auto",
-              border: "1px solid #e5e7eb",
-              borderRadius: "4px",
-              padding: "10px"
-            }}>
-              <p style={{ 
-                marginBottom: "8px", 
-                fontWeight: "bold", 
-                color: "#1E3A8A",
-                fontSize: "clamp(12px, 1.6vw, 13px)"
-              }}>
-                Produtos nesta linha ({produtosSelecionados.length}):
-              </p>
-              {produtosSelecionados.map((prodId, index) => (
-                <div key={index} style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "8px 10px",
-                  marginBottom: "5px",
-                  backgroundColor: "#f3f4f6",
-                  borderRadius: "4px",
-                  border: "1px solid #e5e7eb"
-                }}>
-                  <span style={{ fontSize: "clamp(12px, 1.6vw, 13px)" }}>
-                    {index + 1}. {truncarTexto(getNomeProduto(prodId), 35)}
-                  </span>
-                  <Botao
-                    type="button"
-                    variant="danger"
-                    size="xs"
-                    onClick={() => removerProduto(prodId)}
-                  >
-                    ✕
-                  </Botao>
-                </div>
-              ))}
+            <div style={{ marginTop: "20px", overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ textAlign: "left", borderBottom: "2px solid #eee" }}>
+                    <th style={{ padding: "10px" }}>Produto</th>
+                    <th style={{ padding: "10px" }}>Takt (s)</th>
+                    <th style={{ padding: "10px" }}>Meta (un)</th>
+                    <th style={{ padding: "10px" }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {produtosSelecionados.map((p, index) => (
+                    <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
+                      <td style={{ padding: "10px" }}>{p.nome}</td>
+                      <td style={{ padding: "10px" }}>
+                        <input 
+                          type="number"
+                          style={{ width: "80px", padding: "5px", border: "1px solid #ccc", borderRadius: "4px" }}
+                          value={p.takt}
+                          placeholder="0.0"
+                          onChange={(e) => atualizarProduto(index, 'takt', e.target.value)}
+                        />
+                      </td>
+                      <td style={{ padding: "10px", fontWeight: "bold", color: "#16a34a" }}>
+                        <input 
+                          type="number"
+                          style={{ width: "80px", padding: "5px", border: "1px solid #ccc", borderRadius: "4px", color: "#16a34a", fontWeight: "bold" }}
+                          value={p.meta}
+                          placeholder="0"
+                          onChange={(e) => atualizarProduto(index, 'meta', e.target.value)}
+                        />
+                      </td>
+                      <td style={{ padding: "10px" }}>
+                        <Botao
+                          type="button"
+                          variant="danger"
+                          size="xs"
+                          onClick={() => removerProduto(p.id)}
+                        >
+                          ✕
+                        </Botao>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
 
@@ -384,35 +417,6 @@ export default function LinhaForm() {
               </button>
             </p>
           )}
-        </div>
-
-        <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
-          <label style={labelStyleResponsivo}>Takt Time (segundos) *</label>
-          <input
-            type="number"
-            name="takt_time_segundos"
-            value={form.takt_time_segundos}
-            onChange={handleChange}
-            required
-            min="0.1"
-            step="0.1"
-            style={inputStyleResponsivo}
-            placeholder="Ex: 45.5"
-          />
-        </div>
-
-        <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
-          <label style={labelStyleResponsivo}>Meta Diária (peças) *</label>
-          <input
-            type="number"
-            name="meta_diaria"
-            value={form.meta_diaria}
-            onChange={handleChange}
-            required
-            min="1"
-            style={inputStyleResponsivo}
-            placeholder="Ex: 1000"
-          />
         </div>
 
         <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
