@@ -446,7 +446,7 @@ export default function Cargos() {
                       return (
                         <tr key={cargo.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                           <td style={tdResponsivo}>{cargo.id}</td>
-                          <td style={tdResponsivo} title={cargo.nome}>{truncarTexto(cargo.nome, 15)}</td>
+                          <td style={tdResponsivo} title={cargo.nome}>{truncarTexto(cargo.nome, 25)}</td>
                           <td style={tdResponsivo}>{formatarMoeda(cargo.salario_base)}</td>
                           <td style={tdResponsivo}>{cargo.encargos_percentual || 70}%</td>
                           <td style={tdResponsivo}>
