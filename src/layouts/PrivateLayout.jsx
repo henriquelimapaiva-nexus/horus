@@ -24,7 +24,7 @@ function PrivateLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Carregar empresas - SEM CACHE
+  // Carregar empresas - SEM CACHE E SEM LOOP
   useEffect(() => {
     if (!isAuthenticated) return;
     
@@ -47,7 +47,7 @@ function PrivateLayout() {
             if (cliente) {
               setNomeCliente(cliente.nome);
               setClienteAtual(storedId);
-              selecionarCliente(cliente);
+              // ⚠️ NÃO chamar selecionarCliente aqui para evitar loop
             }
           }
         }
@@ -69,7 +69,7 @@ function PrivateLayout() {
       isMounted = false;
       window.removeEventListener('empresasAtualizadas', handleEmpresasAtualizadas);
     };
-  }, [isAuthenticated, selecionarCliente]);
+  }, [isAuthenticated]); // ✅ APENAS isAuthenticated
 
   // Recuperar cliente do localStorage
   useEffect(() => {
