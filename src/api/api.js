@@ -1,31 +1,63 @@
-import axios from 'axios';
+// Versão simplificada que acabamos de testar
+const API_URL = 'https://horus-backend-gzcp.onrender.com/api';
 
-// Ajustamos para garantir que o /api esteja na base, evitando repetir em cada chamada
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://horus-backend-gzcp.onrender.com';
-const API_URL = BASE_URL.endsWith('/api') ? BASE_URL : `${BASE_URL}/api`;
-
-console.log('🔌 Conectando à API:', API_URL);
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Interceptor para adicionar token em todas as requisições
-api.interceptors.request.use(
-  (config) => {
-    // Pegamos o token que foi salvo no Login
+const api = {
+  get: (url) => {
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
+    return fetch(`${API_URL}${url}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }).then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json().then(data => ({ data }));
+    });
   },
-  (error) => {
-    return Promise.reject(error);
+  
+  post: (url, body) => {
+    const token = localStorage.getItem('token');
+    return fetch(`${API_URL}${url}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }).then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json().then(data => ({ data }));
+    });
+  },
+  
+  put: (url, body) => {
+    const token = localStorage.getItem('token');
+    return fetch(`${API_URL}${url}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }).then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json().then(data => ({ data }));
+    });
+  },
+  
+  delete: (url) => {
+    const token = localStorage.getItem('token');
+    return fetch(`${API_URL}${url}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    }).then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json().then(data => ({ data }));
+    });
   }
-);
+};
 
 export default api;
