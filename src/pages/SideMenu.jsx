@@ -8,7 +8,8 @@ export default function SideMenu({ onFiltroChange }) {
   const [periodo, setPeriodo] = useState("mes"); 
 
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then((res) => setEmpresas(res.data))
       .catch((err) => console.error("Erro ao buscar empresas:", err));
   }, []);

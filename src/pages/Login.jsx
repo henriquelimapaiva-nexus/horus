@@ -35,39 +35,38 @@ export default function Login() {
     setCarregando(true);
 
     try {
-      // 1. Rota corrigida para /api/login (alinhada com o backend)
-      const response = await api.post("/api/login", {
+      // ✅ Rota correta: /login (api.js adiciona /api automaticamente)
+      const response = await api.post("/login", {
         email: form.email,
         senha: form.senha
       });
 
-      // 2. Extração dos dados conforme o retorno do seu servidor
-      const { token, mensagem } = response.data;
+      // ✅ Extração dos dados do backend
+      const { token, usuario } = response.data;
       
-      // 3. Objeto de usuário para manter o estado do AuthContext
-      // Extraímos o nome da mensagem de boas-vindas ou definimos um padrão
+      // ✅ Usa os dados reais do usuário retornados pelo backend
       const usuarioData = { 
-        nome: mensagem.split(", ")[1]?.replace(".", "") || "Usuário", 
-        email: form.email 
+        nome: usuario?.nome || "Consultor Nexus",
+        email: usuario?.email || form.email 
       };
 
-      // 4. Salva no Context e LocalStorage
+      // ✅ Salva no Context e LocalStorage
       login(token, usuarioData);
       
-      toast.success(mensagem || "Login realizado com sucesso! ✅");
+      toast.success(response.data.mensagem || "Login realizado com sucesso! ✅");
       
-      // 5. Redirecionamento
+      // ✅ Redirecionamento
       navigate("/dashboard");
 
     } catch (error) {
       console.error("Erro no login:", error);
       
       if (error.response) {
-        // Erro vindo do backend (401, 404, 500)
+        // Erro retornado pelo servidor (401, 403, etc)
         toast.error(error.response.data.erro || "Credenciais inválidas");
       } else if (error.request) {
-        // Backend offline ou problema de rede
-        toast.error("Servidor indisponível. Verifique se o backend está rodando.");
+        // Sem resposta do servidor (Backend offline ou URL errada)
+        toast.error("Servidor indisponível. Verifique a conexão.");
       } else {
         toast.error("Erro ao processar login.");
       }

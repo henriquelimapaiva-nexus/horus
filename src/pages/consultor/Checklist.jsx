@@ -30,7 +30,8 @@ export default function Checklist() {
   });
 
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
         console.error("Erro ao carregar empresas:", err);
@@ -66,8 +67,10 @@ export default function Checklist() {
 
     try {
       await criarProjeto({
-        empresa_id: empresaSelecionada,
-        ...novoProjeto
+        empresa_id: parseInt(empresaSelecionada),
+        nome: novoProjeto.nome,
+        data_inicio: novoProjeto.data_inicio,
+        data_previsao: novoProjeto.data_previsao
       });
       toast.success('Projeto criado!');
       setMostrarNovoProjeto(false);

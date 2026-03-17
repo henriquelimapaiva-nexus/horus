@@ -32,7 +32,8 @@ export default function DashboardFinanceiro() {
     setCarregando(true);
     
     try {
-      const empresasRes = await api.get("/empresas");
+      // ✅ CORRIGIDO: /empresas → /companies
+      const empresasRes = await api.get("/companies");
       const empresaId = parseInt(clienteAtual);
       const empresaAtual = empresasRes.data.find(e => e.id === empresaId);
       
@@ -45,7 +46,8 @@ export default function DashboardFinanceiro() {
 
       setEmpresa(empresaAtual);
 
-      const linhasRes = await api.get(`/linhas/${empresaAtual.id}`);
+      // ✅ CORRIGIDO: /linhas/${empresaAtual.id} → /lines/${empresaAtual.id}
+      const linhasRes = await api.get(`/lines/${empresaAtual.id}`);
       const linhasData = linhasRes.data;
       setLinhas(linhasData);
 
@@ -69,19 +71,23 @@ export default function DashboardFinanceiro() {
 
       for (const linha of linhasData) {
         try {
-          const postosRes = await api.get(`/postos/${linha.id}`);
+          // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
+          const postosRes = await api.get(`/work-stations/${linha.id}`);
           const postos = postosRes.data;
 
-          const produtosRes = await api.get(`/linha-produto/${linha.id}`).catch(() => ({ data: [] }));
-          const produtos = produtosRes.data;
+          // ✅ CORRIGIDO: /linha-produto/${linha.id} → /line-products/${linha.id}
+          const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
+          const produtos = produtosRes.data.dados || produtosRes.data || [];
 
-          const perdasRes = await api.get(`/perdas/${linha.id}`).catch(() => ({ data: [] }));
+          // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
+          const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
 
           let custoLinha = 0;
           for (const posto of postos) {
             if (posto.cargo_id) {
-              const cargosRes = await api.get(`/cargos/${empresaAtual.id}`).catch(() => ({ data: [] }));
+              // ✅ CORRIGIDO: /cargos/${empresaAtual.id} → /roles/${empresaAtual.id}
+              const cargosRes = await api.get(`/roles/${empresaAtual.id}`).catch(() => ({ data: [] }));
               const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
               if (cargo) {
                 const salario = parseFloat(cargo.salario_base) || 0;
@@ -101,7 +107,7 @@ export default function DashboardFinanceiro() {
           });
 
           produtos.forEach(prod => {
-            const perda = perdas.find(p => p.linha_produto_id === prod.id);
+            const perda = perdas.find(p => p.linha_produto_id === (prod.vinculo_id || prod.id));
             if (perda) {
               perdasMicro += (perda.microparadas_minutos || 0) * custoMinuto * 22;
               
@@ -110,6 +116,7 @@ export default function DashboardFinanceiro() {
             }
           });
 
+          // ✅ CORRIGIDO: /analise-linha mantido (já corrigido anteriormente)
           const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
           if (analiseRes.data.capacidade_estimada_dia) {
             producaoTotal += analiseRes.data.capacidade_estimada_dia * 22;

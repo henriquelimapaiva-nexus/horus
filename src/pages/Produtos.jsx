@@ -35,7 +35,8 @@ export default function Produtos() {
   async function carregarProdutosDaEmpresa() {
     setCarregando(true);
     try {
-      const res = await api.get(`/produtos/filtro/empresa/${clienteAtual}`);
+      // ✅ CORRIGIDO: /produtos/filtro/empresa/${clienteAtual} → /products/company/${clienteAtual}
+      const res = await api.get(`/products/company/${clienteAtual}`);
       setProdutos(res.data);
       
       if (res.data.length === 0) {
@@ -71,17 +72,19 @@ export default function Produtos() {
     setCarregando(true);
     try {
       if (editId) {
-        await api.put(`/produtos/${editId}`, {
+        // ✅ CORRIGIDO: /produtos/${editId} → /products/${editId}
+        await api.put(`/products/${editId}`, {
           nome: form.nome,
           valor_unitario: form.valor_unitario ? parseFloat(form.valor_unitario) : 0
         });
         toast.success("Produto atualizado com sucesso! ✅");
         setEditId(null);
       } else {
-        await api.post("/produtos", {
+        // ✅ CORRIGIDO: /produtos → /products
+        await api.post("/products", {
           nome: form.nome,
           valor_unitario: form.valor_unitario ? parseFloat(form.valor_unitario) : 0,
-          empresa_id: clienteAtual 
+          empresa_id: parseInt(clienteAtual)
         });
         toast.success("Produto cadastrado com sucesso! ✅");
       }
@@ -92,7 +95,13 @@ export default function Produtos() {
 
     } catch (error) {
       console.error("Erro ao salvar produto:", error);
-      toast.error("Erro ao salvar produto ❌");
+      
+      // Tratamento de erro específico
+      if (error.response?.status === 400) {
+        toast.error("Dados inválidos. Verifique o nome e valor ❌");
+      } else {
+        toast.error("Erro ao salvar produto ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -112,12 +121,19 @@ export default function Produtos() {
     
     setCarregando(true);
     try {
-      await api.delete(`/produtos/${id}`);
+      // ✅ CORRIGIDO: /produtos/${id} → /products/${id}
+      await api.delete(`/products/${id}`);
       await carregarProdutosDaEmpresa(); 
       toast.success("Produto excluído com sucesso ✅");
     } catch (error) {
       console.error("Erro ao excluir produto:", error);
-      toast.error("Erro ao excluir produto ❌");
+      
+      // Tratamento de erro se o produto estiver vinculado a uma linha
+      if (error.response?.status === 400 && error.response?.data?.erro?.includes("vinculado")) {
+        toast.error("Produto está vinculado a uma linha de produção. Remova o vínculo primeiro ❌");
+      } else {
+        toast.error("Erro ao excluir produto ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -131,7 +147,7 @@ export default function Produtos() {
   };
 
   const produtosFiltrados = produtos.filter(p =>
-    p.nome.toLowerCase().includes(filtroNome.toLowerCase())
+    p.nome?.toLowerCase().includes(filtroNome.toLowerCase())
   );
 
   return (
@@ -284,26 +300,37 @@ export default function Produtos() {
                   </tr>
                 </thead>
                 <tbody>
-                  {produtosFiltrados.map((produto) => (
-                    <tr key={produto.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={tdResponsivo}>{produto.id}</td>
-                      {/* AJUSTE: Nome completo com quebra de linha se necessário */}
-                      <td style={{...tdResponsivo, textAlign: "left", whiteSpace: "normal", wordWrap: "break-word", maxWidth: "400px"}}>
-                        {produto.nome}
-                      </td>
-                      <td style={tdResponsivo}>{formatarMoeda(produto.valor_unitario)}</td>
-                      <td style={tdResponsivo}>
-                        <div style={{display: 'flex', gap: '5px', justifyContent: 'center'}}>
-                          <Botao variant="primary" size="sm" onClick={() => handleEdit(produto)}>
-                            Editar
-                          </Botao>
-                          <Botao variant="danger" size="sm" onClick={() => handleDelete(produto.id)}>
-                            Excluir
-                          </Botao>
-                        </div>
+                  {produtosFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan="4" style={{ 
+                        textAlign: "center", 
+                        padding: "30px", 
+                        color: "#666" 
+                      }}>
+                        Nenhum produto encontrado
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    produtosFiltrados.map((produto) => (
+                      <tr key={produto.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={tdResponsivo}>{produto.id}</td>
+                        <td style={{...tdResponsivo, textAlign: "left", whiteSpace: "normal", wordWrap: "break-word", maxWidth: "400px"}}>
+                          {produto.nome}
+                        </td>
+                        <td style={tdResponsivo}>{formatarMoeda(produto.valor_unitario)}</td>
+                        <td style={tdResponsivo}>
+                          <div style={{display: 'flex', gap: '5px', justifyContent: 'center'}}>
+                            <Botao variant="primary" size="sm" onClick={() => handleEdit(produto)}>
+                              Editar
+                            </Botao>
+                            <Botao variant="danger" size="sm" onClick={() => handleDelete(produto.id)}>
+                              Excluir
+                            </Botao>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -314,7 +341,31 @@ export default function Produtos() {
   );
 }
 
-const labelStyleResponsivo = { display: "block", marginBottom: "6px", color: "#374151", fontSize: "14px", fontWeight: "500" };
-const inputStyleResponsivo = { padding: "8px", borderRadius: "4px", border: "1px solid #d1d5db", outline: "none", boxSizing: "border-box" };
-const thResponsivo = { padding: "12px", border: "1px solid #e5e7eb", textAlign: "center" };
-const tdResponsivo = { padding: "10px", border: "1px solid #e5e7eb", textAlign: "center" };
+const labelStyleResponsivo = { 
+  display: "block", 
+  marginBottom: "6px", 
+  color: "#374151", 
+  fontSize: "14px", 
+  fontWeight: "500" 
+};
+
+const inputStyleResponsivo = { 
+  width: "100%",
+  padding: "8px", 
+  borderRadius: "4px", 
+  border: "1px solid #d1d5db", 
+  outline: "none", 
+  boxSizing: "border-box" 
+};
+
+const thResponsivo = { 
+  padding: "12px", 
+  border: "1px solid #e5e7eb", 
+  textAlign: "center" 
+};
+
+const tdResponsivo = { 
+  padding: "10px", 
+  border: "1px solid #e5e7eb", 
+  textAlign: "center" 
+};

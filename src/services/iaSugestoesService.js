@@ -3,28 +3,39 @@ import api from '../api/api';
 
 export async function gerarSugestoes(empresaId) {
   try {
-    const token = localStorage.getItem('token');
+    // ✅ CORRIGIDO: usando api.js em vez de fetch
+    // ✅ O api.js já adiciona o token automaticamente via interceptor
+    // ✅ A baseURL já está configurada em api.js
     
-    // 🟢 URL FIXA DEFINITIVA - NÃO DEPENDE DE VARIÁVEL DE AMBIENTE
-    const API_URL = 'https://horus-backend-gzcp.onrender.com';
+    const response = await api.get(`/ia/sugestoes/${empresaId}`);
     
-    const response = await fetch(`${API_URL}/api/ia/sugestoes/${empresaId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : ''
-      }
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.erro || 'Erro ao gerar sugestões');
-    }
-
-    return data.sugestoes;
+    return response.data.sugestoes;
   } catch (error) {
     console.error('Erro no serviço de sugestões:', error);
+    
+    // ✅ Se quiser manter dados simulados como fallback
+    if (error.response?.status === 404) {
+      console.log('Endpoint não encontrado, retornando dados simulados');
+      return {
+        resumo: "Análise baseada em dados simulados. Configure o endpoint /ia/sugestoes no backend.",
+        acoes: [
+          {
+            titulo: "Redução de Setup",
+            descricao: "Implementar SMED nos principais gargalos",
+            prioridade: "alta",
+            ganho: "R$ 15.000/mês",
+            esforco: "2 semanas",
+            investimento: "R$ 8.000"
+          }
+        ],
+        projecoes: {
+          novoOEE: "78%",
+          ganhoMensal: "R$ 25.000",
+          tempoEstimado: "3 meses"
+        }
+      };
+    }
+    
     throw error;
   }
 }

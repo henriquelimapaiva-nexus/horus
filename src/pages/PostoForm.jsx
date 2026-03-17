@@ -50,10 +50,11 @@ export default function PostoForm() {
 
   async function buscarDadosLinha() {
     try {
-      const res = await api.get(`/linhas/${linhaId}`);
-      if (res.data && res.data.length > 0) {
-        const linha = res.data[0];
-        setEmpresaId(linha.empresa_id);
+      // ✅ CORRIGIDO: /linhas/${linhaId} → /lines/${linhaId}
+      const res = await api.get(`/lines/${linhaId}`);
+      // A resposta de /lines/:linhaId retorna um objeto, não um array
+      if (res.data && res.data.empresa_id) {
+        setEmpresaId(res.data.empresa_id);
       }
     } catch (error) {
       console.error("Erro ao buscar dados da linha:", error);
@@ -63,7 +64,8 @@ export default function PostoForm() {
 
   async function carregarCargos() {
     try {
-      const res = await api.get(`/cargos/${empresaId}`);
+      // ✅ CORRIGIDO: /cargos/${empresaId} → /roles/${empresaId}
+      const res = await api.get(`/roles/${empresaId}`);
       setCargos(res.data);
     } catch (error) {
       console.error("Erro ao carregar cargos:", error);
@@ -73,12 +75,13 @@ export default function PostoForm() {
 
   async function carregarPosto() {
     try {
-      const res = await api.get(`/postos/${linhaId}`);
+      // ✅ CORRIGIDO: /postos/${linhaId} → /work-stations/${linhaId}
+      const res = await api.get(`/work-stations/${linhaId}`);
       const posto = res.data.find(p => p.id === parseInt(postoId));
       if (posto) {
         setForm({
           nome: posto.nome || "",
-          linha_id: posto.linha_id || linhaId,
+          linha_id: posto.linha_id || parseInt(linhaId),
           tempo_ciclo_segundos: posto.tempo_ciclo_segundos || "",
           tempo_setup_minutos: posto.tempo_setup_minutos || "",
           disponibilidade_percentual: posto.disponibilidade_percentual || "95",
@@ -105,22 +108,26 @@ export default function PostoForm() {
     
     try {
       if (postoId) {
-        await api.put(`/postos/${postoId}`, {
-          ...form,
+        // ✅ CORRIGIDO: /postos/${postoId} → /work-stations/${postoId}
+        await api.put(`/work-stations/${postoId}`, {
+          nome: form.nome,
           tempo_ciclo_segundos: parseFloat(form.tempo_ciclo_segundos) || 0,
           tempo_setup_minutos: parseFloat(form.tempo_setup_minutos) || 0,
           disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 95,
-          cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null
+          cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null,
+          ordem_fluxo: form.ordem_fluxo ? parseInt(form.ordem_fluxo) : null
         });
         toast.success("Posto atualizado com sucesso! ✅");
       } else {
-        await api.post("/postos", {
-          ...form,
+        // ✅ CORRIGIDO: /postos → /work-stations
+        await api.post("/work-stations", {
           linha_id: parseInt(linhaId),
+          nome: form.nome,
           tempo_ciclo_segundos: parseFloat(form.tempo_ciclo_segundos) || 0,
           tempo_setup_minutos: parseFloat(form.tempo_setup_minutos) || 0,
           disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 95,
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null
+          // ordem_fluxo será gerado automaticamente pelo backend
         });
         toast.success("Posto cadastrado com sucesso! ✅");
       }
@@ -131,7 +138,13 @@ export default function PostoForm() {
 
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao salvar posto ❌");
+      
+      // Tratamento de erro específico
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.erro || "Erro ao salvar posto ❌");
+      } else {
+        toast.error("Erro ao salvar posto ❌");
+      }
     } finally {
       setCarregando(false);
     }

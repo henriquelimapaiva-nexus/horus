@@ -32,14 +32,16 @@ function VisaoGeral({ linha, linhaId }) {
     
     setCarregando(true);
     Promise.all([
-      api.get(`/simulacao-linha/${linhaId}`).catch(() => ({ data: {} })),
-      api.get(`/historico-linha/${linhaId}`).catch(() => ({ data: [] }))
+      // ✅ CORRIGIDO: /simulacao-linha → /simulation
+      api.get(`/simulation/${linhaId}`).catch(() => ({ data: {} })),
+      // ✅ CORRIGIDO: /historico-linha → /history/line
+      api.get(`/history/line/${linhaId}`).catch(() => ({ data: [] }))
     ])
       .then(([simulacao, historico]) => {
-        if (simulacao.data.produtos && simulacao.data.produtos.length > 0) {
-          setDadosSimulacao(simulacao.data.produtos[0]);
+        if (simulacao.data.simulacao && simulacao.data.simulacao.length > 0) {
+          setDadosSimulacao(simulacao.data.simulacao[0]);
         }
-        setDadosHistoricos(historico.data);
+        setDadosHistoricos(historico.data.historico || []);
       })
       .catch((err) => {
         console.error("Erro ao carregar dados:", err);
@@ -55,9 +57,9 @@ function VisaoGeral({ linha, linhaId }) {
   };
 
   const dadosOEE = {
-    disponibilidade: dadosSimulacao?.disponibilidade_percentual || 0,
-    performance: dadosSimulacao?.performance_percentual || 0,
-    qualidade: dadosSimulacao?.qualidade_percentual || 0,
+    disponibilidade: parseFloat(dadosSimulacao?.indicadores?.disponibilidade) || 0,
+    performance: parseFloat(dadosSimulacao?.indicadores?.performance) || 0,
+    qualidade: parseFloat(dadosSimulacao?.indicadores?.qualidade) || 0,
     oee: linha.eficiencia_percentual || 0
   };
 
@@ -65,7 +67,7 @@ function VisaoGeral({ linha, linhaId }) {
     const data = new Date(d.mes);
     return data.toLocaleDateString('pt-BR', { month: 'short' });
   });
-  const valoresOEE = dadosHistoricos.map(d => d.oee);
+  const valoresOEE = dadosHistoricos.map(d => d.oee_performance || 0);
 
   return (
     <div>
@@ -90,17 +92,17 @@ function VisaoGeral({ linha, linhaId }) {
         />
         <Card 
           titulo="Gargalo" 
-          valor={truncarTexto(linha.gargalo || "Não identificado", 20)}
+          valor={truncarTexto(linha.gargalo_identificado || "Não identificado", 20)}
           cor="#1E3A8A"
         />
         <Card 
           titulo="Capacidade Estimada" 
-          valor={`${linha.capacidade_estimada_dia || 0} pç/dia`}
+          valor={`${linha.capacidade_real_estimada || 0} pç/dia`}
           cor="#0f172a"
         />
         <Card 
           titulo="Takt Time" 
-          valor={`${linha.takt_time_segundos || 0}s`}
+          valor={`${linha.takt_time_alvo || 0}s`}
           cor="#6b7280"
         />
       </div>
@@ -175,7 +177,7 @@ function VisaoGeral({ linha, linhaId }) {
             <div>
               <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>Meta diária:</span>
               <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", margin: "5px 0" }}>
-                {linha.meta_diaria_planejada || 0} pç
+                {linha.meta_planejada || 0} pç
               </p>
             </div>
             <div>
@@ -245,7 +247,8 @@ function Mapa({ linha, linhaId }) {
     if (!linhaId) return;
     
     setCarregando(true);
-    api.get(`/postos/${linhaId}`)
+    // ✅ CORRIGIDO: /postos → /work-stations
+    api.get(`/work-stations/${linhaId}`)
       .then((res) => setPostos(res.data))
       .catch((err) => {
         console.error("Erro ao carregar postos:", err);
@@ -488,14 +491,16 @@ function Mapa({ linha, linhaId }) {
 // ABA 3 - POSTOS (TABELA COMPLETA)
 // ========================================
 function Postos({ linha, linhaId }) {
-  const [postos, setPostos] = useState(linha.postos || []);
+  const [postos, setPostos] = useState([]);
+  const [cargos, setCargos] = useState([]);
   const [carregando, setCarregando] = useState(false);
 
   useEffect(() => {
     if (!linhaId) return;
     
     setCarregando(true);
-    api.get(`/postos/${linhaId}`)
+    // ✅ CORRIGIDO: /postos → /work-stations
+    api.get(`/work-stations/${linhaId}`)
       .then((res) => setPostos(res.data))
       .catch((err) => {
         console.error("Erro ao carregar postos:", err);
@@ -593,7 +598,7 @@ function Postos({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 5 - BALANCEAMENTO (COM GRÁFICOS)
+// ABA 4 - BALANCEAMENTO (COM GRÁFICOS)
 // ========================================
 function Balanceamento({ linha, linhaId }) {
   const [dados, setDados] = useState(null);
@@ -604,7 +609,8 @@ function Balanceamento({ linha, linhaId }) {
     if (!linhaId) return;
     
     setCarregando(true);
-    api.get(`/balanceamento/${linhaId}`)
+    // ✅ CORRIGIDO: /balanceamento → /line-balancing
+    api.get(`/line-balancing/${linhaId}`)
       .then((res) => {
         setDados(res.data);
         setErro("");
@@ -635,7 +641,7 @@ function Balanceamento({ linha, linhaId }) {
     );
   }
 
-  if (!dados || dados.quantidade_postos === 0) {
+  if (!dados || dados.total_postos === 0) {
     return (
       <div style={{ 
         backgroundColor: "white", 
@@ -655,8 +661,8 @@ function Balanceamento({ linha, linhaId }) {
     return "#dc2626";
   };
 
-  const nomesPostos = dados.postos.map(p => p.posto);
-  const temposPostos = dados.postos.map(p => parseFloat(p.ciclo_real));
+  const nomesPostos = dados.detalhes_por_posto.map(p => p.posto);
+  const temposPostos = dados.detalhes_por_posto.map(p => parseFloat(p.ciclo_real));
 
   return (
     <div>
@@ -676,23 +682,23 @@ function Balanceamento({ linha, linhaId }) {
       }}>
         <Card 
           titulo="Índice de Balanceamento" 
-          valor={`${dados.indice_balanceamento_percentual}%`}
-          cor={getBalanceamentoCor(parseFloat(dados.indice_balanceamento_percentual))}
+          valor={dados.resumo_executivo.indice_balanceamento}
+          cor={getBalanceamentoCor(parseFloat(dados.resumo_executivo.indice_balanceamento))}
         />
         <Card 
           titulo="Tempo Médio" 
-          valor={`${dados.tempo_medio_segundos}s`}
+          valor={`${dados.resumo_executivo.tempo_total_agregado}s`}
           cor="#1E3A8A"
         />
         <Card 
           titulo="Maior Tempo" 
-          valor={`${dados.maior_tempo_segundos}s`}
+          valor={`${dados.resumo_executivo.ritmo_da_linha_seg}s`}
           cor="#dc2626"
         />
         <Card 
-          titulo="Menor Tempo" 
-          valor={`${dados.menor_tempo_segundos}s`}
-          cor="#16a34a"
+          titulo="Perda por Desbalanceamento" 
+          valor={dados.resumo_executivo.perda_por_desbalanceamento}
+          cor="#f59e0b"
         />
       </div>
 
@@ -733,13 +739,13 @@ function Balanceamento({ linha, linhaId }) {
           <GraficoPizza 
             labels={['Abaixo', 'Na média', 'Acima']}
             valores={[
-              dados.postos.filter(p => parseFloat(p.ciclo_real) < parseFloat(dados.tempo_medio_segundos) * 0.95).length,
-              dados.postos.filter(p => {
+              dados.detalhes_por_posto.filter(p => parseFloat(p.ciclo_real) < parseFloat(dados.resumo_executivo.tempo_total_agregado) * 0.95).length,
+              dados.detalhes_por_posto.filter(p => {
                 const tempo = parseFloat(p.ciclo_real);
-                const media = parseFloat(dados.tempo_medio_segundos);
+                const media = parseFloat(dados.resumo_executivo.tempo_total_agregado);
                 return tempo >= media * 0.95 && tempo <= media * 1.05;
               }).length,
-              dados.postos.filter(p => parseFloat(p.ciclo_real) > parseFloat(dados.tempo_medio_segundos) * 1.05).length
+              dados.detalhes_por_posto.filter(p => parseFloat(p.ciclo_real) > parseFloat(dados.resumo_executivo.tempo_total_agregado) * 1.05).length
             ]}
             titulo="Distribuição dos Postos"
             cores={[coresNexus.success, coresNexus.primary, coresNexus.warning]}
@@ -769,10 +775,10 @@ function Balanceamento({ linha, linhaId }) {
               color: "#dc2626",
               marginBottom: "5px"
             }}>
-              {truncarTexto(dados.postos.find(p => parseFloat(p.ciclo_real) === parseFloat(dados.maior_tempo_segundos))?.posto, 15)}
+              {truncarTexto(dados.detalhes_por_posto.find(p => parseFloat(p.ciclo_real) === parseFloat(dados.resumo_executivo.ritmo_da_linha_seg))?.posto, 15)}
             </div>
             <div style={{ fontSize: "clamp(18px, 3vw, 24px)", color: "#666" }}>
-              {dados.maior_tempo_segundos}s
+              {dados.resumo_executivo.ritmo_da_linha_seg}s
             </div>
             <div style={{ 
               marginTop: "clamp(15px, 2vw, 20px)",
@@ -781,7 +787,7 @@ function Balanceamento({ linha, linhaId }) {
               borderRadius: "4px",
               color: "#dc2626"
             }}>
-              ⚠️ {((parseFloat(dados.maior_tempo_segundos) / parseFloat(dados.tempo_medio_segundos) - 1) * 100).toFixed(1)}% acima da média
+              ⚠️ {((parseFloat(dados.resumo_executivo.ritmo_da_linha_seg) / parseFloat(dados.resumo_executivo.tempo_total_agregado) - 1) * 100).toFixed(1)}% acima da média
             </div>
           </div>
         </div>
@@ -810,11 +816,11 @@ function Balanceamento({ linha, linhaId }) {
             </tr>
           </thead>
           <tbody>
-            {dados.postos.map((posto, index) => {
+            {dados.detalhes_por_posto.map((posto, index) => {
               const tempo = parseFloat(posto.ciclo_real);
-              const media = parseFloat(dados.tempo_medio_segundos);
+              const media = parseFloat(dados.resumo_executivo.tempo_total_agregado);
               const desvio = ((tempo - media) / media * 100).toFixed(1);
-              const isGargalo = tempo === parseFloat(dados.maior_tempo_segundos);
+              const isGargalo = tempo === parseFloat(dados.resumo_executivo.ritmo_da_linha_seg);
               
               return (
                 <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
@@ -847,10 +853,10 @@ function Balanceamento({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 6 - VARIABILIDADE (COM GRÁFICOS)
+// ABA 5 - VARIABILIDADE (COM GRÁFICOS)
 // ========================================
 function Variabilidade({ linha, linhaId }) {
-  const [postos, setPostos] = useState(linha.postos || []);
+  const [postos, setPostos] = useState([]);
   const [dadosVariabilidade, setDadosVariabilidade] = useState({});
   const [carregando, setCarregando] = useState(false);
   const [postoSelecionado, setPostoSelecionado] = useState("");
@@ -860,7 +866,8 @@ function Variabilidade({ linha, linhaId }) {
     if (!linhaId) return;
     
     setCarregando(true);
-    api.get(`/postos/${linhaId}`)
+    // ✅ CORRIGIDO: /postos → /work-stations
+    api.get(`/work-stations/${linhaId}`)
       .then((res) => setPostos(res.data))
       .catch((err) => {
         console.error("Erro ao carregar postos:", err);
@@ -874,8 +881,9 @@ function Variabilidade({ linha, linhaId }) {
     
     setCarregando(true);
     Promise.all([
-      api.get(`/variabilidade/${postoSelecionado}`),
-      api.get(`/medicoes/${postoSelecionado}?tipo=ciclo`)
+      // ✅ CORRIGIDO: /variabilidade → /variability
+      api.get(`/variability/${postoSelecionado}`),
+      api.get(`/cycle-measurements?posto_id=${postoSelecionado}`).catch(() => ({ data: [] }))
     ])
       .then(([variabilidade, medicoes]) => {
         setDadosVariabilidade({
@@ -892,13 +900,14 @@ function Variabilidade({ linha, linhaId }) {
   }, [postoSelecionado]);
 
   const getClassificacaoCor = (classificacao) => {
-    if (classificacao.includes("muito estável")) return "#16a34a";
+    if (classificacao.includes("Excelente")) return "#16a34a";
     if (classificacao.includes("estável")) return "#16a34a";
     if (classificacao.includes("instável")) return "#f59e0b";
-    return "#dc2626";
+    if (classificacao.includes("crítico")) return "#dc2626";
+    return "#ccc";
   };
 
-  const valoresCiclo = dadosMedicoes.map(m => m.valor_numerico).filter(v => v > 0);
+  const valoresCiclo = dadosMedicoes.map(m => m.tempo_ciclo_segundos).filter(v => v > 0);
   const histograma = {};
   valoresCiclo.forEach(v => {
     const faixa = Math.floor(v / 2) * 2;
@@ -983,7 +992,7 @@ function Variabilidade({ linha, linhaId }) {
               padding: "clamp(12px, 1.5vw, 15px)", 
               borderRadius: "8px", 
               boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              borderLeft: dado ? `4px solid ${getClassificacaoCor(dado.classificacao)}` : "4px solid #ccc",
+              borderLeft: dado ? `4px solid ${getClassificacaoCor(dado.diagnostico?.classificacao)}` : "4px solid #ccc",
               width: "100%",
               boxSizing: "border-box"
             }}>
@@ -1004,37 +1013,37 @@ function Variabilidade({ linha, linhaId }) {
                     <div>
                       <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Média:</span>
                       <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: "2px 0" }}>
-                        {dado.media_segundos}s
+                        {dado.estatisticas?.media_segundos}s
                       </p>
                     </div>
                     <div>
                       <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Desvio:</span>
                       <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: "2px 0" }}>
-                        {dado.desvio_padrao_segundos}s
+                        {dado.estatisticas?.desvio_padrao}s
                       </p>
                     </div>
                     <div>
                       <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>CV:</span>
                       <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: "2px 0" }}>
-                        {dado.coeficiente_variacao_percentual}%
+                        {dado.estatisticas?.coeficiente_variacao}
                       </p>
                     </div>
                     <div>
                       <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Medições:</span>
                       <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: "2px 0" }}>
-                        {dado.quantidade_medicoes}
+                        {dado.metadados?.total_amostras}
                       </p>
                     </div>
                   </div>
                   <div style={{ 
                     marginTop: "8px", 
                     padding: "4px", 
-                    backgroundColor: getClassificacaoCor(dado.classificacao) + "20",
+                    backgroundColor: getClassificacaoCor(dado.diagnostico?.classificacao) + "20",
                     borderRadius: "4px",
                     textAlign: "center"
                   }}>
-                    <span style={{ color: getClassificacaoCor(dado.classificacao), fontWeight: "bold", fontSize: "clamp(11px, 1.3vw, 12px)" }}>
-                      {dado.classificacao}
+                    <span style={{ color: getClassificacaoCor(dado.diagnostico?.classificacao), fontWeight: "bold", fontSize: "clamp(11px, 1.3vw, 12px)" }}>
+                      {dado.diagnostico?.classificacao}
                     </span>
                   </div>
                 </>
@@ -1101,17 +1110,17 @@ function Variabilidade({ linha, linhaId }) {
                   overflow: "hidden"
                 }}>
                   <div style={{ 
-                    width: `${Math.min(100, (1 - dadosVariabilidade[postoSelecionado].coeficiente_variacao_percentual / 100) * 100)}%`,
+                    width: `${Math.min(100, (1 - parseFloat(dadosVariabilidade[postoSelecionado].estatisticas?.coeficiente_variacao || 0) / 100) * 100)}%`,
                     height: "100%",
-                    backgroundColor: dadosVariabilidade[postoSelecionado].coeficiente_variacao_percentual < 10 ? "#16a34a" :
-                                   dadosVariabilidade[postoSelecionado].coeficiente_variacao_percentual < 20 ? "#f59e0b" : "#dc2626"
+                    backgroundColor: parseFloat(dadosVariabilidade[postoSelecionado].estatisticas?.coeficiente_variacao || 100) < 10 ? "#16a34a" :
+                                   parseFloat(dadosVariabilidade[postoSelecionado].estatisticas?.coeficiente_variacao || 100) < 20 ? "#f59e0b" : "#dc2626"
                   }} />
                 </div>
               </div>
               <div>
                 <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>IC 95%:</span>
                 <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold" }}>
-                  {dadosVariabilidade[postoSelecionado].media_segundos} ± {(dadosVariabilidade[postoSelecionado].desvio_padrao_segundos * 1.96).toFixed(2)}s
+                  {dadosVariabilidade[postoSelecionado].estatisticas?.media_segundos} ± {(parseFloat(dadosVariabilidade[postoSelecionado].estatisticas?.desvio_padrao || 0) * 1.96).toFixed(2)}s
                 </p>
               </div>
             </div>
@@ -1123,7 +1132,7 @@ function Variabilidade({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 7 - SIMULAÇÃO (COM GRÁFICOS)
+// ABA 6 - SIMULAÇÃO (COM GRÁFICOS)
 // ========================================
 function Simulacao({ linha, linhaId }) {
   const [dados, setDados] = useState(null);
@@ -1134,7 +1143,8 @@ function Simulacao({ linha, linhaId }) {
     if (!linhaId) return;
     
     setCarregando(true);
-    api.get(`/simulacao-linha/${linhaId}`)
+    // ✅ CORRIGIDO: /simulacao-linha → /simulation
+    api.get(`/simulation/${linhaId}`)
       .then((res) => {
         setDados(res.data);
         setErro("");
@@ -1165,7 +1175,7 @@ function Simulacao({ linha, linhaId }) {
     );
   }
 
-  if (!dados || !dados.produtos || dados.produtos.length === 0) {
+  if (!dados || !dados.simulacao || dados.simulacao.length === 0) {
     return (
       <div style={{ 
         backgroundColor: "white", 
@@ -1189,11 +1199,10 @@ function Simulacao({ linha, linhaId }) {
         Simulação de Melhorias e ROI
       </h2>
       
-      {dados.produtos.map((prod, index) => {
-        const oeeAtual = parseFloat(prod.oee_percentual);
-        const deficitAtual = prod.deficit_pecas_dia;
-        const capacidadeAtual = prod.capacidade_bruta_dia;
-        const cicloGargalo = parseFloat(prod.tempo_ciclo_real_gargalo);
+      {dados.simulacao.map((prod, index) => {
+        const oeeAtual = parseFloat(prod.indicadores?.oee_global) || 0;
+        const deficitAtual = prod.perda_diaria_pecas || 0;
+        const capacidadeAtual = prod.capacidade_real_dia || 0;
         
         const cenarios = [
           { nome: "Redução 10%", fator: 0.9 },
@@ -1202,15 +1211,13 @@ function Simulacao({ linha, linhaId }) {
         ];
 
         const resultadosCenarios = cenarios.map(c => {
-          const novoCiclo = cicloGargalo * c.fator;
-          const novaCapacidade = Math.floor(capacidadeAtual * (cicloGargalo / novoCiclo));
-          const novoOEE = oeeAtual * (cicloGargalo / novoCiclo);
+          const novaCapacidade = Math.floor(capacidadeAtual / c.fator);
+          const novoOEE = oeeAtual / c.fator;
           const ganho = novaCapacidade - capacidadeAtual;
           const ganhoFinanceiro = ganho * 50 * 22;
           
           return {
             ...c,
-            novoCiclo,
             novaCapacidade,
             novoOEE,
             ganho,
@@ -1263,7 +1270,7 @@ function Simulacao({ linha, linhaId }) {
               }}>
                 <GraficoBarras 
                   labels={['Atual', 'Potencial']}
-                  valores={[prod.producao_boa_dia, prod.capacidade_bruta_dia]}
+                  valores={[prod.capacidade_real_dia, prod.capacidade_real_dia * 1.2]}
                   titulo="Produção (peças/dia)"
                   cor={[coresNexus.warning, coresNexus.success]}
                   formato="numero"
@@ -1280,30 +1287,6 @@ function Simulacao({ linha, linhaId }) {
                 OEE Atual
               </h4>
               <div style={{ 
-                display: "grid", 
-                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 100px), 1fr))", 
-                gap: "10px" 
-              }}>
-                <div>
-                  <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Disponibilidade:</span>
-                  <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", margin: "2px 0" }}>
-                    {prod.disponibilidade_percentual}%
-                  </p>
-                </div>
-                <div>
-                  <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Performance:</span>
-                  <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", margin: "2px 0" }}>
-                    {prod.performance_percentual}%
-                  </p>
-                </div>
-                <div>
-                  <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Qualidade:</span>
-                  <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", margin: "2px 0" }}>
-                    {prod.qualidade_percentual}%
-                  </p>
-                </div>
-              </div>
-              <div style={{ 
                 marginTop: "10px", 
                 padding: "clamp(8px, 1.5vw, 10px)", 
                 backgroundColor: "#1E3A8A20", 
@@ -1311,7 +1294,7 @@ function Simulacao({ linha, linhaId }) {
                 textAlign: "center"
               }}>
                 <span style={{ color: "#1E3A8A", fontWeight: "bold", fontSize: "clamp(16px, 2.5vw, 20px)" }}>
-                  OEE: {prod.oee_percentual}%
+                  OEE: {prod.indicadores?.oee_global}
                 </span>
               </div>
             </div>
@@ -1427,7 +1410,7 @@ function Simulacao({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 4 - AÇÕES (COM BACKEND)
+// ABA 7 - AÇÕES (COM BACKEND)
 // ========================================
 function Acoes({ linha, linhaId }) {
   const [acoes, setAcoes] = useState([]);
@@ -1444,7 +1427,8 @@ function Acoes({ linha, linhaId }) {
   async function carregarAcoes() {
     setCarregando(true);
     try {
-      const response = await api.get(`/acoes/${linhaId}`);
+      // ✅ CORRIGIDO: /acoes → /actions
+      const response = await api.get(`/actions/${linhaId}`);
       setAcoes(response.data);
       setErro("");
     } catch (error) {
@@ -1460,7 +1444,8 @@ function Acoes({ linha, linhaId }) {
     if (!novaAcao.trim()) return;
     
     try {
-      const response = await api.post("/acoes", {
+      // ✅ CORRIGIDO: /acoes → /actions
+      const response = await api.post("/actions", {
         linha_id: parseInt(linhaId),
         texto: novaAcao,
         prioridade: "media"
@@ -1479,7 +1464,8 @@ function Acoes({ linha, linhaId }) {
 
   async function toggleConcluida(acao) {
     try {
-      const response = await api.put(`/acoes/${acao.id}`, {
+      // ✅ CORRIGIDO: /acoes → /actions
+      const response = await api.put(`/actions/${acao.id}`, {
         concluida: !acao.concluida
       });
       
@@ -1499,7 +1485,8 @@ function Acoes({ linha, linhaId }) {
     if (!window.confirm("Excluir esta ação?")) return;
     
     try {
-      await api.delete(`/acoes/${id}`);
+      // ✅ CORRIGIDO: /acoes → /actions
+      await api.delete(`/actions/${id}`);
       setAcoes(acoes.filter(a => a.id !== id));
       setErro("");
       toast.success("Ação excluída com sucesso ✅");
@@ -1691,8 +1678,9 @@ function Historico({ linha, linhaId }) {
   async function carregarHistorico() {
     setCarregando(true);
     try {
-      const response = await api.get(`/historico-linha/${linhaId}`);
-      setDados(response.data);
+      // ✅ CORRIGIDO: /historico-linha → /history/line
+      const response = await api.get(`/history/line/${linhaId}`);
+      setDados(response.data.historico || []);
       setErro("");
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
@@ -1718,8 +1706,8 @@ function Historico({ linha, linhaId }) {
   const calcularTendencia = () => {
     if (dados.length < 2) return { direcao: "estavel", valor: 0 };
     
-    const primeiro = dados[dados.length - 1]?.oee || 0;
-    const ultimo = dados[0]?.oee || 0;
+    const primeiro = dados[dados.length - 1]?.oee_performance || 0;
+    const ultimo = dados[0]?.oee_performance || 0;
     const variacao = ultimo - primeiro;
     
     return {
@@ -1734,8 +1722,8 @@ function Historico({ linha, linhaId }) {
     const data = new Date(d.mes);
     return data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
   });
-  const valoresOEE = dados.map(d => d.oee);
-  const valoresDesvio = dados.map(d => parseFloat(d.desvio_padrao));
+  const valoresOEE = dados.map(d => d.oee_performance || 0);
+  const valoresDesvio = dados.map(d => parseFloat(d.desvio_padrao || 0));
 
   if (carregando) {
     return <div style={{ padding: "clamp(20px, 5vw, 40px)", textAlign: "center" }}>Carregando histórico...</div>;
@@ -1830,19 +1818,19 @@ function Historico({ linha, linhaId }) {
             <div>
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", color: "#666" }}>Melhor:</span>
               <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", color: "#16a34a", margin: 0 }}>
-                {Math.max(...dados.map(d => d.oee))}%
+                {Math.max(...dados.map(d => d.oee_performance || 0))}%
               </p>
             </div>
             <div>
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", color: "#666" }}>Pior:</span>
               <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", color: "#dc2626", margin: 0 }}>
-                {Math.min(...dados.map(d => d.oee))}%
+                {Math.min(...dados.map(d => d.oee_performance || 0))}%
               </p>
             </div>
             <div>
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", color: "#666" }}>Média:</span>
               <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: 0 }}>
-                {(dados.reduce((acc, d) => acc + d.oee, 0) / dados.length).toFixed(1)}%
+                {(dados.reduce((acc, d) => acc + (d.oee_performance || 0), 0) / dados.length).toFixed(1)}%
               </p>
             </div>
           </div>
@@ -1906,8 +1894,8 @@ function Historico({ linha, linhaId }) {
           <GraficoBarras 
             labels={['Ano Anterior', 'Ano Atual']}
             valores={[
-              dados.slice(-6, -3).reduce((acc, d) => acc + d.oee, 0) / 3,
-              dados.slice(-3).reduce((acc, d) => acc + d.oee, 0) / 3
+              dados.slice(-6, -3).reduce((acc, d) => acc + (d.oee_performance || 0), 0) / 3,
+              dados.slice(-3).reduce((acc, d) => acc + (d.oee_performance || 0), 0) / 3
             ]}
             titulo="Comparativo Semestral"
             cor={[coresNexus.secondary, coresNexus.primary]}
@@ -1948,25 +1936,25 @@ function Historico({ linha, linhaId }) {
                 <td style={tdResponsivo}>{formatarMes(item.mes)}</td>
                 <td style={tdResponsivo}>
                   <span style={{ 
-                    color: getOEECor(item.oee),
+                    color: getOEECor(item.oee_performance || 0),
                     fontWeight: "bold"
                   }}>
-                    {item.oee}%
+                    {(item.oee_performance || 0).toFixed(1)}%
                   </span>
                 </td>
-                <td style={tdResponsivo}>{item.media_ciclo}s</td>
-                <td style={tdResponsivo}>{item.desvio_padrao}s</td>
-                <td style={tdResponsivo}>{item.medicoes}</td>
+                <td style={tdResponsivo}>{item.media_ciclo || 0}s</td>
+                <td style={tdResponsivo}>{item.desvio_padrao || 0}s</td>
+                <td style={tdResponsivo}>{item.medicoes || 0}</td>
                 <td style={tdResponsivo}>
                   <span style={{
                     padding: "4px 8px",
                     borderRadius: "4px",
                     fontSize: "clamp(10px, 1.2vw, 12px)",
-                    backgroundColor: getOEECor(item.oee) + "20",
-                    color: getOEECor(item.oee)
+                    backgroundColor: getOEECor(item.oee_performance || 0) + "20",
+                    color: getOEECor(item.oee_performance || 0)
                   }}>
-                    {item.oee >= 80 ? "Excelente" :
-                     item.oee >= 60 ? "Regular" : "Crítico"}
+                    {(item.oee_performance || 0) >= 80 ? "Excelente" :
+                     (item.oee_performance || 0) >= 60 ? "Regular" : "Crítico"}
                   </span>
                 </td>
               </tr>
@@ -1996,13 +1984,13 @@ function Historico({ linha, linhaId }) {
                 {formatarMes(dados[dados.length - 1]?.mes)} vs {formatarMes(dados[0]?.mes)}
               </span>
               <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", marginTop: "5px" }}>
-                {dados[0]?.oee > dados[dados.length - 1]?.oee ? (
+                {(dados[0]?.oee_performance || 0) > (dados[dados.length - 1]?.oee_performance || 0) ? (
                   <span style={{ color: "#16a34a" }}>
-                    ↑ +{(dados[0]?.oee - dados[dados.length - 1]?.oee).toFixed(1)}%
+                    ↑ +{((dados[0]?.oee_performance || 0) - (dados[dados.length - 1]?.oee_performance || 0)).toFixed(1)}%
                   </span>
                 ) : (
                   <span style={{ color: "#dc2626" }}>
-                    ↓ -{(dados[dados.length - 1]?.oee - dados[0]?.oee).toFixed(1)}%
+                    ↓ -{((dados[dados.length - 1]?.oee_performance || 0) - (dados[0]?.oee_performance || 0)).toFixed(1)}%
                   </span>
                 )}
               </p>
@@ -2011,13 +1999,13 @@ function Historico({ linha, linhaId }) {
             <div>
               <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Melhoria acumulada</span>
               <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", marginTop: "5px" }}>
-                {dados[0]?.oee - dados[dados.length - 1]?.oee > 0 ? (
+                {(dados[0]?.oee_performance || 0) - (dados[dados.length - 1]?.oee_performance || 0) > 0 ? (
                   <span style={{ color: "#16a34a" }}>
-                    +{(dados[0]?.oee - dados[dados.length - 1]?.oee).toFixed(1)}%
+                    +{((dados[0]?.oee_performance || 0) - (dados[dados.length - 1]?.oee_performance || 0)).toFixed(1)}%
                   </span>
                 ) : (
                   <span style={{ color: "#666" }}>
-                    {(dados[0]?.oee - dados[dados.length - 1]?.oee).toFixed(1)}%
+                    {((dados[0]?.oee_performance || 0) - (dados[dados.length - 1]?.oee_performance || 0)).toFixed(1)}%
                   </span>
                 )}
               </p>
@@ -2048,24 +2036,28 @@ function Financeiro({ linha, linhaId }) {
   async function carregarDadosFinanceiros() {
     setCarregando(true);
     try {
-      const postosRes = await api.get(`/postos/${linhaId}`);
+      // ✅ CORRIGIDO: /postos → /work-stations
+      const postosRes = await api.get(`/work-stations/${linhaId}`);
       setPostos(postosRes.data);
 
       if (postosRes.data.length > 0) {
-        const linhaRes = await api.get(`/linhas/${linhaId}`);
-        if (linhaRes.data && linhaRes.data.length > 0) {
-          const empresaId = linhaRes.data[0].empresa_id;
+        // ✅ CORRIGIDO: /linhas → /lines
+        const linhaRes = await api.get(`/lines/${linhaId}`);
+        if (linhaRes.data && linhaRes.data.empresa_id) {
+          const empresaId = linhaRes.data.empresa_id;
           setEmpresaId(empresaId);
           
-          const cargosRes = await api.get(`/cargos/${empresaId}`);
+          // ✅ CORRIGIDO: /cargos → /roles
+          const cargosRes = await api.get(`/roles/${empresaId}`);
           setCargos(cargosRes.data);
         }
       }
 
-      const produtosRes = await api.get(`/linha-produto/${linhaId}`).catch(() => ({ data: [] }));
-      setProdutos(produtosRes.data);
+      // ✅ CORRIGIDO: /linha-produto → /line-products
+      const produtosRes = await api.get(`/line-products/${linhaId}`).catch(() => ({ data: [] }));
+      setProdutos(produtosRes.data.dados || produtosRes.data);
 
-      const perdasRes = await api.get(`/perdas/${linhaId}`).catch(() => ({ data: [] }));
+      const perdasRes = await api.get(`/losses/${linhaId}`).catch(() => ({ data: [] }));
       setPerdas(perdasRes.data);
 
     } catch (error) {
@@ -2113,7 +2105,7 @@ function Financeiro({ linha, linhaId }) {
     });
 
     produtos.forEach(prod => {
-      const perda = perdas.find(p => p.linha_produto_id === prod.id);
+      const perda = perdas.find(p => p.linha_produto_id === prod.vinculo_id || p.linha_produto_id === prod.id);
       if (perda) {
         perdasMicro += (perda.microparadas_minutos || 0) * custoMinuto;
         
@@ -2379,15 +2371,15 @@ function Financeiro({ linha, linhaId }) {
               </thead>
               <tbody>
                 {produtos.map((prod) => {
-                  const perda = perdas.find(p => p.linha_produto_id === prod.id);
+                  const perda = perdas.find(p => p.linha_produto_id === prod.vinculo_id || p.linha_produto_id === prod.id);
                   const custoMinuto = calcularCustoPorMinuto();
                   const custoMicro = (perda?.microparadas_minutos || 0) * custoMinuto;
                   const custoRefugo = (perda?.refugo_pecas || 0) * (prod.valor_unitario || 50);
                   
                   return (
-                    <tr key={prod.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={tdResponsivo} title={prod.produto_nome || prod.nome}>
-                        {truncarTexto(prod.produto_nome || prod.nome, 15)}
+                    <tr key={prod.vinculo_id || prod.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                      <td style={tdResponsivo} title={prod.produto_nome}>
+                        {truncarTexto(prod.produto_nome, 15)}
                       </td>
                       <td style={tdResponsivo}>{formatarMoeda(prod.valor_unitario)}</td>
                       <td style={tdResponsivo}>{perda?.microparadas_minutos || 0} min</td>
@@ -2467,7 +2459,8 @@ function EficienciaGlobal({ linha, linhaId }) {
   async function carregarDados() {
     setCarregando(true);
     try {
-      const response = await api.get(`/eficiencia-global/${linhaId}`);
+      // ✅ CORRIGIDO: /eficiencia-global → /global-efficiency
+      const response = await api.get(`/global-efficiency/${linhaId}`);
       setDados(response.data);
       setErro("");
     } catch (error) {
@@ -2497,7 +2490,7 @@ function EficienciaGlobal({ linha, linhaId }) {
     );
   }
 
-  if (!dados || dados.mensagem) {
+  if (!dados || dados.alerta) {
     return (
       <div style={{ 
         backgroundColor: "white", 
@@ -2511,8 +2504,8 @@ function EficienciaGlobal({ linha, linhaId }) {
     );
   }
 
-  const capacidadeRealPercent = (dados.capacidade_real / dados.meta_planejada) * 100;
-  const ocupacaoPercent = parseFloat(dados.taxa_ocupacao_linha_percentual);
+  const capacidadeRealPercent = (dados.metas.alcancavel_pelo_gargalo / dados.metas.planejada) * 100;
+  const ocupacaoPercent = parseFloat(dados.kpis.ocupacao_media_recursos || 0);
 
   return (
     <div>
@@ -2532,23 +2525,23 @@ function EficienciaGlobal({ linha, linhaId }) {
       }}>
         <Card 
           titulo="Meta Planejada" 
-          valor={`${dados.meta_planejada} pç/dia`}
+          valor={`${dados.metas.planejada} pç/dia`}
           cor="#1E3A8A"
         />
         <Card 
-          titulo="Capacidade Teórica" 
-          valor={`${dados.capacidade_teorica_maxima} pç/dia`}
-          cor="#0f172a"
-        />
-        <Card 
           titulo="Capacidade Real" 
-          valor={`${dados.capacidade_real} pç/dia`}
+          valor={`${dados.metas.alcancavel_pelo_gargalo} pç/dia`}
           cor={capacidadeRealPercent >= 90 ? "#16a34a" : capacidadeRealPercent >= 70 ? "#f59e0b" : "#dc2626"}
         />
         <Card 
           titulo="Eficiência Global" 
-          valor={`${dados.eficiencia_global_percentual}%`}
-          cor={dados.eficiencia_global_percentual >= 80 ? "#16a34a" : dados.eficiencia_global_percentual >= 60 ? "#f59e0b" : "#dc2626"}
+          valor={dados.kpis.eficiencia_global}
+          cor={parseFloat(dados.kpis.eficiencia_global) >= 80 ? "#16a34a" : parseFloat(dados.kpis.eficiencia_global) >= 60 ? "#f59e0b" : "#dc2626"}
+        />
+        <Card 
+          titulo="Ocupação Média" 
+          valor={dados.kpis.ocupacao_media_recursos}
+          cor="#1E3A8A"
         />
       </div>
 
@@ -2572,14 +2565,14 @@ function EficienciaGlobal({ linha, linhaId }) {
           <div style={{ display: "flex", alignItems: "flex-end", gap: "20px", height: "150px" }}>
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ 
-                height: `${(dados.capacidade_real / dados.meta_planejada) * 120}px`, 
+                height: `${(dados.metas.alcancavel_pelo_gargalo / dados.metas.planejada) * 120}px`, 
                 backgroundColor: "#1E3A8A",
                 borderRadius: "4px 4px 0 0",
                 maxHeight: "120px",
                 minHeight: "20px"
               }} />
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", marginTop: "5px", display: "block" }}>
-                Real: {dados.capacidade_real}
+                Real: {dados.metas.alcancavel_pelo_gargalo}
               </span>
             </div>
             <div style={{ flex: 1, textAlign: "center" }}>
@@ -2589,7 +2582,7 @@ function EficienciaGlobal({ linha, linhaId }) {
                 borderRadius: "4px 4px 0 0"
               }} />
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", marginTop: "5px", display: "block" }}>
-                Meta: {dados.meta_planejada}
+                Meta: {dados.metas.planejada}
               </span>
             </div>
           </div>
@@ -2628,7 +2621,7 @@ function EficienciaGlobal({ linha, linhaId }) {
               justifyContent: "center"
             }}>
               <span style={{ fontSize: "18px", fontWeight: "bold", color: "#1E3A8A" }}>
-                {dados.taxa_ocupacao_linha_percentual}%
+                {dados.kpis.ocupacao_media_recursos}
               </span>
             </div>
           </div>
@@ -2647,20 +2640,20 @@ function EficienciaGlobal({ linha, linhaId }) {
       }}>
         <DetalheCard 
           titulo="Perda de Capacidade"
-          valor={`${dados.meta_planejada - dados.capacidade_real} pç/dia`}
+          valor={`${dados.metas.planejada - dados.metas.alcancavel_pelo_gargalo} pç/dia`}
           descricao="Diferença entre meta e real"
           cor="#dc2626"
         />
         <DetalheCard 
           titulo="Oportunidade Mensal"
-          valor={`+${(dados.meta_planejada - dados.capacidade_real) * 22} pç`}
+          valor={`+${(dados.metas.planejada - dados.metas.alcancavel_pelo_gargalo) * 22} pç`}
           descricao="Produção adicional possível"
           cor="#16a34a"
         />
         <DetalheCard 
           titulo="Índice de Utilização"
-          valor={`${((dados.capacidade_real / dados.capacidade_teorica_maxima) * 100).toFixed(1)}%`}
-          descricao="vs capacidade teórica"
+          valor={`${((dados.metas.alcancavel_pelo_gargalo / dados.metas.planejada) * 100).toFixed(1)}%`}
+          descricao="vs meta planejada"
           cor="#1E3A8A"
         />
       </div>
@@ -2733,10 +2726,11 @@ function ProdutosLinha({ linha, linhaId }) {
   async function carregarDados() {
     setCarregando(true);
     try {
-      const produtosRes = await api.get(`/linha-produto/${linhaId}`);
-      setProdutos(produtosRes.data);
+      // ✅ CORRIGIDO: /linha-produto → /line-products
+      const produtosRes = await api.get(`/line-products/${linhaId}`);
+      setProdutos(produtosRes.data.dados || produtosRes.data);
 
-      const perdasRes = await api.get(`/perdas/${linhaId}`).catch(() => ({ data: [] }));
+      const perdasRes = await api.get(`/losses/${linhaId}`).catch(() => ({ data: [] }));
       setPerdas(perdasRes.data);
 
       setErro("");
@@ -2832,7 +2826,7 @@ function ProdutosLinha({ linha, linhaId }) {
         />
         <Card 
           titulo="Maior Takt" 
-          valor={`${Math.max(...produtos.map(p => p.takt_time_segundos || 0))}s`}
+          valor={`${Math.max(...produtos.map(p => p.takt_configurado || 0))}s`}
           cor="#f59e0b"
         />
         <Card 
@@ -2853,7 +2847,7 @@ function ProdutosLinha({ linha, linhaId }) {
         overflow: "hidden"
       }}>
         <GraficoBarras 
-          labels={produtos.map(p => truncarTexto(p.produto_nome || p.nome, 12))}
+          labels={produtos.map(p => truncarTexto(p.produto_nome, 12))}
           valores={produtos.map(p => p.meta_diaria || 0)}
           titulo="Meta Diária por Produto"
           cor={coresNexus.primary}
@@ -2891,15 +2885,15 @@ function ProdutosLinha({ linha, linhaId }) {
           </thead>
           <tbody>
             {produtos.map((prod) => {
-              const perdasProd = calcularPerdasProduto(prod.id);
+              const perdasProd = calcularPerdasProduto(prod.vinculo_id || prod.id);
               const faturamento = (prod.meta_diaria || 0) * (prod.valor_unitario || 0);
               
               return (
-                <tr key={prod.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td style={tdResponsivo} title={prod.produto_nome || prod.nome}>
-                    {truncarTexto(prod.produto_nome || prod.nome, 15)}
+                <tr key={prod.vinculo_id || prod.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <td style={tdResponsivo} title={prod.produto_nome}>
+                    {truncarTexto(prod.produto_nome, 15)}
                   </td>
-                  <td style={tdResponsivo}>{prod.takt_time_segundos || 0}s</td>
+                  <td style={tdResponsivo}>{prod.takt_configurado || 0}s</td>
                   <td style={tdResponsivo}>{prod.meta_diaria || 0}</td>
                   <td style={tdResponsivo}>{formatarMoeda(prod.valor_unitario)}</td>
                   <td style={tdResponsivo}>
@@ -2994,22 +2988,27 @@ function ColaboradoresLinha({ linha, linhaId }) {
   async function carregarDados() {
     setCarregando(true);
     try {
-      const linhaRes = await api.get(`/linhas/${linhaId}`);
-      if (linhaRes.data && linhaRes.data.length > 0) {
-        const empresaId = linhaRes.data[0].empresa_id;
+      // ✅ CORRIGIDO: /linhas → /lines
+      const linhaRes = await api.get(`/lines/${linhaId}`);
+      if (linhaRes.data && linhaRes.data.empresa_id) {
+        const empresaId = linhaRes.data.empresa_id;
         setEmpresaId(empresaId);
 
-        const colaboradoresRes = await api.get(`/colaboradores/${empresaId}`);
+        // ✅ CORRIGIDO: /colaboradores → /employees
+        const colaboradoresRes = await api.get(`/employees/${empresaId}`);
         setColaboradores(colaboradoresRes.data);
 
-        const cargosRes = await api.get(`/cargos/${empresaId}`);
+        // ✅ CORRIGIDO: /cargos → /roles
+        const cargosRes = await api.get(`/roles/${empresaId}`);
         setCargos(cargosRes.data);
 
-        const postosRes = await api.get(`/postos/${linhaId}`);
+        // ✅ CORRIGIDO: /postos → /work-stations
+        const postosRes = await api.get(`/work-stations/${linhaId}`);
         setPostos(postosRes.data);
 
+        // ✅ CORRIGIDO: /alocacoes/posto/ → endpoint precisa existir no backend
         const alocacoesPromises = postosRes.data.map(posto => 
-          api.get(`/alocacoes/posto/${posto.id}?ativo=true`).catch(() => ({ data: [] }))
+          api.get(`/allocations/station/${posto.id}?ativo=true`).catch(() => ({ data: [] }))
         );
         const alocacoesResults = await Promise.all(alocacoesPromises);
         const todasAlocacoes = alocacoesResults.flatMap(res => res.data);
@@ -3052,7 +3051,7 @@ function ColaboradoresLinha({ linha, linhaId }) {
 
   const getColaboradoresAlocados = (postoId, turno) => {
     return alocacoes
-      .filter(a => a.posto_id === postoId && a.turno === turno)
+      .filter(a => a.posto_id === postoId && a.turno === turno && a.ativo)
       .map(a => colaboradores.find(c => c.id === a.colaborador_id))
       .filter(c => c);
   };
@@ -3061,7 +3060,8 @@ function ColaboradoresLinha({ linha, linhaId }) {
     if (!window.confirm("Remover esta alocação?")) return;
     
     try {
-      await api.put(`/alocacoes/${alocacaoId}`, { ativo: false });
+      // ✅ CORRIGIDO: /alocacoes → /allocations (PUT para desativar)
+      await api.put(`/allocations/${alocacaoId}`, { ativo: false });
       carregarDados();
       toast.success("Colaborador desalocado com sucesso!");
     } catch (error) {
@@ -3295,9 +3295,12 @@ export default function FichaLinha() {
     setCarregando(true);
     
     Promise.all([
+      // ✅ CORRIGIDO: /analise-linha mantido (já corrigido anteriormente)
       api.get(`/analise-linha/${id}`).catch(() => ({ data: {} })),
-      api.get(`/postos/${id}`).catch(() => ({ data: [] })),
-      api.get(`/linhas/${clienteAtual}`).catch(() => ({ data: [] }))
+      // ✅ CORRIGIDO: /postos → /work-stations
+      api.get(`/work-stations/${id}`).catch(() => ({ data: [] })),
+      // ✅ CORRIGIDO: /linhas → /lines
+      api.get(`/lines/${clienteAtual}`).catch(() => ({ data: [] }))
     ])
       .then(([analise, postos, linhas]) => {
         const linhaAtual = Array.isArray(linhas.data) 
@@ -3309,7 +3312,11 @@ export default function FichaLinha() {
         setLinha({
           ...analise.data,
           postos: postos.data,
-          id: id
+          id: id,
+          gargalo_identificado: analise.data.gargalo_identificado,
+          capacidade_real_estimada: analise.data.capacidade_real_estimada,
+          takt_time_alvo: analise.data.takt_time_alvo,
+          eficiencia_percentual: analise.data.eficiencia_de_balanceamento
         });
       })
       .catch((err) => {

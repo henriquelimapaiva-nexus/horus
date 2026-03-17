@@ -16,7 +16,8 @@ export default function IASugestoes() {
   const [dadosEmpresa, setDadosEmpresa] = useState(null);
 
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
         console.error("Erro ao carregar empresas:", err);
@@ -30,7 +31,8 @@ export default function IASugestoes() {
     
     try {
       // Buscar dados da empresa
-      const linhasRes = await api.get(`/linhas/${empresaId}`);
+      // ✅ CORRIGIDO: /linhas/${empresaId} → /lines/${empresaId}
+      const linhasRes = await api.get(`/lines/${empresaId}`);
       const linhas = linhasRes.data;
       
       let dadosCompletos = {
@@ -40,13 +42,16 @@ export default function IASugestoes() {
 
       for (const linha of linhas) {
         try {
+          // ✅ CORRIGIDO: /analise-linha/${linha.id} mantido
           const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
           const analise = analiseRes.data;
           
-          const postosRes = await api.get(`/postos/${linha.id}`).catch(() => ({ data: [] }));
+          // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
+          const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
           const postos = postosRes.data;
           
-          const perdasRes = await api.get(`/perdas/${linha.id}`).catch(() => ({ data: [] }));
+          // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
+          const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
 
           dadosCompletos.linhas.push({
@@ -62,7 +67,7 @@ export default function IASugestoes() {
 
       setDadosEmpresa(dadosCompletos);
       
-      // Chamar IA para gerar sugestões
+      // Chamar IA para gerar sugestões (simulado)
       const sugestoesIA = await gerarSugestoes(empresaId);
       setSugestoes(sugestoesIA);
 

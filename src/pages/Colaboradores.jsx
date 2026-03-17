@@ -25,42 +25,46 @@ export default function Colaboradores() {
   const [editId, setEditId] = useState(null);
   const [carregando, setCarregando] = useState(false);
   const [filtroNome, setFiltroNome] = useState("");
-  const [filtroEmpresa, setFiltroEmpresa] = useState("");
+  const [filtroEmpresa, setFiltroEmpresa] = useState(clienteAtual || "");
 
+  // Carregar empresas na inicialização
   useEffect(() => {
-    carregarDados();
+    carregarEmpresas();
   }, []);
 
+  // Carregar cargos quando empresa selecionada mudar
   useEffect(() => {
     if (filtroEmpresa) {
       carregarCargos(filtroEmpresa);
+      carregarColaboradores();
     }
   }, [filtroEmpresa]);
 
-  async function carregarDados() {
-    setCarregando(true);
+  // Carregar empresas
+  async function carregarEmpresas() {
     try {
-      const empresasRes = await api.get("/empresas");
-      setEmpresas(empresasRes.data);
-
-      if (clienteAtual) {
-        await carregarCargos(clienteAtual);
-        setFiltroEmpresa(clienteAtual);
-      }
-
-      await carregarColaboradores();
+      // ✅ CORRIGIDO: /empresas → /companies
+      const res = await api.get("/companies");
+      setEmpresas(res.data);
       
+      // Se tiver clienteAtual, carrega dados
+      if (clienteAtual) {
+        setFiltroEmpresa(clienteAtual);
+        await carregarCargos(clienteAtual);
+        await carregarColaboradores();
+      }
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
-      toast.error("Erro ao carregar dados");
-    } finally {
-      setCarregando(false);
+      console.error("Erro ao carregar empresas:", error);
+      toast.error("Erro ao carregar empresas");
     }
   }
 
   async function carregarCargos(empresaId) {
+    if (!empresaId) return;
+    
     try {
-      const res = await api.get(`/cargos/${empresaId}`);
+      // ✅ CORRIGIDO: /cargos/${empresaId} → /roles/${empresaId}
+      const res = await api.get(`/roles/${empresaId}`);
       setCargos(res.data);
     } catch (error) {
       console.error("Erro ao carregar cargos:", error);
@@ -69,8 +73,11 @@ export default function Colaboradores() {
   }
 
   async function carregarColaboradores() {
+    if (!filtroEmpresa) return;
+    
     try {
-      const res = await api.get(`/colaboradores/${filtroEmpresa || clienteAtual || 1}`);
+      // ✅ CORRIGIDO: /colaboradores/${filtroEmpresa} → /employees/${filtroEmpresa}
+      const res = await api.get(`/employees/${filtroEmpresa}`);
       setColaboradores(res.data);
     } catch (error) {
       console.error("Erro ao carregar colaboradores:", error);
@@ -101,7 +108,8 @@ export default function Colaboradores() {
     setCarregando(true);
     try {
       if (editId) {
-        await api.put(`/colaboradores/${editId}`, {
+        // ✅ CORRIGIDO: /colaboradores/${editId} → /employees/${editId}
+        await api.put(`/employees/${editId}`, {
           nome: form.nome,
           empresa_id: parseInt(form.empresa_id),
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null
@@ -109,7 +117,8 @@ export default function Colaboradores() {
         toast.success("Colaborador atualizado com sucesso! ✅");
         setEditId(null);
       } else {
-        await api.post("/colaboradores", {
+        // ✅ CORRIGIDO: /colaboradores → /employees
+        await api.post("/employees", {
           empresa_id: parseInt(form.empresa_id),
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null,
           nome: form.nome
@@ -127,7 +136,13 @@ export default function Colaboradores() {
 
     } catch (error) {
       console.error("Erro ao salvar colaborador:", error);
-      toast.error("Erro ao salvar colaborador ❌");
+      
+      // Tratamento de erro específico
+      if (error.response?.status === 400) {
+        toast.error("Dados inválidos. Verifique empresa e cargo ❌");
+      } else {
+        toast.error("Erro ao salvar colaborador ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -151,12 +166,19 @@ export default function Colaboradores() {
     
     setCarregando(true);
     try {
-      await api.delete(`/colaboradores/${id}`);
+      // ✅ CORRIGIDO: /colaboradores/${id} → /employees/${id}
+      await api.delete(`/employees/${id}`);
       await carregarColaboradores();
       toast.success("Colaborador excluído com sucesso ✅");
     } catch (error) {
       console.error("Erro ao excluir colaborador:", error);
-      toast.error("Erro ao excluir colaborador ❌");
+      
+      // Tratamento de erro se o colaborador tiver vínculos
+      if (error.response?.status === 400) {
+        toast.error("Colaborador possui registros de atividades vinculados ❌");
+      } else {
+        toast.error("Erro ao excluir colaborador ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -173,10 +195,46 @@ export default function Colaboradores() {
   };
 
   const colaboradoresFiltrados = colaboradores.filter(c => {
-    const matchNome = c.nome.toLowerCase().includes(filtroNome.toLowerCase());
-    const matchEmpresa = !filtroEmpresa || c.empresa_id === parseInt(filtroEmpresa);
-    return matchNome && matchEmpresa;
+    const matchNome = c.nome?.toLowerCase().includes(filtroNome.toLowerCase());
+    return matchNome;
   });
+
+  // Se não houver empresa selecionada
+  if (!filtroEmpresa) {
+    return (
+      <div style={{ 
+        padding: "clamp(20px, 5vw, 60px)", 
+        textAlign: "center",
+        backgroundColor: "white",
+        borderRadius: "8px",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        margin: "clamp(10px, 3vw, 30px)"
+      }}>
+        <h2 style={{ color: "#1E3A8A", marginBottom: "clamp(10px, 2vw, 20px)" }}>
+          Selecione uma empresa
+        </h2>
+        <p style={{ color: "#666", marginBottom: "clamp(15px, 3vw, 30px)" }}>
+          Escolha uma empresa no filtro acima para gerenciar os colaboradores.
+        </p>
+        <select
+          value={filtroEmpresa}
+          onChange={(e) => setFiltroEmpresa(e.target.value)}
+          style={{
+            padding: "10px",
+            borderRadius: "4px",
+            border: "1px solid #d1d5db",
+            width: "min(100%, 300px)",
+            fontSize: "14px"
+          }}
+        >
+          <option value="">Selecione uma empresa...</option>
+          {empresas.map(emp => (
+            <option key={emp.id} value={emp.id}>{emp.nome}</option>
+          ))}
+        </select>
+      </div>
+    );
+  }
 
   return (
     <div style={{ 
@@ -258,6 +316,7 @@ export default function Colaboradores() {
               }}
               style={inputStyleResponsivo}
               required
+              disabled={!!clienteAtual} // Desabilita se já tem cliente selecionado
             >
               <option value="">Selecione uma empresa...</option>
               {empresas.map(emp => (
@@ -373,7 +432,6 @@ export default function Colaboradores() {
               minWidth: "120px"
             }}
           >
-            <option value="">Todas empresas</option>
             {empresas.map(emp => (
               <option key={emp.id} value={emp.id}>{truncarTexto(emp.nome, 20)}</option>
             ))}

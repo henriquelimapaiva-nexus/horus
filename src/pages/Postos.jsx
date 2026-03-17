@@ -22,7 +22,8 @@ export default function Postos() {
   const [linhaSelecionada, setLinhaSelecionada] = useState("");
 
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
         console.error("Erro ao carregar empresas:", err);
@@ -32,7 +33,8 @@ export default function Postos() {
 
   useEffect(() => {
     if (empresaSelecionada) {
-      api.get(`/linhas/${empresaSelecionada}`)
+      // ✅ CORRIGIDO: /linhas/${empresaSelecionada} → /lines/${empresaSelecionada}
+      api.get(`/lines/${empresaSelecionada}`)
         .then(res => setLinhas(res.data))
         .catch(err => {
           console.error("Erro ao carregar linhas:", err);
@@ -55,7 +57,8 @@ export default function Postos() {
   async function carregarPostos(linhaId) {
     setCarregando(true);
     try {
-      const res = await api.get(`/postos/${linhaId}`);
+      // ✅ CORRIGIDO: /postos/${linhaId} → /work-stations/${linhaId}
+      const res = await api.get(`/work-stations/${linhaId}`);
       setPostos(res.data);
       if (res.data.length > 0) {
         toast.success(`Carregados ${res.data.length} postos`);
@@ -72,14 +75,28 @@ export default function Postos() {
     if (!window.confirm("Excluir este posto?")) return;
     
     try {
-      await api.delete(`/postos/${id}`);
+      // ✅ CORRIGIDO: /postos/${id} → /work-stations/${id}
+      await api.delete(`/work-stations/${id}`);
       carregarPostos(linhaSelecionada);
       toast.success("Posto excluído com sucesso! ✅");
     } catch (error) {
       console.error("Erro ao excluir posto:", error);
-      toast.error("Erro ao excluir posto ❌");
+      
+      // Tratamento de erro se o posto tiver vínculos
+      if (error.response?.status === 409) {
+        toast.error("Posto possui vínculos. Remova as alocações primeiro ❌");
+      } else {
+        toast.error("Erro ao excluir posto ❌");
+      }
     }
   }
+
+  // Buscar cargo pelo ID (mock - idealmente viria da API)
+  const getCargoNome = (cargoId) => {
+    if (!cargoId) return "-";
+    // Aqui você pode implementar uma busca real de cargos se necessário
+    return `Cargo ${cargoId}`;
+  };
 
   return (
     <div style={{ 
@@ -268,7 +285,7 @@ export default function Postos() {
                     </span>
                   </td>
                   <td style={tdResponsivo} title={posto.cargo_id || "-"}>
-                    {truncarTexto(posto.cargo_id || "-", 10)}
+                    {truncarTexto(posto.cargo_id ? `Cargo ${posto.cargo_id}` : "-", 10)}
                   </td>
                   <td style={tdResponsivo}>
                     <Link to={`/postos/editar/${posto.id}/linha/${linhaSelecionada}`} style={{ textDecoration: "none", display: "inline-block" }}>

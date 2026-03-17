@@ -12,23 +12,24 @@ const truncarTexto = (texto, maxLength = 20) => {
 };
 
 function PrivateLayout() {
-  const { isAuthenticated, carregando, logout } = useAuth();
+  // Puxando o que é necessário do contexto
+  const { isAuthenticated, carregando, logout, selecionarCliente } = useAuth();
   const navigate = useNavigate();
 
   const [clientes, setClientes] = useState([]);
   const [clienteAtual, setClienteAtual] = useState("");
-  const [nomeCliente, setNomeCliente] = useState("Selecione um Cliente"); // Criado para resolver o "17"
+  const [nomeCliente, setNomeCliente] = useState("Selecione um Cliente");
   const [tamanhoLogo, setTamanhoLogo] = useState(40);
   const [menuAberto, setMenuAberto] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // 🛠️ AJUSTE: Carregar empresas para o seletor com tratamento de erro
+  // Carregar empresas para o seletor
   useEffect(() => {
     const carregarClientes = async () => {
       try {
         console.log("📡 HÓRUS: Atualizando seletor de clientes...");
-        const res = await api.get("/empresas"); // Plural para bater com o banco
+        const res = await api.get("/empresas");
         
         if (res.data && Array.isArray(res.data)) {
           setClientes(res.data);
@@ -38,18 +39,23 @@ function PrivateLayout() {
           const storedId = localStorage.getItem("clienteAtual");
           if (storedId) {
             const cliente = res.data.find(c => c.id === parseInt(storedId));
-            if (cliente) setNomeCliente(cliente.nome);
+            if (cliente) {
+              setNomeCliente(cliente.nome);
+              setClienteAtual(storedId);
+              // Sincroniza com o AuthContext
+              selecionarCliente(cliente);
+            }
           }
         }
       } catch (err) {
-        console.error("❌ Erro ao buscar empresas para o topo:", err.response?.data || err.message);
+        console.error("❌ Erro ao buscar empresas:", err.response?.data || err.message);
       }
     };
 
     if (isAuthenticated) {
       carregarClientes();
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, selecionarCliente]);
 
   // Recuperar cliente do localStorage
   useEffect(() => {
@@ -120,9 +126,12 @@ function PrivateLayout() {
     setClienteAtual(valor);
     localStorage.setItem("clienteAtual", valor);
     
-    // Atualiza o nome para evitar que apareça apenas o ID (o "17")
+    // Atualiza o nome e sincroniza com AuthContext
     const cliente = clientes.find(c => c.id === parseInt(valor));
-    if (cliente) setNomeCliente(cliente.nome);
+    if (cliente) {
+      setNomeCliente(cliente.nome);
+      selecionarCliente(cliente); // ✅ Passa o objeto completo
+    }
     
     window.location.reload(); // Garante que o contexto seja atualizado em todas as telas
   };
@@ -131,7 +140,7 @@ function PrivateLayout() {
     setMobileMenuOpen(!mobileMenuOpen);
   };
 
-  // Estilos (Mantendo seu padrão original)
+  // Estilos
   const linkStyle = {
     color: "white",
     textDecoration: "none",
@@ -300,7 +309,6 @@ function PrivateLayout() {
       </header>
 
       <main style={{ flex: 1, display: "flex", backgroundColor: "#f5f7fa", overflow: "auto" }}>
-        {/* Adicionado o nomeCliente ao contexto para que as telas filhas possam usá-lo se necessário */}
         <Outlet context={{ clienteAtual, nomeCliente }} />
       </main>
     </div>

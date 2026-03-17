@@ -3,14 +3,12 @@ import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import api from "../api/api";
 import Botao from "../components/ui/Botao";
-import toast from 'react-hot-toast'; // 1️⃣ IMPORT ADICIONADO
+import toast from 'react-hot-toast';
 
 // Funções de formatação
 const formatarCNPJ = (cnpj) => {
   if (!cnpj) return "";
-  // Remove tudo que não é número
   const cnpjLimpo = cnpj.replace(/\D/g, '');
-  // Aplica a máscara XX.XXX.XXX/XXXX-XX
   return cnpjLimpo.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
 };
 
@@ -41,8 +39,6 @@ export default function Empresa() {
     meta_mensal: ""
   });
 
-  // 2️⃣ REMOVIDO: const [mensagem, setMensagem] = useState("");
-
   const [empresas, setEmpresas] = useState([]);
   const [editId, setEditId] = useState(null);
   const [filtroNome, setFiltroNome] = useState("");
@@ -55,11 +51,12 @@ export default function Empresa() {
 
   async function carregarEmpresas() {
     try {
-      const res = await api.get("/empresas");
+      // ✅ CORRIGIDO: /empresas → /companies
+      const res = await api.get("/companies");
       setEmpresas(res.data);
     } catch (error) {
       console.error("Erro ao carregar empresas:", error);
-      toast.error("Erro ao carregar empresas"); // 3️⃣ TOAST ADICIONADO
+      toast.error("Erro ao carregar empresas");
     }
   }
 
@@ -76,14 +73,14 @@ export default function Empresa() {
     
     try {
       if (editId) {
-        // Editar empresa existente
-        await api.put(`/empresas/${editId}`, form);
-        toast.success("Empresa atualizada com sucesso! ✅"); // 4️⃣ TOAST ADICIONADO
+        // ✅ CORRIGIDO: /empresas → /companies
+        await api.put(`/companies/${editId}`, form);
+        toast.success("Empresa atualizada com sucesso! ✅");
         setEditId(null);
       } else {
-        // Criar nova empresa
-        await api.post("/empresas", form);
-        toast.success("Empresa cadastrada com sucesso! ✅"); // 5️⃣ TOAST ADICIONADO
+        // ✅ CORRIGIDO: /empresas → /companies
+        await api.post("/companies", form);
+        toast.success("Empresa cadastrada com sucesso! ✅");
       }
 
       setForm({
@@ -100,7 +97,13 @@ export default function Empresa() {
       
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao salvar empresa ❌"); // 6️⃣ TOAST ADICIONADO
+      
+      // Tratamento de erro específico para CNPJ duplicado
+      if (error.response?.data?.erro?.includes("CNPJ já está cadastrado")) {
+        toast.error("CNPJ já cadastrado no sistema ❌");
+      } else {
+        toast.error("Erro ao salvar empresa ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -115,17 +118,24 @@ export default function Empresa() {
     if (!window.confirm("Deseja realmente excluir esta empresa?")) return;
     
     try {
-      await api.delete(`/empresas/${id}`);
+      // ✅ CORRIGIDO: /empresas → /companies
+      await api.delete(`/companies/${id}`);
       carregarEmpresas();
-      toast.success("Empresa excluída ✅"); // 7️⃣ TOAST ADICIONADO
+      toast.success("Empresa excluída ✅");
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao excluir empresa ❌"); // 8️⃣ TOAST ADICIONADO
+      
+      // Tratamento de erro se a empresa tiver vínculos
+      if (error.response?.status === 409) {
+        toast.error("Empresa possui linhas vinculadas. Remova os vínculos primeiro ❌");
+      } else {
+        toast.error("Erro ao excluir empresa ❌");
+      }
     }
   }
 
   const empresasFiltradas = empresas.filter((e) =>
-    e.nome.toLowerCase().includes(filtroNome.toLowerCase())
+    e.nome?.toLowerCase().includes(filtroNome.toLowerCase())
   );
 
   return (
@@ -146,7 +156,7 @@ export default function Empresa() {
         </p>
       </div>
 
-      {/* FORMULÁRIO CENTRALIZADO */}
+      {/* FORMULÁRIO */}
       <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
         <form
           onSubmit={handleSubmit}
@@ -263,8 +273,6 @@ export default function Empresa() {
               </Botao>
             )}
           </div>
-
-          {/* 9️⃣ BLOCO DE MENSAGEM REMOVIDO */}
         </form>
       </div>
 
@@ -279,7 +287,7 @@ export default function Empresa() {
         />
       </div>
 
-      {/* TABELA DE EMPRESAS */}
+      {/* TABELA */}
       <div style={{ overflowX: "auto", backgroundColor: "white", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead style={{ backgroundColor: "#1E3A8A", color: "white" }}>

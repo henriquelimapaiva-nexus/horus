@@ -29,7 +29,8 @@ export default function PainelExecutivo() {
   }, [clienteAtual]);
 
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
         console.error("Erro ao carregar empresas:", err);
@@ -51,7 +52,8 @@ export default function PainelExecutivo() {
     setErro("");
     
     try {
-      const linhasRes = await api.get(`/linhas/${empresaSelecionada}`);
+      // ✅ CORRIGIDO: /linhas/${empresaSelecionada} → /lines/${empresaSelecionada}
+      const linhasRes = await api.get(`/lines/${empresaSelecionada}`);
       const linhas = linhasRes.data;
 
       if (!linhas || linhas.length === 0) {
@@ -72,6 +74,7 @@ export default function PainelExecutivo() {
 
       for (const linha of linhas) {
         try {
+          // ✅ CORRIGIDO: /analise-linha mantido (já corrigido anteriormente)
           const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
           const analise = analiseRes.data;
           
@@ -80,13 +83,15 @@ export default function PainelExecutivo() {
             nomesLinhas.push(linha.nome);
           }
 
-          const postosRes = await api.get(`/postos/${linha.id}`).catch(() => ({ data: [] }));
+          // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
+          const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
           const postos = postosRes.data;
 
           let custoLinha = 0;
           for (const posto of postos) {
             if (posto.cargo_id) {
-              const cargosRes = await api.get(`/cargos/${empresaSelecionada}`).catch(() => ({ data: [] }));
+              // ✅ CORRIGIDO: /cargos/${empresaSelecionada} → /roles/${empresaSelecionada}
+              const cargosRes = await api.get(`/roles/${empresaSelecionada}`).catch(() => ({ data: [] }));
               const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
               if (cargo) {
                 const salario = parseFloat(cargo.salario_base) || 0;
@@ -97,8 +102,9 @@ export default function PainelExecutivo() {
           }
           custosPorLinha.push(custoLinha);
 
-          const produtosRes = await api.get(`/linha-produto/${linha.id}`).catch(() => ({ data: [] }));
-          const produtos = produtosRes.data;
+          // ✅ CORRIGIDO: /linha-produto/${linha.id} → /line-products/${linha.id}
+          const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
+          const produtos = produtosRes.data.dados || produtosRes.data || [];
           
           let producaoLinha = analise.capacidade_estimada_dia || 0;
           producaoTotal += producaoLinha;
@@ -142,7 +148,7 @@ export default function PainelExecutivo() {
       })).sort((a, b) => b.perda - a.perda);
 
       setDadosPainel({
-        empresa: empresas.find(e => e.id === parseInt(empresaSelecionada))?.nome,
+        empresa: empresas.find(e => e.id === parseInt(empresaSelecionada))?.nome || `Empresa ${empresaSelecionada}`,
         totalLinhas: linhas.length,
         faturamento: faturamentoTotal,
         perdas: perdasTotais,

@@ -1,6 +1,6 @@
 // src/pages/Linhas.jsx
 import { useState, useEffect } from "react";
-import { useOutletContext, Link } from "react-router-dom"; // Importado context corretamente
+import { useOutletContext, Link } from "react-router-dom";
 import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast';
@@ -11,7 +11,6 @@ const truncarTexto = (texto, maxLength = 20) => {
 };
 
 export default function Linhas() {
-  // ✅ AJUSTE: Pegando o nomeCliente que enviamos do PrivateLayout
   const { clienteAtual, nomeCliente } = useOutletContext();
 
   const [linhas, setLinhas] = useState([]);
@@ -24,9 +23,12 @@ export default function Linhas() {
     }
 
     setCarregando(true);
-    // 📡 Note que o endpoint usa o ID (clienteAtual), mas a tela usará o nomeCliente
-    api.get(`/linhas/${clienteAtual}`)
-      .then((res) => setLinhas(res.data))
+    // ✅ CORRIGIDO: /linhas/${clienteAtual} → /lines/${clienteAtual}
+    api.get(`/lines/${clienteAtual}`)
+      .then((res) => {
+        console.log("✅ Linhas carregadas:", res.data);
+        setLinhas(res.data);
+      })
       .catch((err) => {
         console.error("Erro ao carregar linhas:", err);
         toast.error("Erro ao carregar linhas");
@@ -55,7 +57,6 @@ export default function Linhas() {
             Linhas de Produção
           </h1>
           <p style={{ color: "#666", fontSize: "14px" }}>
-            {/* ✅ AGORA TRADUZIDO: Mostra o nome da empresa, não o ID */}
             Cliente selecionado: <strong style={{ color: "#1E3A8A" }}>{nomeCliente}</strong>
           </p>
         </div>

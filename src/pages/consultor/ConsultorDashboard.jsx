@@ -1,7 +1,7 @@
 // src/pages/consultor/ConsultorDashboard.jsx
 import { useState, useEffect } from "react";
 import api from "../../api/api";
-import { useAuth } from "../../context/AuthContext";
+import { useConsultorAuth } from "../../context/ConsultorAuthContext";
 
 // Cores exclusivas do consultor
 const coresConsultor = {
@@ -11,6 +11,7 @@ const coresConsultor = {
   success: "#16a34a",
   warning: "#f59e0b",
   danger: "#dc2626",
+  info: "#2563eb",
   faturamento: "#059669",
   metas: "#7c3aed",
   clientes: "#2563eb",
@@ -18,7 +19,7 @@ const coresConsultor = {
 };
 
 export default function ConsultorDashboard() {
-  const { usuario } = useAuth();
+  const { usuario } = useConsultorAuth();
   const [carregando, setCarregando] = useState(true);
   const [dados, setDados] = useState({
     empresas: [],
@@ -56,8 +57,8 @@ export default function ConsultorDashboard() {
   useEffect(() => {
     async function carregarDados() {
       try {
-        // Buscar todas as empresas
-        const empresasRes = await api.get("/empresas");
+        // ✅ CORRIGIDO: /empresas → /companies
+        const empresasRes = await api.get("/companies");
         const empresas = empresasRes.data;
         
         let totalLinhas = 0;
@@ -69,26 +70,27 @@ export default function ConsultorDashboard() {
         // Para cada empresa, buscar linhas e postos
         for (const empresa of empresas) {
           try {
-            // Buscar linhas da empresa
-            const linhasRes = await api.get(`/linhas/${empresa.id}`);
+            // ✅ CORRIGIDO: /linhas/${empresa.id} → /lines/${empresa.id}
+            const linhasRes = await api.get(`/lines/${empresa.id}`);
             const linhas = linhasRes.data;
             totalLinhas += linhas.length;
 
             // Para cada linha, buscar postos
             for (const linha of linhas) {
               try {
-                const postosRes = await api.get(`/postos/${linha.id}`);
+                // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
+                const postosRes = await api.get(`/work-stations/${linha.id}`);
                 totalPostos += postosRes.data.length;
 
-                // Buscar análise da linha para OEE
+                // ✅ CORRIGIDO: /analise-linha/${linha.id} mantido
                 const analiseRes = await api.get(`/analise-linha/${linha.id}`);
                 if (analiseRes.data.eficiencia_percentual) {
                   somaOEE += parseFloat(analiseRes.data.eficiencia_percentual);
                   empresasComOEE++;
                 }
 
-                // Buscar perdas da linha (simulado)
-                const perdasRes = await api.get(`/perdas/${linha.id}`).catch(() => ({ data: [] }));
+                // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
+                const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
                 perdasRes.data.forEach(perda => {
                   totalPerdas += (perda.microparadas_minutos || 0) * 0.5;
                   totalPerdas += (perda.refugo_pecas || 0) * 50;
@@ -369,7 +371,7 @@ export default function ConsultorDashboard() {
   );
 }
 
-// Componentes auxiliares (mantidos iguais)
+// Componentes auxiliares
 function CardFaturamento({ titulo, valor, variacao, cor }) {
   return (
     <div style={{

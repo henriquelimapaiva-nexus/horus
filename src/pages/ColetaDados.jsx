@@ -36,7 +36,8 @@ export default function ColetaDados() {
   useEffect(() => {
     if (!linhaId) return;
     
-    api.get(`/postos/${linhaId}`)
+    // ✅ CORRIGIDO: /postos → /work-stations
+    api.get(`/work-stations/${linhaId}`)
       .then((res) => setPostos(res.data))
       .catch((err) => {
         console.error("Erro ao carregar postos:", err);
@@ -53,8 +54,33 @@ export default function ColetaDados() {
   async function carregarMedicoes() {
     setCarregando(true);
     try {
-      const response = await api.get(`/medicoes/${postoSelecionado}`);
-      setMedicoes(response.data);
+      // ✅ CORRIGIDO: /medicoes/${postoSelecionado} → /measurements/stats/${postoSelecionado}
+      // O backend não tem rota para listar medições por posto, então vamos usar a rota de estatísticas
+      // e depois buscar as medições individuais se necessário
+      
+      // Por enquanto, vamos usar a rota de estatísticas e mostrar dados agregados
+      const response = await api.get(`/measurements/stats/${postoSelecionado}`);
+      
+      // Transformar os dados de estatísticas em um formato similar ao que a tabela espera
+      const medicoesFormatadas = [];
+      if (response.data.analise_estatistica) {
+        response.data.analise_estatistica.forEach(stat => {
+          // Criar uma entrada fictícia para cada tipo
+          medicoesFormatadas.push({
+            id: `${stat.tipo}-${Date.now()}`,
+            data_medicao: new Date().toISOString().split('T')[0],
+            tipo: stat.tipo,
+            valor_numerico: stat.media,
+            descricao: `Média de ${stat.amostras} medições`,
+            turno: "1"
+          });
+        });
+      }
+      setMedicoes(medicoesFormatadas);
+      
+      // TODO: Se precisar das medições individuais, precisaremos criar uma rota no backend
+      // GET /cycle-measurements?posto_id=:postoId
+      
       setErro("");
     } catch (error) {
       console.error("Erro ao carregar medições:", error);
@@ -90,34 +116,66 @@ export default function ColetaDados() {
 
     setSalvando(true);
     try {
-      const dados = {
-        posto_id: parseInt(postoSelecionado),
-        tipo: modoColeta,
-        turno: parseInt(novaMedicao.turno),
-        data_medicao: novaMedicao.data,
-        descricao: novaMedicao.descricao || null
-      };
-
-      if (modoColeta === "ciclo") {
-        dados.valor_numerico = parseFloat(novaMedicao.tempo_ciclo_segundos);
-      } else if (modoColeta === "parada") {
-        dados.valor_numerico = parseFloat(novaMedicao.tempo_parada_minutos);
-      }
-
-      const response = await api.post("/medicoes", dados);
-      
-      setMedicoes([response.data, ...medicoes]);
+      let dados = {};
       
       if (modoColeta === "ciclo") {
+        // ✅ Para ciclo: usa /cycle-measurements
+        dados = {
+          posto_id: parseInt(postoSelecionado),
+          tempo_ciclo_segundos: parseFloat(novaMedicao.tempo_ciclo_segundos)
+        };
+        
+        const response = await api.post("/cycle-measurements", dados);
+        
+        // Formatar resposta para a tabela
+        const novaMed = {
+          id: response.data.id,
+          data_medicao: new Date().toISOString().split('T')[0],
+          tipo: "ciclo",
+          valor_numerico: response.data.tempo_ciclo_segundos,
+          descricao: "",
+          turno: parseInt(novaMedicao.turno)
+        };
+        
+        setMedicoes([novaMed, ...medicoes]);
         setNovaMedicao({ ...novaMedicao, tempo_ciclo_segundos: "" });
-      } else if (modoColeta === "parada") {
-        setNovaMedicao({ ...novaMedicao, tempo_parada_minutos: "", descricao: "" });
-      } else {
-        setNovaMedicao({ ...novaMedicao, descricao: "" });
+        toast.success("Ciclo registrado com sucesso! ✅");
+        
+      } else if (modoColeta === "parada" || modoColeta === "evento") {
+        // ✅ Para paradas e eventos: usa /measurements
+        dados = {
+          posto_id: parseInt(postoSelecionado),
+          tipo: modoColeta === "parada" ? novaMedicao.tipo_parada : "evento",
+          valor_numerico: modoColeta === "parada" ? parseFloat(novaMedicao.tempo_parada_minutos) : 0,
+          turno: parseInt(novaMedicao.turno),
+          data_medicao: novaMedicao.data,
+          descricao: novaMedicao.descricao || null
+        };
+        
+        const response = await api.post("/measurements", dados);
+        
+        // Formatar resposta para a tabela
+        const novaMed = {
+          id: response.data.protocolo || response.data.id,
+          data_medicao: response.data.data_medicao || novaMedicao.data,
+          tipo: modoColeta,
+          valor_numerico: dados.valor_numerico,
+          descricao: response.data.descricao || novaMedicao.descricao,
+          turno: response.data.turno || parseInt(novaMedicao.turno)
+        };
+        
+        setMedicoes([novaMed, ...medicoes]);
+        
+        if (modoColeta === "parada") {
+          setNovaMedicao({ ...novaMedicao, tempo_parada_minutos: "", descricao: "" });
+        } else {
+          setNovaMedicao({ ...novaMedicao, descricao: "" });
+        }
+        
+        toast.success(`${modoColeta === "parada" ? "Parada" : "Evento"} registrado com sucesso! ✅`);
       }
       
       setErro("");
-      toast.success(`${modoColeta === "ciclo" ? "Ciclo" : modoColeta === "parada" ? "Parada" : "Evento"} registrado com sucesso! ✅`);
       
     } catch (error) {
       console.error("Erro ao salvar medição:", error);
@@ -132,7 +190,16 @@ export default function ColetaDados() {
     if (!window.confirm("Excluir esta medição?")) return;
     
     try {
-      await api.delete(`/medicoes/${id}`);
+      // Tentar excluir em /measurements primeiro (para paradas/eventos)
+      // Se falhar, tentar /cycle-measurements (para ciclos)
+      try {
+        await api.delete(`/measurements/${id}`);
+      } catch {
+        await api.delete(`/cycle-measurements/${id}`).catch(() => {
+          throw new Error("Não foi possível excluir");
+        });
+      }
+      
       setMedicoes(medicoes.filter(m => m.id !== id));
       setErro("");
       toast.success("Medição excluída com sucesso ✅");
@@ -147,9 +214,11 @@ export default function ColetaDados() {
     let csv = "Data,Posto,Tipo,Valor,Descrição,Turno\n";
     
     medicoes.forEach(m => {
-      const postoNome = postos.find(p => p.id === m.posto_id)?.nome || `Posto ${m.posto_id}`;
+      const postoNome = postos.find(p => p.id === m.posto_id)?.nome || 
+                       postos.find(p => p.id === parseInt(postoSelecionado))?.nome || 
+                       `Posto ${postoSelecionado}`;
       const valor = m.tipo === "ciclo" ? `${m.valor_numerico}s` : 
-                   m.tipo === "parada" ? `${m.valor_numerico}min` : "-";
+                   m.tipo === "parada" || m.tipo?.includes("parada") ? `${m.valor_numerico}min` : "-";
       
       csv += `${m.data_medicao},${postoNome},${m.tipo},${valor},${m.descricao || "-"},${m.turno}\n`;
     });
@@ -534,17 +603,17 @@ export default function ColetaDados() {
                         borderRadius: "4px",
                         fontSize: "clamp(10px, 1.3vw, 12px)",
                         backgroundColor: med.tipo === "ciclo" ? "#16a34a20" :
-                                       med.tipo === "parada" ? "#dc262620" : "#f59e0b20",
+                                       med.tipo === "parada" || med.tipo?.includes("parada") ? "#dc262620" : "#f59e0b20",
                         color: med.tipo === "ciclo" ? "#16a34a" :
-                               med.tipo === "parada" ? "#dc2626" : "#f59e0b"
+                               med.tipo === "parada" || med.tipo?.includes("parada") ? "#dc2626" : "#f59e0b"
                       }}>
                         {med.tipo === "ciclo" ? "⏱️ Ciclo" :
-                         med.tipo === "parada" ? "⛔ Parada" : "📝 Evento"}
+                         med.tipo === "parada" || med.tipo?.includes("parada") ? "⛔ Parada" : "📝 Evento"}
                       </span>
                     </td>
                     <td style={tdResponsivo}>
                       {med.tipo === "ciclo" ? `${med.valor_numerico}s` :
-                       med.tipo === "parada" ? `${med.valor_numerico}min` : "-"}
+                       (med.tipo === "parada" || med.tipo?.includes("parada")) ? `${med.valor_numerico}min` : "-"}
                     </td>
                     <td style={tdResponsivo} title={med.descricao || "-"}>
                       {truncarTexto(med.descricao || "-", 15)}

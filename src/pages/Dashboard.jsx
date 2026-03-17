@@ -45,7 +45,8 @@ export default function Dashboard() {
 
       setEmpresa(empresaAtual);
 
-      const linhasRes = await api.get(`/linhas/${empresaAtual.id}`);
+      // ✅ CORRIGIDO: /linhas/ → /lines/
+      const linhasRes = await api.get(`/lines/${empresaAtual.id}`);
       const linhas = linhasRes.data;
 
       if (!linhas || linhas.length === 0) {
@@ -74,13 +75,15 @@ export default function Dashboard() {
             nomesLinhas.push(linha.nome);
           }
 
-          const postosRes = await api.get(`/postos/${linha.id}`).catch(() => ({ data: [] }));
+          // ✅ CORRIGIDO: /postos/ → /work-stations/
+          const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
           const postos = postosRes.data;
 
           let custoLinha = 0;
           for (const posto of postos) {
             if (posto.cargo_id) {
-              const cargosRes = await api.get(`/cargos/${empresaAtual.id}`).catch(() => ({ data: [] }));
+              // ✅ CORRIGIDO: /cargos/ → /roles/
+              const cargosRes = await api.get(`/roles/${empresaAtual.id}`).catch(() => ({ data: [] }));
               const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
               if (cargo) {
                 const salario = parseFloat(cargo.salario_base) || 0;
@@ -310,7 +313,7 @@ export default function Dashboard() {
         <CardExecutivo 
           titulo="Perdas Totais"
           valor={formatarMoeda(dadosDashboard.perdas)}
-          subtitulo={`${(dadosDashboard.perdas / dadosDashboard.faturamento * 100).toFixed(1)}% do faturamento`}
+          subtitulo={`${(dadosDashboard.perdas / (dadosDashboard.faturamento || 1) * 100).toFixed(1)}% do faturamento`}
           cor={coresNexus.danger}
         />
         <CardExecutivo 
@@ -334,7 +337,6 @@ export default function Dashboard() {
         gap: "clamp(15px, 2vw, 20px)", 
         marginBottom: "clamp(20px, 4vw, 30px)" 
       }}>
-        {/* Perdas por Linha */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
@@ -353,7 +355,6 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Faturamento por Linha */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
@@ -380,7 +381,6 @@ export default function Dashboard() {
         gap: "clamp(15px, 2vw, 20px)", 
         marginBottom: "clamp(20px, 4vw, 30px)" 
       }}>
-        {/* Evolução das Perdas */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
@@ -399,7 +399,6 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Distribuição das Perdas */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
@@ -492,7 +491,7 @@ export default function Dashboard() {
                 overflow: "hidden"
               }}>
                 <div style={{
-                  width: `${(opp.ganho / dadosDashboard.oportunidades[0].ganho) * 100}%`,
+                  width: `${(opp.ganho / (dadosDashboard.oportunidades[0].ganho || 1)) * 100}%`,
                   height: "100%",
                   backgroundColor: index === 0 ? coresNexus.success : index === 1 ? coresNexus.warning : coresNexus.info,
                   borderRadius: "4px"
@@ -537,7 +536,7 @@ export default function Dashboard() {
           </div>
           <div>
             <p style={{ margin: "5px 0" }}><strong>🎯 Oportunidade:</strong> {formatarMoeda(dadosDashboard.oportunidades[0].ganho)}/mês</p>
-            <p style={{ margin: "5px 0" }}><strong>⏱️ Payback:</strong> {Math.ceil(50000 / dadosDashboard.oportunidades[0].ganho)} meses</p>
+            <p style={{ margin: "5px 0" }}><strong>⏱️ Payback:</strong> {Math.ceil(50000 / (dadosDashboard.oportunidades[0].ganho || 1))} meses</p>
           </div>
         </div>
       </div>
@@ -545,7 +544,7 @@ export default function Dashboard() {
   );
 }
 
-// Componente Card Executivo responsivo
+// Componente Card Executivo
 function CardExecutivo({ titulo, valor, subtitulo, cor }) {
   return (
     <div style={{ 

@@ -32,7 +32,7 @@ export default function LinhaForm() {
   const [carregando, setCarregando] = useState(false);
 
   // ========================================
-  // ✅ ALTERADO: Carregar produtos da empresa selecionada
+  // ✅ CORRIGIDO: Carregar produtos da empresa selecionada
   // ========================================
   useEffect(() => {
     if (clienteAtual) {
@@ -44,8 +44,8 @@ export default function LinhaForm() {
 
   async function carregarProdutosDaEmpresa() {
     try {
-      // 🔥 Usando a nova rota com o ID da empresa
-      const res = await api.get(`/produtos/empresa/${clienteAtual}`);
+      // ✅ CORRIGIDO: /produtos/empresa/${clienteAtual} → /products/company/${clienteAtual}
+      const res = await api.get(`/products/company/${clienteAtual}`);
       setProdutos(res.data);
     } catch (err) {
       console.error("Erro ao carregar produtos:", err);
@@ -62,7 +62,8 @@ export default function LinhaForm() {
 
   async function carregarLinha() {
     try {
-      const res = await api.get(`/linhas/${clienteAtual}`);
+      // ✅ CORRIGIDO: /linhas/${clienteAtual} → /lines/${clienteAtual}
+      const res = await api.get(`/lines/${clienteAtual}`);
       const linha = res.data.find(l => l.id === parseInt(id));
       if (linha) {
         setForm({
@@ -73,10 +74,11 @@ export default function LinhaForm() {
           horas_produtivas_dia: linha.horas_produtivas_dia || "16"
         });
 
-        // Carregar produtos vinculados a esta linha
+        // ✅ CORRIGIDO: /linha-produto/${id} → /line-products/${id}
         try {
-          const produtosRes = await api.get(`/linha-produto/${id}`);
-          const produtosVinculados = produtosRes.data.map(p => p.produto_id);
+          const produtosRes = await api.get(`/line-products/${id}`);
+          const produtosData = produtosRes.data.dados || produtosRes.data || [];
+          const produtosVinculados = produtosData.map(p => p.produto_id);
           setProdutosSelecionados(produtosVinculados);
         } catch (error) {
           console.error("Erro ao carregar produtos da linha:", error);
@@ -136,18 +138,21 @@ export default function LinhaForm() {
     
     try {
       if (id) {
-        // EDIÇÃO - usar rota existente (vamos manter simples por enquanto)
+        // EDIÇÃO - precisamos criar um endpoint PUT /lines/:id no backend
+        // Por enquanto, manter como alerta
         toast.error("Edição com múltiplos produtos será implementada depois");
-        // await api.put(`/linhas/${id}`, form);
         // TODO: implementar edição com múltiplos produtos
       } else {
-        // CRIAÇÃO - usar a nova rota que criamos no backend
-        await api.post("/linhas-com-multiplos-produtos", {
-          empresa_id: clienteAtual,
+        // CRIAÇÃO - ✅ CORRIGIDO: /linhas-com-multiplos-produtos → /lines-master
+        await api.post("/lines-master", {
+          empresa_id: parseInt(clienteAtual),
           nome: form.nome,
-          takt_time_segundos: form.takt_time_segundos,
-          meta_diaria: form.meta_diaria,
-          produtos_ids: produtosSelecionados
+          horas_produtivas: parseFloat(form.horas_produtivas_dia),
+          produtos: produtosSelecionados.map(prodId => ({
+            id: prodId,
+            takt: parseFloat(form.takt_time_segundos) || 0,
+            meta: parseInt(form.meta_diaria) || 0
+          }))
         });
         toast.success("Linha cadastrada com sucesso! ✅");
       }
@@ -171,7 +176,13 @@ export default function LinhaForm() {
 
     } catch (error) {
       console.error(error);
-      toast.error("Erro ao salvar linha ❌");
+      
+      // Tratamento de erro específico
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.erro || "Erro ao salvar linha ❌");
+      } else {
+        toast.error("Erro ao salvar linha ❌");
+      }
     } finally {
       setCarregando(false);
     }

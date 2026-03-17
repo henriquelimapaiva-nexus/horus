@@ -27,7 +27,8 @@ export default function IAPrecificacao() {
 
   // Buscar empresas ao carregar
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
         console.error("Erro ao carregar empresas:", err);
@@ -51,8 +52,8 @@ export default function IAPrecificacao() {
     toast.loading('Buscando dados da empresa...', { id: 'busca' });
 
     try {
-      // Buscar linhas da empresa
-      const linhasRes = await api.get(`/linhas/${empresaId}`);
+      // ✅ CORRIGIDO: /linhas/${empresaId} → /lines/${empresaId}
+      const linhasRes = await api.get(`/lines/${empresaId}`);
       const linhas = linhasRes.data;
       
       // Calcular perdas totais
@@ -60,18 +61,19 @@ export default function IAPrecificacao() {
       
       for (const linha of linhas) {
         try {
-          // Buscar postos da linha
-          const postosRes = await api.get(`/postos/${linha.id}`).catch(() => ({ data: [] }));
+          // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
+          const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
           const postos = postosRes.data;
           
-          // Buscar perdas da linha
-          const perdasRes = await api.get(`/perdas/${linha.id}`).catch(() => ({ data: [] }));
+          // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
+          const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
           
           // Calcular custo dos postos (para estimativa de perdas)
           for (const posto of postos) {
             if (posto.cargo_id) {
-              const cargosRes = await api.get(`/cargos/${empresaId}`).catch(() => ({ data: [] }));
+              // ✅ CORRIGIDO: /cargos/${empresaId} → /roles/${empresaId}
+              const cargosRes = await api.get(`/roles/${empresaId}`).catch(() => ({ data: [] }));
               const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
               if (cargo) {
                 const salario = parseFloat(cargo.salario_base) || 0;

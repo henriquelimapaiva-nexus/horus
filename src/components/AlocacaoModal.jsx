@@ -30,10 +30,12 @@ export default function AlocacaoModal({
 
     setCarregando(true);
     try {
-      await api.post("/alocacoes", {
-        ...form,
+      // ✅ CORRIGIDO: /alocacoes → /allocations
+      await api.post("/allocations", {
+        colaborador_id: parseInt(form.colaborador_id),
         posto_id: posto.id,
-        turno: parseInt(form.turno)
+        turno: parseInt(form.turno),
+        data_inicio: form.data_inicio
       });
       
       onAlocacaoCriada();

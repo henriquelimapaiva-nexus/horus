@@ -8,8 +8,8 @@ import api from '../api/api';
  */
 export async function gerarPropostaComIA(dadosProposta) {
   try {
-    // ✅ USA O API.JS QUE JÁ TEM A URL CORRETA
-    const response = await api.post('/api/ia/gerar-proposta', { dadosProposta });
+    // ✅ CORRIGIDO: removido /api/ (api.js já adiciona)
+    const response = await api.post('/ia/gerar-proposta', { dadosProposta });
     return response.data.proposta;
   } catch (error) {
     console.error('Erro no serviço de IA:', error);

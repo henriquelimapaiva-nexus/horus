@@ -21,9 +21,9 @@ export default function NovaLinha() {
 
       if (idEmpresa) {
         try {
-          console.log(`📡 HÓRUS: Buscando lista da empresa em -> /produtos/empresa/${idEmpresa}`);
-          // ROTA ATUALIZADA: /produtos/empresa/ID
-          const res = await api.get(`/produtos/filtro/empresa/${idEmpresa}`);
+          console.log(`📡 HÓRUS: Buscando lista da empresa em -> /products/company/${idEmpresa}`);
+          // ✅ CORRIGIDO: /produtos/filtro/empresa/${idEmpresa} → /products/company/${idEmpresa}
+          const res = await api.get(`/products/company/${idEmpresa}`);
           
           if (res.data && Array.isArray(res.data)) {
             setProdutosCadastrados(res.data);
@@ -33,7 +33,6 @@ export default function NovaLinha() {
           }
         } catch (err) {
           console.error("❌ Erro na API:", err);
-          // Se der 404 aqui, verifique se o push do Backend no Render já terminou
           toast.error("Erro ao carregar produtos desta empresa.");
         }
       }
@@ -86,18 +85,29 @@ export default function NovaLinha() {
     setSalvando(true);
     try {
       const payload = {
-        empresa_id: idEmpresa,
+        empresa_id: parseInt(idEmpresa),
         nome,
         horas_produtivas: parseFloat(horasProdutivas),
-        produtos: produtosSelecionados 
+        produtos: produtosSelecionados.map(p => ({
+          id: p.id,
+          takt: parseFloat(p.takt) || 0,
+          meta: p.meta
+        }))
       };
 
-      await api.post("/linhas-com-multiplos-produtos", payload);
+      // ✅ CORRIGIDO: /linhas-com-multiplos-produtos → /lines-master
+      await api.post("/lines-master", payload);
       toast.success("Linha Master cadastrada com sucesso!");
       navigate("/linhas");
     } catch (err) {
       console.error(err);
-      toast.error("Erro ao salvar a linha no banco.");
+      
+      // Tratamento de erro específico
+      if (err.response?.status === 400) {
+        toast.error(err.response.data.erro || "Erro ao salvar a linha.");
+      } else {
+        toast.error("Erro ao salvar a linha no banco.");
+      }
     } finally {
       setSalvando(false);
     }

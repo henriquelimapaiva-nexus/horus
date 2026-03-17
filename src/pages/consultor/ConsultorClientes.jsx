@@ -24,16 +24,16 @@ export default function ConsultorClientes() {
   useEffect(() => {
     async function carregarDados() {
       try {
-        // Buscar todas as empresas
-        const empresasRes = await api.get("/empresas");
+        // ✅ CORRIGIDO: /empresas → /companies
+        const empresasRes = await api.get("/companies");
         const empresasData = empresasRes.data;
         setEmpresas(empresasData);
 
         // Para cada empresa, buscar dados detalhados
         const dadosPromises = empresasData.map(async (empresa) => {
           try {
-            // Buscar linhas da empresa
-            const linhasRes = await api.get(`/linhas/${empresa.id}`);
+            // ✅ CORRIGIDO: /linhas/${empresa.id} → /lines/${empresa.id}
+            const linhasRes = await api.get(`/lines/${empresa.id}`);
             const linhas = linhasRes.data;
 
             let totalLinhas = linhas.length;
@@ -46,19 +46,19 @@ export default function ConsultorClientes() {
             // Para cada linha, buscar postos e análises
             for (const linha of linhas) {
               try {
-                // Buscar postos
-                const postosRes = await api.get(`/postos/${linha.id}`);
+                // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
+                const postosRes = await api.get(`/work-stations/${linha.id}`);
                 totalPostos += postosRes.data.length;
 
-                // Buscar análise da linha
+                // ✅ CORRIGIDO: /analise-linha/${linha.id} mantido
                 const analiseRes = await api.get(`/analise-linha/${linha.id}`);
                 if (analiseRes.data.eficiencia_percentual) {
                   somaOEE += parseFloat(analiseRes.data.eficiencia_percentual);
                   qtdOEE++;
                 }
 
-                // Buscar perdas
-                const perdasRes = await api.get(`/perdas/${linha.id}`).catch(() => ({ data: [] }));
+                // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
+                const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
                 perdasRes.data.forEach(perda => {
                   totalPerdas += (perda.microparadas_minutos || 0) * 0.5;
                   totalPerdas += (perda.refugo_pecas || 0) * 50;

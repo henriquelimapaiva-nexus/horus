@@ -23,16 +23,21 @@ export default function Cargos() {
   const [editId, setEditId] = useState(null);
   const [carregando, setCarregando] = useState(false);
   const [filtroNome, setFiltroNome] = useState("");
-  const [departamentoId, setDepartamentoId] = useState("1");
+
+  // Pega o ID da empresa do clienteAtual
+  const empresaId = clienteAtual ? parseInt(clienteAtual) : null;
 
   useEffect(() => {
-    carregarCargos();
-  }, []);
+    if (empresaId) {
+      carregarCargos();
+    }
+  }, [empresaId]);
 
   async function carregarCargos() {
     setCarregando(true);
     try {
-      const res = await api.get(`/cargos/${departamentoId}`);
+      // ✅ CORRIGIDO: /cargos/${departamentoId} → /roles/${empresaId}
+      const res = await api.get(`/roles/${empresaId}`);
       setCargos(res.data);
     } catch (error) {
       console.error("Erro ao carregar cargos:", error);
@@ -65,7 +70,8 @@ export default function Cargos() {
     setCarregando(true);
     try {
       if (editId) {
-        await api.put(`/cargos/${editId}`, {
+        // ✅ CORRIGIDO: /cargos/${editId} → /roles/${editId}
+        await api.put(`/roles/${editId}`, {
           nome: form.nome,
           salario_base: parseFloat(form.salario_base),
           encargos_percentual: parseFloat(form.encargos_percentual)
@@ -73,8 +79,9 @@ export default function Cargos() {
         toast.success("Cargo atualizado com sucesso! ✅");
         setEditId(null);
       } else {
-        await api.post("/cargos", {
-          departamento_id: parseInt(departamentoId),
+        // ✅ CORRIGIDO: /cargos → /roles
+        await api.post("/roles", {
+          departamento_id: 1, // Mantido como 1, mas idealmente seria um departamento real
           nome: form.nome,
           salario_base: parseFloat(form.salario_base),
           encargos_percentual: parseFloat(form.encargos_percentual)
@@ -91,7 +98,13 @@ export default function Cargos() {
 
     } catch (error) {
       console.error("Erro ao salvar cargo:", error);
-      toast.error("Erro ao salvar cargo ❌");
+      
+      // Tratamento de erro específico
+      if (error.response?.data?.erro?.includes("Departamento inexistente")) {
+        toast.error("Departamento não encontrado. Configure um departamento primeiro ❌");
+      } else {
+        toast.error("Erro ao salvar cargo ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -111,12 +124,19 @@ export default function Cargos() {
     
     setCarregando(true);
     try {
-      await api.delete(`/cargos/${id}`);
+      // ✅ CORRIGIDO: /cargos/${id} → /roles/${id}
+      await api.delete(`/roles/${id}`);
       carregarCargos();
       toast.success("Cargo excluído com sucesso ✅");
     } catch (error) {
       console.error("Erro ao excluir cargo:", error);
-      toast.error("Erro ao excluir cargo ❌");
+      
+      // Tratamento de erro se o cargo estiver em uso
+      if (error.response?.status === 400) {
+        toast.error("Não é possível excluir: cargo está vinculado a colaboradores ou postos ❌");
+      } else {
+        toast.error("Erro ao excluir cargo ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -136,8 +156,29 @@ export default function Cargos() {
   };
 
   const cargosFiltrados = cargos.filter(c =>
-    c.nome.toLowerCase().includes(filtroNome.toLowerCase())
+    c.nome?.toLowerCase().includes(filtroNome.toLowerCase())
   );
+
+  // Se não houver cliente selecionado
+  if (!empresaId) {
+    return (
+      <div style={{ 
+        padding: "clamp(20px, 5vw, 60px)", 
+        textAlign: "center",
+        backgroundColor: "white",
+        borderRadius: "8px",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        margin: "clamp(10px, 3vw, 30px)"
+      }}>
+        <h2 style={{ color: "#1E3A8A", marginBottom: "clamp(10px, 2vw, 20px)" }}>
+          Selecione uma empresa
+        </h2>
+        <p style={{ color: "#666", marginBottom: "clamp(15px, 3vw, 30px)" }}>
+          Escolha uma empresa no menu superior para gerenciar os cargos.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ 
@@ -169,7 +210,6 @@ export default function Cargos() {
           wordBreak: "break-word"
         }}>
           Cadastre os cargos e salários para cálculo de custo de mão de obra
-          {clienteAtual && ` - Cliente ativo: ${clienteAtual}`}
         </p>
       </div>
 

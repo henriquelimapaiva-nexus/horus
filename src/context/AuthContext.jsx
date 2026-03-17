@@ -1,4 +1,3 @@
-// src/context/AuthContext.jsx
 import { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
@@ -6,19 +5,24 @@ const AuthContext = createContext();
 export function AuthProvider({ children }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [usuario, setUsuario] = useState(null);
+  const [clienteSelecionado, setClienteSelecionado] = useState(null); // Estado para o Hórus
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    // Verifica se já existe token e usuário no localStorage ao iniciar app
+    // Recupera tudo do localStorage ao iniciar
     const token = localStorage.getItem("token");
     const usuarioSalvo = localStorage.getItem("usuario");
+    const clienteSalvo = localStorage.getItem("clienteSelecionado");
     
     if (token && usuarioSalvo) {
       setIsAuthenticated(true);
       setUsuario(JSON.parse(usuarioSalvo));
+      
+      if (clienteSalvo) {
+        setClienteSelecionado(JSON.parse(clienteSalvo));
+      }
     }
     
-    // Marca que a verificação terminou
     setCarregando(false);
   }, []);
 
@@ -29,17 +33,24 @@ export function AuthProvider({ children }) {
     setUsuario(usuarioData);
   }
 
+  function selecionarCliente(cliente) {
+    localStorage.setItem("clienteSelecionado", JSON.stringify(cliente));
+    setClienteSelecionado(cliente);
+  }
+
   function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
+    localStorage.clear(); // Limpa tudo de uma vez (token, usuario, cliente)
     setIsAuthenticated(false);
     setUsuario(null);
+    setClienteSelecionado(null);
   }
 
   return (
     <AuthContext.Provider value={{ 
       isAuthenticated, 
       usuario, 
+      clienteSelecionado,
+      selecionarCliente,
       login, 
       logout,
       carregando
@@ -50,5 +61,9 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth deve ser usado dentro de um AuthProvider");
+  }
+  return context;
 }

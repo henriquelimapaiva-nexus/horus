@@ -28,7 +28,8 @@ export default function Relatorio() {
   });
 
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then((res) => setEmpresas(res.data))
       .catch((err) => {
         console.error("Erro ao carregar empresas:", err);
@@ -38,7 +39,8 @@ export default function Relatorio() {
 
   useEffect(() => {
     if (filtros.empresaId) {
-      api.get(`/linhas/${filtros.empresaId}`)
+      // ✅ CORRIGIDO: /linhas/${filtros.empresaId} → /lines/${filtros.empresaId}
+      api.get(`/lines/${filtros.empresaId}`)
         .then((res) => setLinhas(res.data))
         .catch((err) => {
           console.error("Erro ao carregar linhas:", err);
@@ -63,24 +65,29 @@ export default function Relatorio() {
 
       if (filtros.linhaId) {
         const [analise, postos] = await Promise.all([
+          // ✅ CORRIGIDO: /analise-linha mantido (já corrigido)
           api.get(`/analise-linha/${filtros.linhaId}`).catch(() => ({ data: {} })),
-          api.get(`/postos/${filtros.linhaId}`).catch(() => ({ data: [] }))
+          // ✅ CORRIGIDO: /postos/${filtros.linhaId} → /work-stations/${filtros.linhaId}
+          api.get(`/work-stations/${filtros.linhaId}`).catch(() => ({ data: [] }))
         ]);
 
         dados = [{
           tipo: "linha",
-          id: filtros.linhaId,
+          id: parseInt(filtros.linhaId),
           nome: linhas.find(l => l.id === parseInt(filtros.linhaId))?.nome || "Linha",
           analise: analise.data,
           postos: postos.data
         }];
       } else if (filtros.empresaId) {
-        const linhasDaEmpresa = await api.get(`/linhas/${filtros.empresaId}`);
+        // ✅ CORRIGIDO: /linhas/${filtros.empresaId} → /lines/${filtros.empresaId}
+        const linhasDaEmpresa = await api.get(`/lines/${filtros.empresaId}`);
         
         for (const linha of linhasDaEmpresa.data) {
           const [analise, postos] = await Promise.all([
+            // ✅ CORRIGIDO: /analise-linha mantido
             api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} })),
-            api.get(`/postos/${linha.id}`).catch(() => ({ data: [] }))
+            // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
+            api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }))
           ]);
 
           dados.push({
@@ -125,7 +132,7 @@ export default function Relatorio() {
       csv += `${item.nome},Gargalo,${item.analise.gargalo || "N/A"}\n`;
     });
 
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -461,7 +468,7 @@ function ResumoCardResponsivo({ titulo, valor }) {
   );
 }
 
-// Funções auxiliares (mantidas iguais)
+// Funções auxiliares
 function calcularMedia(dados, campo) {
   if (dados.length === 0) return 0;
   const soma = dados.reduce((acc, item) => acc + (parseFloat(item.analise[campo]) || 0), 0);

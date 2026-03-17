@@ -20,6 +20,7 @@ export default function PropostaIA({ dadosProposta, onTextoGerado }) {
     const toastId = toast.loading('🤖 IA gerando proposta...');
 
     try {
+      // ✅ O serviço iaService.js já foi corrigido
       const texto = await gerarPropostaComIA(dadosProposta);
       setTextoGerado(texto);
       setModalAberto(true);

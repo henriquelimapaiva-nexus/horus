@@ -29,7 +29,8 @@ export default function ConsultorRelatorios() {
 
   // Carregar empresas para o filtro
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => console.error("Erro ao carregar empresas:", err));
   }, []);
@@ -43,8 +44,8 @@ export default function ConsultorRelatorios() {
     setCarregando(true);
     
     try {
-      // Buscar todas as empresas
-      const empresasRes = await api.get("/empresas");
+      // ✅ CORRIGIDO: /empresas → /companies
+      const empresasRes = await api.get("/companies");
       const empresasData = empresasRes.data;
       
       // Filtrar empresas se necessário
@@ -65,7 +66,8 @@ export default function ConsultorRelatorios() {
       // Para cada empresa, buscar dados
       for (const empresa of empresasFiltradas) {
         try {
-          const linhasRes = await api.get(`/linhas/${empresa.id}`);
+          // ✅ CORRIGIDO: /linhas/${empresa.id} → /lines/${empresa.id}
+          const linhasRes = await api.get(`/lines/${empresa.id}`);
           const linhas = linhasRes.data;
 
           let totalLinhas = linhas.length;
@@ -77,29 +79,30 @@ export default function ConsultorRelatorios() {
 
           for (const linha of linhas) {
             try {
-              // Postos
-              const postosRes = await api.get(`/postos/${linha.id}`);
+              // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
+              const postosRes = await api.get(`/work-stations/${linha.id}`);
               totalPostos += postosRes.data.length;
 
-              // Análise da linha (OEE)
+              // ✅ CORRIGIDO: /analise-linha/${linha.id} mantido
               const analiseRes = await api.get(`/analise-linha/${linha.id}`);
               if (analiseRes.data.eficiencia_percentual) {
                 somaOEE += parseFloat(analiseRes.data.eficiencia_percentual);
                 qtdOEE++;
               }
 
-              // Perdas
-              const perdasRes = await api.get(`/perdas/${linha.id}`).catch(() => ({ data: [] }));
+              // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
+              const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
               perdasRes.data.forEach(perda => {
                 totalPerdas += (perda.microparadas_minutos || 0) * 0.5;
                 totalPerdas += (perda.refugo_pecas || 0) * 50;
               });
 
-              // Faturamento estimado (baseado em produção)
+              // ✅ CORRIGIDO: /linha-produto/${linha.id} → /line-products/${linha.id}
               if (analiseRes.data.capacidade_estimada_dia) {
-                const produtosRes = await api.get(`/linha-produto/${linha.id}`).catch(() => ({ data: [] }));
-                if (produtosRes.data.length > 0) {
-                  const valorMedio = produtosRes.data.reduce((acc, p) => acc + (p.valor_unitario || 50), 0) / produtosRes.data.length;
+                const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
+                const produtosData = produtosRes.data.dados || produtosRes.data || [];
+                if (produtosData.length > 0) {
+                  const valorMedio = produtosData.reduce((acc, p) => acc + (p.valor_unitario || 50), 0) / produtosData.length;
                   faturamentoEstimado += analiseRes.data.capacidade_estimada_dia * valorMedio * 22;
                 }
               }
@@ -403,7 +406,7 @@ export default function ConsultorRelatorios() {
             />
           </div>
 
-          {/* Gráficos (simulados por enquanto) */}
+          {/* Gráficos */}
           <div style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",

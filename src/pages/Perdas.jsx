@@ -49,7 +49,8 @@ export default function Perdas() {
   });
 
   useEffect(() => {
-    api.get("/empresas")
+    // ✅ CORRIGIDO: /empresas → /companies
+    api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
         console.error("Erro ao carregar empresas:", err);
@@ -59,7 +60,8 @@ export default function Perdas() {
 
   useEffect(() => {
     if (filtros.empresaId) {
-      api.get(`/linhas/${filtros.empresaId}`)
+      // ✅ CORRIGIDO: /linhas/${filtros.empresaId} → /lines/${filtros.empresaId}
+      api.get(`/lines/${filtros.empresaId}`)
         .then(res => setLinhas(res.data))
         .catch(err => {
           console.error("Erro ao carregar linhas:", err);
@@ -89,8 +91,10 @@ export default function Perdas() {
 
   async function carregarLinhaProdutos(linhaId) {
     try {
-      const res = await api.get(`/linha-produto/${linhaId}`);
-      setLinhaProdutos(res.data);
+      // ✅ CORRIGIDO: /linha-produto/${linhaId} → /line-products/${linhaId}
+      const res = await api.get(`/line-products/${linhaId}`);
+      const produtosData = res.data.dados || res.data || [];
+      setLinhaProdutos(produtosData);
     } catch (error) {
       console.error("Erro ao carregar produtos da linha:", error);
       toast.error("Erro ao carregar produtos da linha");
@@ -105,8 +109,23 @@ export default function Perdas() {
 
     setCarregando(true);
     try {
-      const res = await api.get(`/perdas/${filtros.linhaId}`);
-      setPerdas(res.data);
+      // ✅ CORRIGIDO: /perdas/${filtros.linhaId} → /losses/${filtros.linhaId}
+      const res = await api.get(`/losses/${filtros.linhaId}`);
+      
+      // Filtrar por data se necessário
+      let perdasFiltradas = res.data;
+      if (filtros.dataInicio) {
+        perdasFiltradas = perdasFiltradas.filter(p => 
+          new Date(p.data_medicao) >= new Date(filtros.dataInicio)
+        );
+      }
+      if (filtros.dataFim) {
+        perdasFiltradas = perdasFiltradas.filter(p => 
+          new Date(p.data_medicao) <= new Date(filtros.dataFim)
+        );
+      }
+      
+      setPerdas(perdasFiltradas);
     } catch (error) {
       console.error("Erro ao carregar perdas:", error);
       toast.error("Erro ao carregar perdas");
@@ -162,7 +181,8 @@ export default function Perdas() {
     setCarregando(true);
     try {
       if (editId) {
-        await api.put(`/perdas/${editId}`, {
+        // ✅ CORRIGIDO: /perdas/${editId} → /losses/${editId}
+        await api.put(`/losses/${editId}`, {
           microparadas_minutos: parseFloat(form.microparadas_minutos) || 0,
           retrabalho_pecas: parseInt(form.retrabalho_pecas) || 0,
           refugo_pecas: parseInt(form.refugo_pecas) || 0
@@ -170,7 +190,8 @@ export default function Perdas() {
         toast.success("Perda atualizada com sucesso! ✅");
         setEditId(null);
       } else {
-        await api.post("/perdas", {
+        // ✅ CORRIGIDO: /perdas → /losses
+        await api.post("/losses", {
           linha_produto_id: parseInt(form.linha_produto_id),
           microparadas_minutos: parseFloat(form.microparadas_minutos) || 0,
           retrabalho_pecas: parseInt(form.retrabalho_pecas) || 0,
@@ -191,7 +212,13 @@ export default function Perdas() {
 
     } catch (error) {
       console.error("Erro ao salvar perda:", error);
-      toast.error("Erro ao salvar perda ❌");
+      
+      // Tratamento de erro específico
+      if (error.response?.status === 400) {
+        toast.error("Dados inválidos. Verifique os valores ❌");
+      } else {
+        toast.error("Erro ao salvar perda ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -213,7 +240,8 @@ export default function Perdas() {
     
     setCarregando(true);
     try {
-      await api.delete(`/perdas/${id}`);
+      // ✅ CORRIGIDO: /perdas/${id} → /losses/${id}
+      await api.delete(`/losses/${id}`);
       carregarPerdas();
       toast.success("Registro excluído com sucesso ✅");
     } catch (error) {
@@ -231,7 +259,7 @@ export default function Perdas() {
   };
 
   const getProdutoNome = (linhaProdutoId) => {
-    const item = linhaProdutos.find(lp => lp.id === linhaProdutoId);
+    const item = linhaProdutos.find(lp => lp.vinculo_id === linhaProdutoId || lp.id === linhaProdutoId);
     return item ? item.produto_nome || "Produto" : "-";
   };
 
@@ -451,7 +479,7 @@ export default function Perdas() {
               >
                 <option value="">Selecione...</option>
                 {linhaProdutos.map(lp => (
-                  <option key={lp.id} value={lp.id}>
+                  <option key={lp.vinculo_id || lp.id} value={lp.vinculo_id || lp.id}>
                     {truncarTexto(lp.produto_nome || lp.nome, 20)}
                   </option>
                 ))}
@@ -620,7 +648,7 @@ export default function Perdas() {
               </thead>
               <tbody>
                 {perdas.map((perda) => (
-                  <tr key={perda.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <tr key={perda.perda_id || perda.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={tdResponsivo}>{formatarData(perda.data_medicao)}</td>
                     <td style={tdResponsivo} title={perda.produto_nome || getProdutoNome(perda.linha_produto_id)}>
                       {truncarTexto(perda.produto_nome || getProdutoNome(perda.linha_produto_id), 15)}
@@ -640,7 +668,7 @@ export default function Perdas() {
                       <Botao
                         variant="danger"
                         size="sm"
-                        onClick={() => handleDelete(perda.id)}
+                        onClick={() => handleDelete(perda.perda_id || perda.id)}
                       >
                         Excluir
                       </Botao>
