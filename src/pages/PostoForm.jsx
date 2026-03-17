@@ -56,11 +56,12 @@ export default function PostoForm() {
       // ✅ CORRIGIDO: /linhas/${linhaId} → /lines/${linhaId}
       const res = await api.get(`/lines/${linhaId}`);
       // A resposta de /lines/:linhaId retorna um objeto, não um array
-      if (res.data && res.data.empresa_id) {
-        console.log('✅ empresaId encontrado:', res.data.empresa_id);
-        setEmpresaId(res.data.empresa_id);
+      if (res.data && res.data.length > 0 && res.data[0].empresa_id) {
+        setEmpresaId(res.data[0].empresa_id);
+        console.log('✅ empresaId encontrado:', res.data[0].empresa_id);
       } else {
         console.log('❌ empresaId não encontrado na resposta');
+        toast.error("Não foi possível identificar a empresa da linha");
       }
     } catch (error) {
       console.error("Erro ao buscar dados da linha:", error);
