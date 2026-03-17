@@ -66,12 +66,17 @@ export default function LinhaForm() {
       const res = await api.get(`/lines/${clienteAtual}`);
       const linha = res.data.find(l => l.id === parseInt(id));
       if (linha) {
+        // 👇 CORREÇÃO AQUI: definir horasFormatadas dentro do escopo
+        const horasFormatadas = linha.horas_produtivas_dia 
+          ? parseFloat(linha.horas_produtivas_dia).toString() 
+          : "16";
+
         setForm({
           nome: linha.nome || "",
           empresa_id: linha.empresa_id || clienteAtual,
           takt_time_segundos: linha.takt_time_segundos || "",
           meta_diaria: linha.meta_diaria || "",
-          horas_produtivas_dia: horas
+          horas_produtivas_dia: horasFormatadas
         });
 
         // ✅ CORRIGIDO: /linha-produto/${id} → /line-products/${id}
