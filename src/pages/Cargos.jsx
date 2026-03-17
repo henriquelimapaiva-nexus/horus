@@ -437,7 +437,7 @@ export default function Cargos() {
                       <td style={tdResponsivo}>{cargo.id}</td>
                       <td style={tdResponsivo} title={cargo.nome}>{truncarTexto(cargo.nome, 15)}</td>
                       <td style={tdResponsivo} title={formatarMoeda(cargo.salario_base)}>
-                        {truncarTexto(formatarMoeda(cargo.salario_base), 10)}
+                        {formatarMoeda(cargo.salario_base)}
                       </td>
                       <td style={tdResponsivo}>{cargo.encargos_percentual || 70}%</td>
                       <td style={tdResponsivo}>
@@ -445,7 +445,7 @@ export default function Cargos() {
                           fontWeight: "bold",
                           color: "#16a34a"
                         }} title={formatarMoeda(custoTotal)}>
-                          {truncarTexto(formatarMoeda(custoTotal), 10)}
+                          {formatarMoeda(custoTotal)}
                         </span>
                       </td>
                       <td style={tdResponsivo}>
