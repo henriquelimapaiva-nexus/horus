@@ -19,33 +19,6 @@ const formatarMoeda = (valor) => {
   }).format(valor || 0);
 };
 
-// Componente para campo com olho de visibilidade
-const CampoComOlho = ({ valor, campo, visivel, toggleVisivel }) => {
-  const estaVisivel = visivel[campo];
-  
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-      <span>
-        {estaVisivel ? valor : '••••••••'}
-      </span>
-      <button
-        onClick={() => toggleVisivel(campo)}
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          fontSize: '16px',
-          padding: '2px',
-          opacity: estaVisivel ? 1 : 0.5
-        }}
-        title={estaVisivel ? 'Ocultar' : 'Mostrar'}
-      >
-        {estaVisivel ? '👁️' : '👁️‍🗨️'}
-      </button>
-    </div>
-  );
-};
-
 export default function Empresa() {
   // Pega o clienteAtual do contexto
   let clienteAtual = null;
@@ -71,20 +44,42 @@ export default function Empresa() {
   const [filtroNome, setFiltroNome] = useState("");
   const [carregando, setCarregando] = useState(false);
   
-  // Controle de visibilidade dos campos
-  const [visivel, setVisivel] = useState({
-    cnpj: false,
-    meta_mensal: false,
-    regime: false,
-    turnos: false,
-    dias: false
-  });
+  // Controle de visibilidade individual por empresa
+  const [visiveis, setVisiveis] = useState({});
 
-  const toggleVisivel = (campo) => {
-    setVisivel(prev => ({
+  const toggleVisivel = (empresaId, campo) => {
+    setVisiveis(prev => ({
       ...prev,
-      [campo]: !prev[campo]
+      [`${empresaId}-${campo}`]: !prev[`${empresaId}-${campo}`]
     }));
+  };
+
+  // Componente para campo com olho de visibilidade individual
+  const CampoComOlho = ({ empresaId, valor, campo }) => {
+    const chave = `${empresaId}-${campo}`;
+    const estaVisivel = visiveis[chave] || false;
+    
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+        <span>
+          {estaVisivel ? valor : '••••••••'}
+        </span>
+        <button
+          onClick={() => toggleVisivel(empresaId, campo)}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '16px',
+            padding: '2px',
+            opacity: estaVisivel ? 1 : 0.5
+          }}
+          title={estaVisivel ? 'Ocultar' : 'Mostrar'}
+        >
+          {estaVisivel ? '👁️' : '👁️‍🗨️'}
+        </button>
+      </div>
+    );
   };
 
   // Carregar empresas
@@ -385,43 +380,38 @@ export default function Empresa() {
                   <td style={td}>{e.nome || e.name || "-"}</td>
                   <td style={td}>
                     <CampoComOlho 
+                      empresaId={e.id}
                       valor={formatarCNPJ(e.cnpj)} 
                       campo="cnpj"
-                      visivel={visivel}
-                      toggleVisivel={toggleVisivel}
                     />
                   </td>
                   <td style={td}>{e.segmento || e.segment || "-"}</td>
                   <td style={td}>
                     <CampoComOlho 
+                      empresaId={e.id}
                       valor={e.regime_tributario || e.tax_regime || "-"} 
                       campo="regime"
-                      visivel={visivel}
-                      toggleVisivel={toggleVisivel}
                     />
                   </td>
                   <td style={td}>
                     <CampoComOlho 
+                      empresaId={e.id}
                       valor={e.turnos || e.shifts || "0"} 
                       campo="turnos"
-                      visivel={visivel}
-                      toggleVisivel={toggleVisivel}
                     />
                   </td>
                   <td style={td}>
                     <CampoComOlho 
+                      empresaId={e.id}
                       valor={e.dias_produtivos_mes || e.working_days_per_month || "0"} 
                       campo="dias"
-                      visivel={visivel}
-                      toggleVisivel={toggleVisivel}
                     />
                   </td>
                   <td style={td}>
                     <CampoComOlho 
+                      empresaId={e.id}
                       valor={formatarMoeda(e.meta_mensal || e.monthly_target)} 
                       campo="meta_mensal"
-                      visivel={visivel}
-                      toggleVisivel={toggleVisivel}
                     />
                   </td>
                   <td style={td}>
