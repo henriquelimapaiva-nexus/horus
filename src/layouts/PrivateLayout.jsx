@@ -24,30 +24,22 @@ function PrivateLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
-  // Carregar empresas para o seletor - APENAS UMA VEZ
+  // Carregar empresas - SEM CACHE
   useEffect(() => {
+    if (!isAuthenticated) return;
+    
     let isMounted = true;
     
     const carregarClientes = async () => {
-      // Verifica se já carregou nos últimos 30 segundos
-      const ultimaBusca = localStorage.getItem('ultimaBuscaClientes');
-      const agora = Date.now();
-      
-      if (ultimaBusca && (agora - parseInt(ultimaBusca)) < 30000) {
-        console.log("⏳ Usando cache de clientes (última busca há menos de 30s)");
-        return;
-      }
-      
       try {
-        console.log("📡 HÓRUS: Atualizando seletor de clientes...");
+        console.log("📡 Carregando clientes...");
         const res = await api.get("/companies");
         
         if (!isMounted) return;
         
         if (res.data && Array.isArray(res.data)) {
           setClientes(res.data);
-          console.log(`✅ ${res.data.length} clientes carregados.`);
-          localStorage.setItem('ultimaBuscaClientes', agora.toString());
+          console.log(`✅ ${res.data.length} clientes carregados`);
           
           const storedId = localStorage.getItem("clienteAtual");
           if (storedId) {
@@ -60,19 +52,24 @@ function PrivateLayout() {
           }
         }
       } catch (err) {
-        if (!isMounted) return;
-        console.error("❌ Erro ao buscar empresas:", err.response?.data || err.message);
+        console.error("Erro ao carregar clientes:", err);
       }
     };
 
-    if (isAuthenticated) {
+    carregarClientes();
+
+    const handleEmpresasAtualizadas = () => {
+      console.log("📢 Evento recebido - recarregando seletor");
       carregarClientes();
-    }
-    
+    };
+
+    window.addEventListener('empresasAtualizadas', handleEmpresasAtualizadas);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('empresasAtualizadas', handleEmpresasAtualizadas);
     };
-  }, [isAuthenticated]);
+  }, [isAuthenticated, selecionarCliente]);
 
   // Recuperar cliente do localStorage
   useEffect(() => {

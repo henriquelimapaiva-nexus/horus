@@ -75,11 +75,31 @@ export default function Empresa() {
       if (editId) {
         // ✅ CORRIGIDO: /empresas → /companies
         await api.put(`/companies/${editId}`, form);
+        
+        // Recarrega a lista
+        await carregarEmpresas();
+        
+        // 🔥 NOVO: Limpa o cache do seletor
+        localStorage.removeItem('ultimaBuscaClientes');
+        
+        // Dispara evento para atualizar o seletor do menu
+        window.dispatchEvent(new CustomEvent('empresasAtualizadas'));
+        
         toast.success("Empresa atualizada com sucesso! ✅");
         setEditId(null);
       } else {
         // ✅ CORRIGIDO: /empresas → /companies
         await api.post("/companies", form);
+        
+        // Recarrega a lista
+        await carregarEmpresas();
+        
+        // 🔥 NOVO: Limpa o cache do seletor
+        localStorage.removeItem('ultimaBuscaClientes');
+        
+        // Dispara evento para atualizar o seletor do menu
+        window.dispatchEvent(new CustomEvent('empresasAtualizadas'));
+        
         toast.success("Empresa cadastrada com sucesso! ✅");
       }
 
@@ -93,8 +113,6 @@ export default function Empresa() {
         meta_mensal: ""
       });
 
-      carregarEmpresas();
-      
     } catch (error) {
       console.error(error);
       
@@ -120,7 +138,16 @@ export default function Empresa() {
     try {
       // ✅ CORRIGIDO: /empresas → /companies
       await api.delete(`/companies/${id}`);
-      carregarEmpresas();
+      
+      // Recarrega a lista
+      await carregarEmpresas();
+      
+      // 🔥 NOVO: Limpa o cache do seletor
+      localStorage.removeItem('ultimaBuscaClientes');
+      
+      // Dispara evento para atualizar o seletor do menu
+      window.dispatchEvent(new CustomEvent('empresasAtualizadas'));
+      
       toast.success("Empresa excluída ✅");
     } catch (error) {
       console.error(error);
@@ -312,13 +339,13 @@ export default function Empresa() {
             ) : (
               empresasFiltradas.map((e) => (
                 <tr key={e.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td style={td}>{e.nome}</td>
+                  <td style={td}>{e.nome || e.name || "-"}</td>
                   <td style={td}>{formatarCNPJ(e.cnpj)}</td>
-                  <td style={td}>{e.segmento}</td>
-                  <td style={td}>{e.regime_tributario}</td>
-                  <td style={td}>{e.turnos}</td>
-                  <td style={td}>{e.dias_produtivos_mes}</td>
-                  <td style={td}>{formatarMoeda(e.meta_mensal)}</td>
+                  <td style={td}>{e.segmento || e.segment || "-"}</td>
+                  <td style={td}>{e.regime_tributario || e.tax_regime || "-"}</td>
+                  <td style={td}>{e.turnos || e.shifts || "0"}</td>
+                  <td style={td}>{e.dias_produtivos_mes || e.working_days_per_month || "0"}</td>
+                  <td style={td}>{formatarMoeda(e.meta_mensal || e.monthly_target)}</td>
                   <td style={td}>
                     <Botao
                       variant="primary"
