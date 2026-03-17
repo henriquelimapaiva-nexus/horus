@@ -23,6 +23,7 @@ export default function Cargos() {
   const [editId, setEditId] = useState(null);
   const [carregando, setCarregando] = useState(false);
   const [filtroNome, setFiltroNome] = useState("");
+  const [mostrarLista, setMostrarLista] = useState(true); // 👈 NOVO
 
   // Pega o ID da empresa do clienteAtual
   const empresaId = clienteAtual ? parseInt(clienteAtual) : null;
@@ -343,7 +344,7 @@ export default function Cargos() {
         </form>
       </div>
 
-      {/* Filtro responsivo */}
+      {/* Controles: Filtro e Botão Mostrar/Esconder */}
       <div style={{ 
         display: "flex", 
         justifyContent: "space-between", 
@@ -352,12 +353,21 @@ export default function Cargos() {
         flexWrap: "wrap",
         gap: "15px"
       }}>
-        <h2 style={{ 
-          color: "#1E3A8A", 
-          fontSize: "clamp(16px, 2.5vw, 18px)" 
-        }}>
-          Lista de Cargos
-        </h2>
+        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+          <h2 style={{ 
+            color: "#1E3A8A", 
+            fontSize: "clamp(16px, 2.5vw, 18px)" 
+          }}>
+            Lista de Cargos
+          </h2>
+          <Botao
+            variant={mostrarLista ? "warning" : "success"}
+            size="sm"
+            onClick={() => setMostrarLista(!mostrarLista)}
+          >
+            {mostrarLista ? "👁️ Ocultar" : "👁️ Mostrar"}
+          </Botao>
+        </div>
         <input
           type="text"
           placeholder="Filtrar por nome..."
@@ -373,105 +383,106 @@ export default function Cargos() {
         />
       </div>
 
-      {/* Tabela de cargos responsiva */}
-      {carregando && cargos.length === 0 ? (
-        <div style={{ 
-          textAlign: "center", 
-          padding: "clamp(20px, 4vw, 40px)",
-          fontSize: "clamp(14px, 2vw, 16px)",
-          color: "#666"
-        }}>
-          Carregando cargos...
-        </div>
-      ) : (
-        <div style={{ 
-          overflowX: "auto",
-          width: "100%",
-          WebkitOverflowScrolling: "touch"
-        }}>
-          <table style={{ 
-            width: "100%", 
-            borderCollapse: "collapse", 
-            backgroundColor: "white",
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            borderRadius: "8px",
-            minWidth: "600px",
-            tableLayout: "fixed"
-          }}>
-            <colgroup>
-              <col style={{ width: "10%" }} />
-              <col style={{ width: "25%" }} />
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "10%" }} />
-            </colgroup>
-            <thead>
-              <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-                <th style={thResponsivo}>ID</th>
-                <th style={thResponsivo}>Nome</th>
-                <th style={thResponsivo}>Salário Base</th>
-                <th style={thResponsivo}>Encargos</th>
-                <th style={thResponsivo}>Custo Total</th>
-                <th style={thResponsivo}>Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cargosFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={{ 
-                    textAlign: "center", 
-                    padding: "clamp(20px, 3vw, 30px)", 
-                    color: "#666",
-                    fontSize: "clamp(13px, 1.8vw, 14px)"
-                  }}>
-                    Nenhum cargo cadastrado
-                  </td>
-                </tr>
-              ) : (
-                cargosFiltrados.map((cargo) => {
-                  const custoTotal = calcularCustoTotal(cargo.salario_base, cargo.encargos_percentual);
-                  
-                  return (
-                    <tr key={cargo.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={tdResponsivo}>{cargo.id}</td>
-                      <td style={tdResponsivo} title={cargo.nome}>{truncarTexto(cargo.nome, 15)}</td>
-                      <td style={tdResponsivo} title={formatarMoeda(cargo.salario_base)}>
-                        {formatarMoeda(cargo.salario_base)}
-                      </td>
-                      <td style={tdResponsivo}>{cargo.encargos_percentual || 70}%</td>
-                      <td style={tdResponsivo}>
-                        <span style={{ 
-                          fontWeight: "bold",
-                          color: "#16a34a"
-                        }} title={formatarMoeda(custoTotal)}>
-                          {formatarMoeda(custoTotal)}
-                        </span>
-                      </td>
-                      <td style={tdResponsivo}>
-                        <Botao
-                          variant="primary"
-                          size="sm"
-                          onClick={() => handleEdit(cargo)}
-                          style={{ marginRight: "5px" }}
-                        >
-                          Editar
-                        </Botao>
-                        <Botao
-                          variant="danger"
-                          size="sm"
-                          onClick={() => handleDelete(cargo.id)}
-                        >
-                          Excluir
-                        </Botao>
+      {/* Tabela de cargos responsiva - só aparece se mostrarLista for true */}
+      {mostrarLista && (
+        <>
+          {carregando && cargos.length === 0 ? (
+            <div style={{ 
+              textAlign: "center", 
+              padding: "clamp(20px, 4vw, 40px)",
+              fontSize: "clamp(14px, 2vw, 16px)",
+              color: "#666"
+            }}>
+              Carregando cargos...
+            </div>
+          ) : (
+            <div style={{ 
+              overflowX: "auto",
+              width: "100%",
+              WebkitOverflowScrolling: "touch"
+            }}>
+              <table style={{ 
+                width: "100%", 
+                borderCollapse: "collapse", 
+                backgroundColor: "white",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                borderRadius: "8px",
+                minWidth: "600px"
+              }}>
+                <colgroup>
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "25%" }} />
+                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "20%" }} />
+                  <col style={{ width: "10%" }} />
+                </colgroup>
+                <thead>
+                  <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+                    <th style={thResponsivo}>ID</th>
+                    <th style={thResponsivo}>Nome</th>
+                    <th style={thResponsivo}>Salário Base</th>
+                    <th style={thResponsivo}>Encargos</th>
+                    <th style={thResponsivo}>Custo Total</th>
+                    <th style={thResponsivo}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cargosFiltrados.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" style={{ 
+                        textAlign: "center", 
+                        padding: "clamp(20px, 3vw, 30px)", 
+                        color: "#666",
+                        fontSize: "clamp(13px, 1.8vw, 14px)"
+                      }}>
+                        Nenhum cargo cadastrado
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  ) : (
+                    cargosFiltrados.map((cargo) => {
+                      const custoTotal = calcularCustoTotal(cargo.salario_base, cargo.encargos_percentual);
+                      
+                      return (
+                        <tr key={cargo.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                          <td style={tdResponsivo}>{cargo.id}</td>
+                          <td style={tdResponsivo} title={cargo.nome}>{truncarTexto(cargo.nome, 15)}</td>
+                          <td style={tdResponsivo}>{formatarMoeda(cargo.salario_base)}</td>
+                          <td style={tdResponsivo}>{cargo.encargos_percentual || 70}%</td>
+                          <td style={tdResponsivo}>
+                            <span style={{ 
+                              fontWeight: "bold",
+                              color: "#16a34a"
+                            }}>
+                              {formatarMoeda(custoTotal)}
+                            </span>
+                          </td>
+                          <td style={tdResponsivoAcoes}>
+                            <Botao
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleEdit(cargo)}
+                              style={{ marginRight: "5px" }}
+                            >
+                              Editar
+                            </Botao>
+                            <Botao
+                              variant="danger"
+                              size="sm"
+                              onClick={() => handleDelete(cargo.id)}
+                            >
+                              Excluir
+                            </Botao>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -511,8 +522,13 @@ const tdResponsivo = {
   padding: "clamp(6px, 0.8vw, 10px) clamp(4px, 0.6vw, 8px)",
   border: "1px solid #e5e7eb",
   textAlign: "center",
+  fontSize: "clamp(11px, 1.5vw, 13px)"
+};
+
+const tdResponsivoAcoes = {
+  padding: "clamp(6px, 0.8vw, 10px) clamp(4px, 0.6vw, 8px)",
+  border: "1px solid #e5e7eb",
+  textAlign: "center",
   fontSize: "clamp(11px, 1.5vw, 13px)",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
   whiteSpace: "nowrap"
 };
