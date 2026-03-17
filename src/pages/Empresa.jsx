@@ -19,6 +19,34 @@ const formatarMoeda = (valor) => {
   }).format(valor || 0);
 };
 
+// Componente de campo com olho - FORA do componente principal
+const CampoComOlho = ({ empresaId, valor, campo, visivel, onToggle }) => {
+  const chave = `${empresaId}-${campo}`;
+  const estaVisivel = visivel[chave] || false;
+  
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+      <span>
+        {estaVisivel ? valor : '••••••••'}
+      </span>
+      <button
+        onClick={() => onToggle(empresaId, campo)}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '16px',
+          padding: '2px',
+          opacity: estaVisivel ? 1 : 0.5
+        }}
+        title={estaVisivel ? 'Ocultar' : 'Mostrar'}
+      >
+        {estaVisivel ? '👁️' : '👁️‍🗨️'}
+      </button>
+    </div>
+  );
+};
+
 export default function Empresa() {
   // Pega o clienteAtual do contexto
   let clienteAtual = null;
@@ -44,42 +72,18 @@ export default function Empresa() {
   const [filtroNome, setFiltroNome] = useState("");
   const [carregando, setCarregando] = useState(false);
   
-  // Controle de visibilidade individual por empresa
-  const [visiveis, setVisiveis] = useState({});
+  // Estado para controlar quais campos estão visíveis (por empresa)
+  const [camposVisiveis, setCamposVisiveis] = useState({});
 
   const toggleVisivel = (empresaId, campo) => {
-    setVisiveis(prev => ({
-      ...prev,
-      [`${empresaId}-${campo}`]: !prev[`${empresaId}-${campo}`]
-    }));
-  };
-
-  // Componente para campo com olho de visibilidade individual
-  const CampoComOlho = ({ empresaId, valor, campo }) => {
     const chave = `${empresaId}-${campo}`;
-    const estaVisivel = visiveis[chave] || false;
-    
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-        <span>
-          {estaVisivel ? valor : '••••••••'}
-        </span>
-        <button
-          onClick={() => toggleVisivel(empresaId, campo)}
-          style={{
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            fontSize: '16px',
-            padding: '2px',
-            opacity: estaVisivel ? 1 : 0.5
-          }}
-          title={estaVisivel ? 'Ocultar' : 'Mostrar'}
-        >
-          {estaVisivel ? '👁️' : '👁️‍🗨️'}
-        </button>
-      </div>
-    );
+    setCamposVisiveis(prev => {
+      // Cria um novo objeto para forçar re-render
+      const novo = { ...prev };
+      // Inverte o valor atual
+      novo[chave] = !prev[chave];
+      return novo;
+    });
   };
 
   // Carregar empresas
@@ -383,6 +387,8 @@ export default function Empresa() {
                       empresaId={e.id}
                       valor={formatarCNPJ(e.cnpj)} 
                       campo="cnpj"
+                      visivel={camposVisiveis}
+                      onToggle={toggleVisivel}
                     />
                   </td>
                   <td style={td}>{e.segmento || e.segment || "-"}</td>
@@ -391,6 +397,8 @@ export default function Empresa() {
                       empresaId={e.id}
                       valor={e.regime_tributario || e.tax_regime || "-"} 
                       campo="regime"
+                      visivel={camposVisiveis}
+                      onToggle={toggleVisivel}
                     />
                   </td>
                   <td style={td}>
@@ -398,6 +406,8 @@ export default function Empresa() {
                       empresaId={e.id}
                       valor={e.turnos || e.shifts || "0"} 
                       campo="turnos"
+                      visivel={camposVisiveis}
+                      onToggle={toggleVisivel}
                     />
                   </td>
                   <td style={td}>
@@ -405,6 +415,8 @@ export default function Empresa() {
                       empresaId={e.id}
                       valor={e.dias_produtivos_mes || e.working_days_per_month || "0"} 
                       campo="dias"
+                      visivel={camposVisiveis}
+                      onToggle={toggleVisivel}
                     />
                   </td>
                   <td style={td}>
@@ -412,6 +424,8 @@ export default function Empresa() {
                       empresaId={e.id}
                       valor={formatarMoeda(e.meta_mensal || e.monthly_target)} 
                       campo="meta_mensal"
+                      visivel={camposVisiveis}
+                      onToggle={toggleVisivel}
                     />
                   </td>
                   <td style={td}>
