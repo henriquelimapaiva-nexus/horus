@@ -29,7 +29,7 @@ function PrivateLayout() {
     const carregarClientes = async () => {
       try {
         console.log("📡 HÓRUS: Atualizando seletor de clientes...");
-        const res = await api.get("/empresas");
+        const res = await api.get("/companies");
         
         if (res.data && Array.isArray(res.data)) {
           setClientes(res.data);
