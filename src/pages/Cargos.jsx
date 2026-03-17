@@ -70,7 +70,7 @@ export default function Cargos() {
     setCarregando(true);
     try {
       if (editId) {
-        // ✅ CORRIGIDO: /cargos/${editId} → /roles/${editId}
+        // ✅ EDIÇÃO - envia os dados (backend não precisa de empresa_id na edição)
         await api.put(`/roles/${editId}`, {
           nome: form.nome,
           salario_base: parseFloat(form.salario_base),
@@ -79,9 +79,9 @@ export default function Cargos() {
         toast.success("Cargo atualizado com sucesso! ✅");
         setEditId(null);
       } else {
-        // ✅ CORRIGIDO: /cargos → /roles
+        // ✅ CADASTRO - envia empresa_id
         await api.post("/roles", {
-          departamento_id: 1, // Mantido como 1, mas idealmente seria um departamento real
+          empresa_id: parseInt(clienteAtual), // USA O ID DA EMPRESA SELECIONADA
           nome: form.nome,
           salario_base: parseFloat(form.salario_base),
           encargos_percentual: parseFloat(form.encargos_percentual)
@@ -100,8 +100,8 @@ export default function Cargos() {
       console.error("Erro ao salvar cargo:", error);
       
       // Tratamento de erro específico
-      if (error.response?.data?.erro?.includes("Departamento inexistente")) {
-        toast.error("Departamento não encontrado. Configure um departamento primeiro ❌");
+      if (error.response?.data?.erro?.includes("Empresa inexistente")) {
+        toast.error("Empresa não encontrada. Selecione uma empresa válida ❌");
       } else {
         toast.error("Erro ao salvar cargo ❌");
       }
