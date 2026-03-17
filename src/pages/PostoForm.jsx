@@ -29,6 +29,7 @@ export default function PostoForm() {
   const [empresas, setEmpresas] = useState([]);
   const [empresaId, setEmpresaId] = useState(null);
   const [carregando, setCarregando] = useState(false);
+  const [carregandoCargos, setCarregandoCargos] = useState(false); // 👈 NOVO
 
   useEffect(() => {
     if (linhaId) {
@@ -42,8 +43,10 @@ export default function PostoForm() {
     }
   }, [postoId]);
 
+  // 👇 SÓ CARREGA CARGOS QUANDO empresaId EXISTIR
   useEffect(() => {
     if (empresaId) {
+      console.log('📢 Carregando cargos para empresa:', empresaId);
       carregarCargos();
     }
   }, [empresaId]);
@@ -54,7 +57,10 @@ export default function PostoForm() {
       const res = await api.get(`/lines/${linhaId}`);
       // A resposta de /lines/:linhaId retorna um objeto, não um array
       if (res.data && res.data.empresa_id) {
+        console.log('✅ empresaId encontrado:', res.data.empresa_id);
         setEmpresaId(res.data.empresa_id);
+      } else {
+        console.log('❌ empresaId não encontrado na resposta');
       }
     } catch (error) {
       console.error("Erro ao buscar dados da linha:", error);
@@ -63,13 +69,17 @@ export default function PostoForm() {
   }
 
   async function carregarCargos() {
+    setCarregandoCargos(true);
     try {
       // ✅ CORRIGIDO: /cargos/${empresaId} → /roles/${empresaId}
       const res = await api.get(`/roles/${empresaId}`);
       setCargos(res.data);
+      console.log('✅ Cargos carregados:', res.data.length);
     } catch (error) {
       console.error("Erro ao carregar cargos:", error);
       toast.error("Erro ao carregar cargos");
+    } finally {
+      setCarregandoCargos(false);
     }
   }
 
@@ -274,8 +284,11 @@ export default function PostoForm() {
             value={form.cargo_id}
             onChange={handleChange}
             style={inputStyleResponsivo}
+            disabled={carregandoCargos}
           >
-            <option value="">Selecione um cargo (opcional)</option>
+            <option value="">
+              {carregandoCargos ? "Carregando cargos..." : "Selecione um cargo (opcional)"}
+            </option>
             {cargos.map((cargo) => (
               <option key={cargo.id} value={cargo.id}>
                 {truncarTexto(cargo.nome, 25)}
