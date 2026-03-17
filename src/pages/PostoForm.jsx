@@ -26,89 +26,83 @@ export default function PostoForm() {
   });
 
   const [cargos, setCargos] = useState([]);
+  const [empresas, setEmpresas] = useState([]);
   const [empresaId, setEmpresaId] = useState(null);
   const [carregando, setCarregando] = useState(false);
-  const [carregandoCargos, setCarregandoCargos] = useState(false);
 
-  // Buscar dados da linha para obter o empresa_id
   useEffect(() => {
-    if (!linhaId) return;
-    
-    const buscarDadosLinha = async () => {
-      try {
-        const res = await api.get(`/lines/${linhaId}`);
-        
-        // A resposta é um ARRAY de linhas
-        if (res.data && res.data.length > 0) {
-          const primeiraLinha = res.data[0];
-          if (primeiraLinha.empresa_id) {
-            setEmpresaId(primeiraLinha.empresa_id);
-            console.log('✅ empresaId encontrado:', primeiraLinha.empresa_id);
-          } else {
-            console.log('❌ empresaId não encontrado na linha');
-            toast.error("Erro: linha não possui empresa vinculada");
-          }
-        } else {
-          console.log('❌ Nenhuma linha encontrada');
-          toast.error("Linha não encontrada");
-        }
-      } catch (error) {
-        console.error("Erro ao buscar dados da linha:", error);
-        toast.error("Erro ao carregar dados da linha");
-      }
-    };
-
-    buscarDadosLinha();
+    if (linhaId) {
+      buscarDadosLinha();
+    }
   }, [linhaId]);
 
-  // Carregar cargos quando empresaId estiver disponível
   useEffect(() => {
-    if (!empresaId) return;
-    
-    const carregarCargos = async () => {
-      setCarregandoCargos(true);
-      try {
-        const res = await api.get(`/roles/${empresaId}`);
-        setCargos(res.data);
-        console.log(`✅ ${res.data.length} cargos carregados`);
-      } catch (error) {
-        console.error("Erro ao carregar cargos:", error);
-        toast.error("Erro ao carregar cargos");
-      } finally {
-        setCarregandoCargos(false);
-      }
-    };
+    if (postoId) {
+      carregarPosto();
+    }
+  }, [postoId]);
 
-    carregarCargos();
+  useEffect(() => {
+    if (empresaId) {
+      carregarCargos();
+    }
   }, [empresaId]);
 
-  // Carregar dados do posto se for edição
-  useEffect(() => {
-    if (!postoId || !linhaId) return;
-    
-    const carregarPosto = async () => {
-      try {
-        const res = await api.get(`/work-stations/${linhaId}`);
-        const posto = res.data.find(p => p.id === parseInt(postoId));
-        if (posto) {
-          setForm({
-            nome: posto.nome || "",
-            linha_id: posto.linha_id || parseInt(linhaId),
-            tempo_ciclo_segundos: posto.tempo_ciclo_segundos || "",
-            tempo_setup_minutos: posto.tempo_setup_minutos || "",
-            disponibilidade_percentual: posto.disponibilidade_percentual || "95",
-            cargo_id: posto.cargo_id || "",
-            ordem_fluxo: posto.ordem_fluxo || ""
-          });
+  async function buscarDadosLinha() {
+    try {
+      // ✅ CORRIGIDO: /linhas/${linhaId} → /lines/${linhaId}
+      const res = await api.get(`/lines/${linhaId}`);
+      // A resposta de /lines/:linhaId retorna um ARRAY de linhas
+      if (res.data && res.data.length > 0) {
+        // Pega o empresa_id da primeira linha do array
+        const empresaId = res.data[0].empresa_id;
+        if (empresaId) {
+          setEmpresaId(empresaId);
+          console.log('✅ empresaId encontrado:', empresaId);
+        } else {
+          console.log('❌ empresaId não encontrado na linha');
         }
-      } catch (error) {
-        console.error("Erro ao carregar posto:", error);
-        toast.error("Erro ao carregar dados do posto");
+      } else {
+        console.log('❌ Nenhuma linha encontrada para o ID:', linhaId);
       }
-    };
+    } catch (error) {
+      console.error("Erro ao buscar dados da linha:", error);
+      toast.error("Erro ao carregar dados da linha");
+    }
+  }
 
-    carregarPosto();
-  }, [postoId, linhaId]);
+  async function carregarCargos() {
+    try {
+      // ✅ CORRIGIDO: /cargos/${empresaId} → /roles/${empresaId}
+      const res = await api.get(`/roles/${empresaId}`);
+      setCargos(res.data);
+    } catch (error) {
+      console.error("Erro ao carregar cargos:", error);
+      toast.error("Erro ao carregar cargos");
+    }
+  }
+
+  async function carregarPosto() {
+    try {
+      // ✅ CORRIGIDO: /postos/${linhaId} → /work-stations/${linhaId}
+      const res = await api.get(`/work-stations/${linhaId}`);
+      const posto = res.data.find(p => p.id === parseInt(postoId));
+      if (posto) {
+        setForm({
+          nome: posto.nome || "",
+          linha_id: posto.linha_id || parseInt(linhaId),
+          tempo_ciclo_segundos: posto.tempo_ciclo_segundos || "",
+          tempo_setup_minutos: posto.tempo_setup_minutos || "",
+          disponibilidade_percentual: posto.disponibilidade_percentual || "95",
+          cargo_id: posto.cargo_id || "",
+          ordem_fluxo: posto.ordem_fluxo || ""
+        });
+      }
+    } catch (error) {
+      console.error("Erro ao carregar posto:", error);
+      toast.error("Erro ao carregar dados do posto");
+    }
+  }
 
   const handleChange = (e) => {
     setForm({
@@ -123,6 +117,7 @@ export default function PostoForm() {
     
     try {
       if (postoId) {
+        // ✅ CORRIGIDO: /postos/${postoId} → /work-stations/${postoId}
         await api.put(`/work-stations/${postoId}`, {
           nome: form.nome,
           tempo_ciclo_segundos: parseFloat(form.tempo_ciclo_segundos) || 0,
@@ -133,6 +128,7 @@ export default function PostoForm() {
         });
         toast.success("Posto atualizado com sucesso! ✅");
       } else {
+        // ✅ CORRIGIDO: /postos → /work-stations
         await api.post("/work-stations", {
           linha_id: parseInt(linhaId),
           nome: form.nome,
@@ -140,6 +136,7 @@ export default function PostoForm() {
           tempo_setup_minutos: parseFloat(form.tempo_setup_minutos) || 0,
           disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 95,
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null
+          // ordem_fluxo será gerado automaticamente pelo backend
         });
         toast.success("Posto cadastrado com sucesso! ✅");
       }
@@ -150,7 +147,13 @@ export default function PostoForm() {
 
     } catch (error) {
       console.error(error);
-      toast.error(error.response?.data?.erro || "Erro ao salvar posto ❌");
+      
+      // Tratamento de erro específico
+      if (error.response?.status === 400) {
+        toast.error(error.response.data.erro || "Erro ao salvar posto ❌");
+      } else {
+        toast.error("Erro ao salvar posto ❌");
+      }
     } finally {
       setCarregando(false);
     }
@@ -170,7 +173,9 @@ export default function PostoForm() {
     
     const salario = parseFloat(cargo.salario_base) || 0;
     const encargos = parseFloat(cargo.encargos_percentual) || 70;
-    return salario * (1 + encargos / 100);
+    const custoMensal = salario * (1 + encargos / 100);
+    
+    return custoMensal;
   };
 
   return (
@@ -182,6 +187,7 @@ export default function PostoForm() {
       boxSizing: "border-box"
     }}>
       
+      {/* Cabeçalho responsivo */}
       <div style={{ marginBottom: "clamp(20px, 3vw, 30px)" }}>
         <h1 style={{ 
           color: "#1E3A8A", 
@@ -198,6 +204,7 @@ export default function PostoForm() {
         </p>
       </div>
 
+      {/* Formulário responsivo */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -276,11 +283,8 @@ export default function PostoForm() {
             value={form.cargo_id}
             onChange={handleChange}
             style={inputStyleResponsivo}
-            disabled={carregandoCargos}
           >
-            <option value="">
-              {carregandoCargos ? "Carregando cargos..." : "Selecione um cargo (opcional)"}
-            </option>
+            <option value="">Selecione um cargo (opcional)</option>
             {cargos.map((cargo) => (
               <option key={cargo.id} value={cargo.id}>
                 {truncarTexto(cargo.nome, 25)}
@@ -293,7 +297,7 @@ export default function PostoForm() {
             marginTop: "4px",
             fontSize: "clamp(11px, 1.5vw, 12px)"
           }}>
-            O cargo define o custo da mão de obra
+            O cargo define o custo da mão de obra para cálculos financeiros
           </small>
         </div>
 
@@ -325,6 +329,14 @@ export default function PostoForm() {
                 {formatarMoeda(calcularCustoEstimado())}
               </span>
             </div>
+            <div style={{ 
+              fontSize: "clamp(10px, 1.3vw, 12px)", 
+              color: "#666", 
+              marginTop: "5px",
+              fontStyle: "italic"
+            }}>
+              * Baseado no salário e encargos do cargo selecionado
+            </div>
           </div>
         )}
 
@@ -339,6 +351,14 @@ export default function PostoForm() {
             style={inputStyleResponsivo}
             placeholder="Ex: 1"
           />
+          <small style={{ 
+            color: "#666", 
+            display: "block", 
+            marginTop: "4px",
+            fontSize: "clamp(11px, 1.5vw, 12px)"
+          }}>
+            Posição do posto na linha. Deixe em branco para ordem automática.
+          </small>
         </div>
 
         <div style={{ 
@@ -373,7 +393,7 @@ export default function PostoForm() {
   );
 }
 
-// Estilos
+// Estilos responsivos
 const labelStyleResponsivo = {
   display: "block",
   marginBottom: "6px",
@@ -390,4 +410,25 @@ const inputStyleResponsivo = {
   fontSize: "clamp(13px, 1.8vw, 14px)",
   outline: "none",
   boxSizing: "border-box"
+};
+
+const thResponsivo = {
+  padding: "clamp(8px, 1vw, 12px) clamp(4px, 0.8vw, 8px)",
+  border: "1px solid #e5e7eb",
+  textAlign: "center",
+  fontSize: "clamp(11px, 1.5vw, 13px)",
+  fontWeight: "500",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
+};
+
+const tdResponsivo = {
+  padding: "clamp(6px, 0.8vw, 10px) clamp(4px, 0.6vw, 8px)",
+  border: "1px solid #e5e7eb",
+  textAlign: "center",
+  fontSize: "clamp(11px, 1.5vw, 13px)",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
 };
