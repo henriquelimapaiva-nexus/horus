@@ -1,6 +1,6 @@
 // src/pages/Linhas.jsx
 import { useState, useEffect } from "react";
-import { useOutletContext, Link } from "react-router-dom";
+import { useOutletContext, Link, useNavigate } from "react-router-dom";
 import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast';
@@ -12,6 +12,7 @@ const truncarTexto = (texto, maxLength = 20) => {
 
 export default function Linhas() {
   const { clienteAtual, nomeCliente } = useOutletContext();
+  const navigate = useNavigate();
 
   const [linhas, setLinhas] = useState([]);
   const [carregando, setCarregando] = useState(false);
@@ -22,19 +23,36 @@ export default function Linhas() {
       return;
     }
 
-    setCarregando(true);
-    // ✅ CORRIGIDO: /linhas/${clienteAtual} → /lines/${clienteAtual}
-    api.get(`/lines/${clienteAtual}`)
-      .then((res) => {
-        console.log("✅ Linhas carregadas:", res.data);
-        setLinhas(res.data);
-      })
-      .catch((err) => {
-        console.error("Erro ao carregar linhas:", err);
-        toast.error("Erro ao carregar linhas");
-      })
-      .finally(() => setCarregando(false));
+    carregarLinhas();
   }, [clienteAtual]);
+
+  async function carregarLinhas() {
+    setCarregando(true);
+    try {
+      // ✅ CORRIGIDO: /linhas/${clienteAtual} → /lines/${clienteAtual}
+      const res = await api.get(`/lines/${clienteAtual}`);
+      console.log("✅ Linhas carregadas:", res.data);
+      setLinhas(res.data);
+    } catch (err) {
+      console.error("Erro ao carregar linhas:", err);
+      toast.error("Erro ao carregar linhas");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function excluirLinha(id) {
+    if (!window.confirm("Deseja realmente excluir esta linha?")) return;
+    
+    try {
+      await api.delete(`/lines/${id}`);
+      toast.success("Linha excluída com sucesso! ✅");
+      carregarLinhas(); // Recarrega a lista
+    } catch (error) {
+      console.error("Erro ao excluir linha:", error);
+      toast.error("Erro ao excluir linha ❌");
+    }
+  }
 
   if (!clienteAtual) {
     return (
@@ -78,24 +96,65 @@ export default function Linhas() {
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
           {linhas.map((linha) => (
-            <Link key={linha.id} to={`/linhas/${linha.id}`} style={{ textDecoration: "none" }}>
-              <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", boxShadow: "0 2px 4px rgba(0,0,0,0.1)", borderLeft: "4px solid #1E3A8A", transition: "transform 0.2s" }}
+            <div key={linha.id} style={{ position: 'relative' }}>
+              <Link to={`/linhas/${linha.id}`} style={{ textDecoration: "none" }}>
+                <div style={{ 
+                  backgroundColor: "white", 
+                  padding: "20px", 
+                  borderRadius: "8px", 
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
+                  borderLeft: "4px solid #1E3A8A", 
+                  transition: "transform 0.2s"
+                }}
                 onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
                 onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}>
-                
-                <h3 style={{ color: "#1E3A8A", marginBottom: "10px" }}>{truncarTexto(linha.nome, 25)}</h3>
-                
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginBottom: "5px" }}>
-                  <span style={{ color: "#666" }}>Takt time:</span>
-                  <span style={{ fontWeight: "bold" }}>{linha.takt_time_segundos}s</span>
+                  
+                  <h3 style={{ color: "#1E3A8A", marginBottom: "10px" }}>{truncarTexto(linha.nome, 25)}</h3>
+                  
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginBottom: "5px" }}>
+                    <span style={{ color: "#666" }}>Takt time:</span>
+                    <span style={{ fontWeight: "bold" }}>{linha.takt_time_segundos || '—'}s</span>
+                  </div>
+                  
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
+                    <span style={{ color: "#666" }}>Meta diária:</span>
+                    <span style={{ fontWeight: "bold", color: "#16a34a" }}>{linha.meta_diaria || '—'} pçs</span>
+                  </div>
                 </div>
-                
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
-                  <span style={{ color: "#666" }}>Meta diária:</span>
-                  <span style={{ fontWeight: "bold", color: "#16a34a" }}>{linha.meta_diaria} pçs</span>
-                </div>
+              </Link>
+              
+              {/* Botões de ação */}
+              <div style={{
+                position: 'absolute',
+                top: '10px',
+                right: '10px',
+                display: 'flex',
+                gap: '5px'
+              }}>
+                <Botao
+                  variant="primary"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate(`/linhas/editar/${linha.id}`);
+                  }}
+                  style={{ padding: '4px 8px', fontSize: '12px' }}
+                >
+                  Editar
+                </Botao>
+                <Botao
+                  variant="danger"
+                  size="sm"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    excluirLinha(linha.id);
+                  }}
+                  style={{ padding: '4px 8px', fontSize: '12px' }}
+                >
+                  Excluir
+                </Botao>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       )}
