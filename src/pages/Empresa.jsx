@@ -19,6 +19,33 @@ const formatarMoeda = (valor) => {
   }).format(valor || 0);
 };
 
+// Componente para campo com olho de visibilidade
+const CampoComOlho = ({ valor, campo, visivel, toggleVisivel }) => {
+  const estaVisivel = visivel[campo];
+  
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+      <span>
+        {estaVisivel ? valor : '••••••••'}
+      </span>
+      <button
+        onClick={() => toggleVisivel(campo)}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          fontSize: '16px',
+          padding: '2px',
+          opacity: estaVisivel ? 1 : 0.5
+        }}
+        title={estaVisivel ? 'Ocultar' : 'Mostrar'}
+      >
+        {estaVisivel ? '👁️' : '👁️‍🗨️'}
+      </button>
+    </div>
+  );
+};
+
 export default function Empresa() {
   // Pega o clienteAtual do contexto
   let clienteAtual = null;
@@ -43,6 +70,22 @@ export default function Empresa() {
   const [editId, setEditId] = useState(null);
   const [filtroNome, setFiltroNome] = useState("");
   const [carregando, setCarregando] = useState(false);
+  
+  // Controle de visibilidade dos campos
+  const [visivel, setVisivel] = useState({
+    cnpj: false,
+    meta_mensal: false,
+    regime: false,
+    turnos: false,
+    dias: false
+  });
+
+  const toggleVisivel = (campo) => {
+    setVisivel(prev => ({
+      ...prev,
+      [campo]: !prev[campo]
+    }));
+  };
 
   // Carregar empresas
   useEffect(() => {
@@ -79,7 +122,7 @@ export default function Empresa() {
         // Recarrega a lista
         await carregarEmpresas();
         
-        // 🔥 NOVO: Limpa o cache do seletor
+        // Limpa o cache do seletor
         localStorage.removeItem('ultimaBuscaClientes');
         
         // Dispara evento para atualizar o seletor do menu
@@ -94,7 +137,7 @@ export default function Empresa() {
         // Recarrega a lista
         await carregarEmpresas();
         
-        // 🔥 NOVO: Limpa o cache do seletor
+        // Limpa o cache do seletor
         localStorage.removeItem('ultimaBuscaClientes');
         
         // Dispara evento para atualizar o seletor do menu
@@ -142,7 +185,7 @@ export default function Empresa() {
       // Recarrega a lista
       await carregarEmpresas();
       
-      // 🔥 NOVO: Limpa o cache do seletor
+      // Limpa o cache do seletor
       localStorage.removeItem('ultimaBuscaClientes');
       
       // Dispara evento para atualizar o seletor do menu
@@ -340,12 +383,47 @@ export default function Empresa() {
               empresasFiltradas.map((e) => (
                 <tr key={e.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                   <td style={td}>{e.nome || e.name || "-"}</td>
-                  <td style={td}>{formatarCNPJ(e.cnpj)}</td>
+                  <td style={td}>
+                    <CampoComOlho 
+                      valor={formatarCNPJ(e.cnpj)} 
+                      campo="cnpj"
+                      visivel={visivel}
+                      toggleVisivel={toggleVisivel}
+                    />
+                  </td>
                   <td style={td}>{e.segmento || e.segment || "-"}</td>
-                  <td style={td}>{e.regime_tributario || e.tax_regime || "-"}</td>
-                  <td style={td}>{e.turnos || e.shifts || "0"}</td>
-                  <td style={td}>{e.dias_produtivos_mes || e.working_days_per_month || "0"}</td>
-                  <td style={td}>{formatarMoeda(e.meta_mensal || e.monthly_target)}</td>
+                  <td style={td}>
+                    <CampoComOlho 
+                      valor={e.regime_tributario || e.tax_regime || "-"} 
+                      campo="regime"
+                      visivel={visivel}
+                      toggleVisivel={toggleVisivel}
+                    />
+                  </td>
+                  <td style={td}>
+                    <CampoComOlho 
+                      valor={e.turnos || e.shifts || "0"} 
+                      campo="turnos"
+                      visivel={visivel}
+                      toggleVisivel={toggleVisivel}
+                    />
+                  </td>
+                  <td style={td}>
+                    <CampoComOlho 
+                      valor={e.dias_produtivos_mes || e.working_days_per_month || "0"} 
+                      campo="dias"
+                      visivel={visivel}
+                      toggleVisivel={toggleVisivel}
+                    />
+                  </td>
+                  <td style={td}>
+                    <CampoComOlho 
+                      valor={formatarMoeda(e.meta_mensal || e.monthly_target)} 
+                      campo="meta_mensal"
+                      visivel={visivel}
+                      toggleVisivel={toggleVisivel}
+                    />
+                  </td>
                   <td style={td}>
                     <Botao
                       variant="primary"
