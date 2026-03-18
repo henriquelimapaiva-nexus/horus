@@ -1,6 +1,6 @@
 // src/pages/FichaLinha.jsx
 import { useState, useEffect } from "react";
-import { useParams, useOutletContext, Link } from "react-router-dom";
+import { useParams, useOutletContext, Link, useNavigate } from "react-router-dom"; // 👈 Adicionado useNavigate
 import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast';
@@ -3285,7 +3285,8 @@ const badgeStyle = {
 // ========================================
 export default function FichaLinha() {
   const { id } = useParams();
-  const { clienteAtual } = useOutletContext();
+  const { clienteAtual, nomeCLiente } = useOutletContext();
+  const navigate = useNavigate(); // 👈 Adicionado para navegação
   const [linha, setLinha] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState("visao");
   const [carregando, setCarregando] = useState(true);
@@ -3385,7 +3386,7 @@ export default function FichaLinha() {
       margin: "0 auto",
       boxSizing: "border-box"
     }}>
-      {/* Cabeçalho da linha */}
+      {/* Cabeçalho da linha - CORRIGIDO COM BOTÃO VOLTAR */}
       <div style={{ 
         marginBottom: "clamp(20px, 3vw, 30px)",
         backgroundColor: "white",
@@ -3400,17 +3401,32 @@ export default function FichaLinha() {
           flexWrap: "wrap",
           gap: "15px"
         }}>
-          <div>
-            <h1 style={{ 
-              color: "#1E3A8A", 
-              marginBottom: "5px", 
-              fontSize: "clamp(20px, 4vw, 24px)" 
-            }}>
-              {truncarTexto(nomeLinha, 30)}
-            </h1>
-            <p style={{ color: "#666", fontSize: "clamp(12px, 1.8vw, 14px)" }}>
-              Cliente: {clienteAtual} • ID: {id}
-            </p>
+          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+            <Botao
+              variant="secondary"
+              size="sm"
+              onClick={() => navigate("/linhas")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "6px 12px"
+              }}
+            >
+              ← Voltar
+            </Botao>
+            <div>
+              <h1 style={{ 
+                color: "#1E3A8A", 
+                marginBottom: "5px", 
+                fontSize: "clamp(20px, 4vw, 24px)" 
+              }}>
+                {truncarTexto(nomeLinha, 30)}
+              </h1>
+              <p style={{ color: "#666", fontSize: "clamp(12px, 1.8vw, 14px)" }}>
+                Cliente: <strong>{nomeCliente}</strong> • ID: {id}
+              </p>
+            </div>
           </div>
           <Link to={`/coleta/${id}`}>
             <Botao

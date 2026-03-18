@@ -69,6 +69,8 @@ export default function Linhas() {
       // Tratamento de erro específico
       if (error.response?.status === 409) {
         toast.error("Linha possui postos vinculados. Remova os postos primeiro ❌");
+      } else if (error.response?.status === 404) {
+        toast.error("Linha não encontrada ❌");
       } else {
         toast.error("Erro ao excluir linha ❌");
       }
@@ -115,7 +117,7 @@ export default function Linhas() {
           <Link to="/linhas/novo"><Botao variant="primary">Cadastrar primeira linha</Botao></Link>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
           {linhas.map((linha) => {
             // Pega o primeiro produto para mostrar takt e meta no card
             const primeiroProduto = linha.produtos && linha.produtos.length > 0 ? linha.produtos[0] : null;
@@ -126,13 +128,17 @@ export default function Linhas() {
                   <div style={{ 
                     backgroundColor: "white", 
                     padding: "20px", 
+                    paddingTop: "15px",
+                    paddingRight: "90px", // Espaço reservado para os botões
                     borderRadius: "8px", 
                     boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
                     borderLeft: "4px solid #1E3A8A", 
                     transition: "transform 0.2s",
                     minHeight: "140px",
                     display: "flex",
-                    flexDirection: "column"
+                    flexDirection: "column",
+                    position: "relative",
+                    zIndex: 1
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
                   onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}>
@@ -141,9 +147,11 @@ export default function Linhas() {
                       color: "#1E3A8A", 
                       marginBottom: "10px",
                       fontSize: "clamp(16px, 2vw, 18px)",
-                      paddingRight: "70px" // Espaço para os botões não sobreporem
+                      paddingRight: "0",
+                      wordBreak: "break-word",
+                      maxWidth: "calc(100% - 20px)"
                     }}>
-                      {truncarTexto(linha.nome, 25)}
+                      {truncarTexto(linha.nome, 30)}
                     </h3>
                     
                     <div style={{ 
@@ -182,14 +190,18 @@ export default function Linhas() {
                   </div>
                 </Link>
                 
-                {/* Botões de ação */}
+                {/* Botões de ação - com fundo branco e posição fixa */}
                 <div style={{
                   position: 'absolute',
-                  top: '10px',
-                  right: '10px',
+                  top: '15px',
+                  right: '15px',
                   display: 'flex',
                   gap: '5px',
-                  zIndex: 2
+                  zIndex: 10,
+                  backgroundColor: 'white',
+                  padding: '4px',
+                  borderRadius: '6px',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
                 }}>
                   <Botao
                     variant="primary"
@@ -199,7 +211,7 @@ export default function Linhas() {
                       e.stopPropagation();
                       navigate(`/linhas/editar/${linha.id}`);
                     }}
-                    style={{ padding: '4px 8px', fontSize: '12px' }}
+                    style={{ padding: '4px 10px', fontSize: '12px', minWidth: '60px' }}
                   >
                     Editar
                   </Botao>
@@ -211,7 +223,7 @@ export default function Linhas() {
                       e.stopPropagation();
                       excluirLinha(linha.id);
                     }}
-                    style={{ padding: '4px 8px', fontSize: '12px' }}
+                    style={{ padding: '4px 10px', fontSize: '12px', minWidth: '60px' }}
                   >
                     Excluir
                   </Botao>
