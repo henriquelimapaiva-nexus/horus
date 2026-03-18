@@ -29,10 +29,25 @@ export default function Linhas() {
   async function carregarLinhas() {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /linhas/${clienteAtual} → /lines/${clienteAtual}
+      // Buscar linhas da empresa
       const res = await api.get(`/lines/${clienteAtual}`);
-      console.log("✅ Linhas carregadas:", res.data);
-      setLinhas(res.data);
+      
+      // Para cada linha, buscar seus produtos
+      const linhasComProdutos = await Promise.all(
+        res.data.map(async (linha) => {
+          try {
+            const produtosRes = await api.get(`/line-products/${linha.id}`);
+            const produtos = produtosRes.data.dados || produtosRes.data || [];
+            return { ...linha, produtos };
+          } catch (err) {
+            console.error(`Erro ao carregar produtos da linha ${linha.id}:`, err);
+            return { ...linha, produtos: [] };
+          }
+        })
+      );
+      
+      console.log("✅ Linhas carregadas:", linhasComProdutos);
+      setLinhas(linhasComProdutos);
     } catch (err) {
       console.error("Erro ao carregar linhas:", err);
       toast.error("Erro ao carregar linhas");
@@ -50,7 +65,13 @@ export default function Linhas() {
       carregarLinhas(); // Recarrega a lista
     } catch (error) {
       console.error("Erro ao excluir linha:", error);
-      toast.error("Erro ao excluir linha ❌");
+      
+      // Tratamento de erro específico
+      if (error.response?.status === 409) {
+        toast.error("Linha possui postos vinculados. Remova os postos primeiro ❌");
+      } else {
+        toast.error("Erro ao excluir linha ❌");
+      }
     }
   }
 
@@ -95,67 +116,109 @@ export default function Linhas() {
         </div>
       ) : (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "20px" }}>
-          {linhas.map((linha) => (
-            <div key={linha.id} style={{ position: 'relative' }}>
-              <Link to={`/linhas/${linha.id}`} style={{ textDecoration: "none" }}>
-                <div style={{ 
-                  backgroundColor: "white", 
-                  padding: "20px", 
-                  borderRadius: "8px", 
-                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
-                  borderLeft: "4px solid #1E3A8A", 
-                  transition: "transform 0.2s"
-                }}
-                onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-                onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}>
-                  
-                  <h3 style={{ color: "#1E3A8A", marginBottom: "10px" }}>{truncarTexto(linha.nome, 25)}</h3>
-                  
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px", marginBottom: "5px" }}>
-                    <span style={{ color: "#666" }}>Takt time:</span>
-                    <span style={{ fontWeight: "bold" }}>{linha.takt_time_segundos || '—'}s</span>
+          {linhas.map((linha) => {
+            // Pega o primeiro produto para mostrar takt e meta no card
+            const primeiroProduto = linha.produtos && linha.produtos.length > 0 ? linha.produtos[0] : null;
+            
+            return (
+              <div key={linha.id} style={{ position: 'relative' }}>
+                <Link to={`/linhas/${linha.id}`} style={{ textDecoration: "none" }}>
+                  <div style={{ 
+                    backgroundColor: "white", 
+                    padding: "20px", 
+                    borderRadius: "8px", 
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
+                    borderLeft: "4px solid #1E3A8A", 
+                    transition: "transform 0.2s",
+                    minHeight: "140px",
+                    display: "flex",
+                    flexDirection: "column"
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}>
+                    
+                    <h3 style={{ 
+                      color: "#1E3A8A", 
+                      marginBottom: "10px",
+                      fontSize: "clamp(16px, 2vw, 18px)",
+                      paddingRight: "70px" // Espaço para os botões não sobreporem
+                    }}>
+                      {truncarTexto(linha.nome, 25)}
+                    </h3>
+                    
+                    <div style={{ 
+                      display: "flex", 
+                      justifyContent: "space-between", 
+                      fontSize: "14px", 
+                      marginBottom: "5px" 
+                    }}>
+                      <span style={{ color: "#666" }}>Takt time:</span>
+                      <span style={{ fontWeight: "bold" }}>
+                        {primeiroProduto ? `${primeiroProduto.takt_configurado}s` : '—'}
+                      </span>
+                    </div>
+                    
+                    <div style={{ 
+                      display: "flex", 
+                      justifyContent: "space-between", 
+                      fontSize: "14px" 
+                    }}>
+                      <span style={{ color: "#666" }}>Meta diária:</span>
+                      <span style={{ fontWeight: "bold", color: "#16a34a" }}>
+                        {primeiroProduto ? `${primeiroProduto.meta_diaria} pçs` : '—'}
+                      </span>
+                    </div>
+
+                    {linha.produtos && linha.produtos.length > 1 && (
+                      <div style={{ 
+                        marginTop: "8px", 
+                        fontSize: "12px", 
+                        color: "#666",
+                        fontStyle: "italic"
+                      }}>
+                        +{linha.produtos.length - 1} produto(s)
+                      </div>
+                    )}
                   </div>
-                  
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "14px" }}>
-                    <span style={{ color: "#666" }}>Meta diária:</span>
-                    <span style={{ fontWeight: "bold", color: "#16a34a" }}>{linha.meta_diaria || '—'} pçs</span>
-                  </div>
+                </Link>
+                
+                {/* Botões de ação */}
+                <div style={{
+                  position: 'absolute',
+                  top: '10px',
+                  right: '10px',
+                  display: 'flex',
+                  gap: '5px',
+                  zIndex: 2
+                }}>
+                  <Botao
+                    variant="primary"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigate(`/linhas/editar/${linha.id}`);
+                    }}
+                    style={{ padding: '4px 8px', fontSize: '12px' }}
+                  >
+                    Editar
+                  </Botao>
+                  <Botao
+                    variant="danger"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      excluirLinha(linha.id);
+                    }}
+                    style={{ padding: '4px 8px', fontSize: '12px' }}
+                  >
+                    Excluir
+                  </Botao>
                 </div>
-              </Link>
-              
-              {/* Botões de ação */}
-              <div style={{
-                position: 'absolute',
-                top: '10px',
-                right: '10px',
-                display: 'flex',
-                gap: '5px'
-              }}>
-                <Botao
-                  variant="primary"
-                  size="sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    navigate(`/linhas/editar/${linha.id}`);
-                  }}
-                  style={{ padding: '4px 8px', fontSize: '12px' }}
-                >
-                  Editar
-                </Botao>
-                <Botao
-                  variant="danger"
-                  size="sm"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    excluirLinha(linha.id);
-                  }}
-                  style={{ padding: '4px 8px', fontSize: '12px' }}
-                >
-                  Excluir
-                </Botao>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
