@@ -209,24 +209,47 @@ export default function Empresa() {
 
   return (
     <div style={{ 
-      padding: "30px", 
-      width: "100%",
-      fontFamily: "Arial, sans-serif", 
-      backgroundColor: "#f5f7fa",
+      padding: "clamp(15px, 3vw, 30px)", 
+      width: "100%", 
+      maxWidth: "1400px", 
+      margin: "0 auto",
+      fontFamily: "Arial, sans-serif",
       minHeight: "100%"
     }}>
       
-      {/* Cabeçalho */}
-      <div style={{ marginBottom: "30px" }}>
-        <h1 style={{ color: "#1E3A8A", marginBottom: "5px" }}>Empresas</h1>
-        <p style={{ color: "#666" }}>
-          Cadastre e gerencie todas as empresas (clientes)
-          {clienteAtual && ` - Cliente ativo: ${clienteAtual}`}
-        </p>
+      {/* Área do Título com o design padrão do sistema */}
+      <div style={{ 
+        backgroundColor: "white", 
+        borderRadius: "8px", 
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
+        padding: "25px 30px",
+        marginBottom: "30px"
+      }}>
+        <div>
+          <h1 style={{ color: "#1E3A8A", marginBottom: "5px", fontSize: "clamp(20px, 4vw, 28px)" }}>
+            Empresas
+          </h1>
+          <p style={{ color: "#666", fontSize: "14px" }}>
+            Cadastre e gerencie todas as empresas (clientes)
+          </p>
+        </div>
+
+        {/* Informação do cliente selecionado em destaque (se houver) */}
+        {clienteAtual && (
+          <div style={{ 
+            marginTop: "15px", 
+            paddingTop: "15px", 
+            borderTop: "1px solid #e5e7eb",
+            fontSize: "14px",
+            color: "#666"
+          }}>
+            Cliente ativo: <strong style={{ color: "#1E3A8A" }}>{clienteAtual}</strong>
+          </div>
+        )}
       </div>
 
       {/* FORMULÁRIO */}
-      <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+      <div style={{ display: "flex", justifyContent: "center", width: "100%", marginBottom: "30px" }}>
         <form
           onSubmit={handleSubmit}
           style={{
@@ -239,8 +262,7 @@ export default function Empresa() {
             display: "flex",
             flexDirection: "column",
             gap: "15px",
-            backgroundColor: "white",
-            marginBottom: "30px"
+            backgroundColor: "white"
           }}
         >
           <h2 style={{ color: "#1E3A8A", marginBottom: "10px", fontSize: "18px" }}>
@@ -346,13 +368,31 @@ export default function Empresa() {
       </div>
 
       {/* FILTRO */}
-      <div style={{ marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2 style={{ color: "#1E3A8A", fontSize: "18px" }}>Empresas Cadastradas</h2>
+      <div style={{ 
+        backgroundColor: "white", 
+        borderRadius: "8px", 
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
+        padding: "20px",
+        marginBottom: "20px",
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "15px"
+      }}>
+        <h2 style={{ color: "#1E3A8A", fontSize: "18px", margin: 0 }}>Empresas Cadastradas</h2>
         <input
-          placeholder="Filtrar por nome"
+          placeholder="Filtrar por nome..."
           value={filtroNome}
           onChange={(e) => setFiltroNome(e.target.value)}
-          style={{ padding: "8px 12px", borderRadius: "4px", border: "1px solid #ccc", width: "250px" }}
+          style={{ 
+            padding: "8px 12px", 
+            borderRadius: "4px", 
+            border: "1px solid #d1d5db",
+            fontSize: "14px",
+            width: "250px",
+            maxWidth: "100%"
+          }}
         />
       </div>
 
@@ -380,7 +420,7 @@ export default function Empresa() {
               </tr>
             ) : (
               empresasFiltradas.map((e) => (
-                <tr key={e.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                <tr key={e.id} style={{ borderBottom: "1px solid #e5e7eb", hover: { backgroundColor: "#f9fafb" } }}>
                   <td style={td}>{e.nome || e.name || "-"}</td>
                   <td style={td}>
                     <CampoComOlho 
@@ -429,21 +469,42 @@ export default function Empresa() {
                     />
                   </td>
                   <td style={td}>
-                    <Botao
-                      variant="primary"
-                      size="sm"
-                      onClick={() => handleEdit(e)}
-                      style={{ marginRight: "5px" }}
-                    >
-                      Editar
-                    </Botao>
-                    <Botao
-                      variant="danger"
-                      size="sm"
-                      onClick={() => handleDelete(e.id)}
-                    >
-                      Excluir
-                    </Botao>
+                    <div style={{ display: "flex", gap: "5px", justifyContent: "center" }}>
+                      <button
+                        onClick={() => handleEdit(e)}
+                        style={{
+                          padding: "4px 12px",
+                          backgroundColor: "#dbeafe",
+                          color: "#1e40af",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#bfdbfe"}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#dbeafe"}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleDelete(e.id)}
+                        style={{
+                          padding: "4px 12px",
+                          backgroundColor: "#fee2e2",
+                          color: "#b91c1c",
+                          border: "none",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          fontWeight: "500",
+                          cursor: "pointer"
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#fecaca"}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#fee2e2"}
+                      >
+                        Excluir
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
