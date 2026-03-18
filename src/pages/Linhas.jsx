@@ -1,4 +1,4 @@
-// src/pages/Linhas.jsx
+// src/pages/Linhas.jsx - VERSÃO CORRIGIDA DEFINITIVA
 import { useState, useEffect } from "react";
 import { useOutletContext, Link, useNavigate } from "react-router-dom";
 import api from "../api/api";
@@ -123,110 +123,136 @@ export default function Linhas() {
             const primeiroProduto = linha.produtos && linha.produtos.length > 0 ? linha.produtos[0] : null;
             
             return (
-              <div key={linha.id} style={{ position: 'relative' }}>
-                <Link to={`/linhas/${linha.id}`} style={{ textDecoration: "none" }}>
-                  <div style={{ 
-                    backgroundColor: "white", 
-                    padding: "20px", 
-                    paddingTop: "15px",
-                    paddingRight: "90px", // Espaço reservado para os botões
-                    borderRadius: "8px", 
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
-                    borderLeft: "4px solid #1E3A8A", 
-                    transition: "transform 0.2s",
-                    minHeight: "140px",
-                    display: "flex",
-                    flexDirection: "column",
-                    position: "relative",
-                    zIndex: 1
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.transform = "translateY(-2px)"}
-                  onMouseLeave={(e) => e.currentTarget.style.transform = "translateY(0)"}>
-                    
-                    <h3 style={{ 
-                      color: "#1E3A8A", 
-                      marginBottom: "10px",
-                      fontSize: "clamp(16px, 2vw, 18px)",
-                      paddingRight: "0",
-                      wordBreak: "break-word",
-                      maxWidth: "calc(100% - 20px)"
-                    }}>
-                      {truncarTexto(linha.nome, 30)}
-                    </h3>
-                    
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between", 
-                      fontSize: "14px", 
-                      marginBottom: "5px" 
-                    }}>
-                      <span style={{ color: "#666" }}>Takt time:</span>
-                      <span style={{ fontWeight: "bold" }}>
-                        {primeiroProduto ? `${primeiroProduto.takt_configurado}s` : '—'}
-                      </span>
-                    </div>
-                    
-                    <div style={{ 
-                      display: "flex", 
-                      justifyContent: "space-between", 
-                      fontSize: "14px" 
-                    }}>
-                      <span style={{ color: "#666" }}>Meta diária:</span>
-                      <span style={{ fontWeight: "bold", color: "#16a34a" }}>
-                        {primeiroProduto ? `${primeiroProduto.meta_diaria} pçs` : '—'}
-                      </span>
-                    </div>
-
-                    {linha.produtos && linha.produtos.length > 1 && (
-                      <div style={{ 
-                        marginTop: "8px", 
-                        fontSize: "12px", 
-                        color: "#666",
-                        fontStyle: "italic"
-                      }}>
-                        +{linha.produtos.length - 1} produto(s)
-                      </div>
-                    )}
-                  </div>
-                </Link>
-                
-                {/* Botões de ação - com fundo branco e posição fixa */}
-                <div style={{
-                  position: 'absolute',
-                  top: '15px',
-                  right: '15px',
-                  display: 'flex',
-                  gap: '5px',
-                  zIndex: 10,
-                  backgroundColor: 'white',
-                  padding: '4px',
-                  borderRadius: '6px',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)'
+              <div 
+                key={linha.id} 
+                style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  backgroundColor: "white", 
+                  borderRadius: "8px", 
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
+                  borderLeft: "4px solid #1E3A8A", 
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                  overflow: 'hidden',
+                  height: '100%',
+                  cursor: 'pointer'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+                }}
+                onClick={() => navigate(`/linhas/${linha.id}`)}
+              >
+                {/* Área de conteúdo clicável */}
+                <div style={{ 
+                  padding: "20px",
+                  flex: 1,
                 }}>
-                  <Botao
-                    variant="primary"
-                    size="sm"
+                  <h3 style={{ 
+                    color: "#1E3A8A", 
+                    marginBottom: "12px",
+                    fontSize: "clamp(16px, 2vw, 18px)",
+                    fontWeight: "600",
+                    wordBreak: "break-word",
+                    paddingRight: 0,
+                    lineHeight: 1.4
+                  }}>
+                    {truncarTexto(linha.nome, 40)}
+                  </h3>
+                  
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    fontSize: "14px", 
+                    marginBottom: "8px" 
+                  }}>
+                    <span style={{ color: "#666" }}>Takt time:</span>
+                    <span style={{ fontWeight: "bold" }}>
+                      {primeiroProduto ? `${primeiroProduto.takt_configurado}s` : '—'}
+                    </span>
+                  </div>
+                  
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    fontSize: "14px",
+                    marginBottom: linha.produtos && linha.produtos.length > 1 ? "8px" : 0
+                  }}>
+                    <span style={{ color: "#666" }}>Meta diária:</span>
+                    <span style={{ fontWeight: "bold", color: "#16a34a" }}>
+                      {primeiroProduto ? `${primeiroProduto.meta_diaria} pçs` : '—'}
+                    </span>
+                  </div>
+
+                  {linha.produtos && linha.produtos.length > 1 && (
+                    <div style={{ 
+                      fontSize: "12px", 
+                      color: "#666",
+                      fontStyle: "italic",
+                      marginTop: "4px"
+                    }}>
+                      +{linha.produtos.length - 1} produto(s)
+                    </div>
+                  )}
+                </div>
+
+                {/* Botões na parte inferior - SEMPRE SEPARADOS */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '8px',
+                  padding: '12px 20px',
+                  borderTop: '1px solid #e5e7eb',
+                  backgroundColor: '#f9fafb'
+                }}
+                onClick={(e) => e.stopPropagation()} // Impede que clique nos botões navegue
+                >
+                  <button
                     onClick={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                       navigate(`/linhas/editar/${linha.id}`);
                     }}
-                    style={{ padding: '4px 10px', fontSize: '12px', minWidth: '60px' }}
+                    style={{
+                      padding: '6px 16px',
+                      backgroundColor: '#dbeafe',
+                      color: '#1e40af',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#bfdbfe'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dbeafe'}
                   >
                     Editar
-                  </Botao>
-                  <Botao
-                    variant="danger"
-                    size="sm"
+                  </button>
+                  <button
                     onClick={(e) => {
-                      e.preventDefault();
                       e.stopPropagation();
                       excluirLinha(linha.id);
                     }}
-                    style={{ padding: '4px 10px', fontSize: '12px', minWidth: '60px' }}
+                    style={{
+                      padding: '6px 16px',
+                      backgroundColor: '#fee2e2',
+                      color: '#b91c1c',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      fontWeight: '500',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#fecaca'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#fee2e2'}
                   >
                     Excluir
-                  </Botao>
+                  </button>
                 </div>
               </div>
             );
