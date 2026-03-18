@@ -3285,7 +3285,7 @@ const badgeStyle = {
 // ========================================
 export default function FichaLinha() {
   const { id } = useParams();
-  const { clienteAtual, nomeCLiente } = useOutletContext();
+  const { clienteAtual, nomeCliente } = useOutletContext();
   const navigate = useNavigate(); // 👈 Adicionado para navegação
   const [linha, setLinha] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState("visao");
