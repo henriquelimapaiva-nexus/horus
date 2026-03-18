@@ -1,4 +1,4 @@
-// src/pages/Linhas.jsx - VERSÃO CORRIGIDA DEFINITIVA
+// src/pages/Linhas.jsx
 import { useState, useEffect } from "react";
 import { useOutletContext, Link, useNavigate } from "react-router-dom";
 import api from "../api/api";
@@ -92,19 +92,39 @@ export default function Linhas() {
   return (
     <div style={{ padding: "clamp(15px, 3vw, 30px)", width: "100%", maxWidth: "1400px", margin: "0 auto" }}>
       
-      <div style={{ marginBottom: "30px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "15px" }}>
-        <div>
-          <h1 style={{ color: "#1E3A8A", marginBottom: "5px", fontSize: "clamp(20px, 4vw, 28px)" }}>
-            Linhas de Produção
-          </h1>
-          <p style={{ color: "#666", fontSize: "14px" }}>
-            Cliente selecionado: <strong style={{ color: "#1E3A8A" }}>{nomeCliente}</strong>
-          </p>
+      {/* Área do Título com o design padrão do sistema */}
+      <div style={{ 
+        backgroundColor: "white", 
+        borderRadius: "8px", 
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
+        padding: "25px 30px",
+        marginBottom: "30px"
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "15px" }}>
+          <div>
+            <h1 style={{ color: "#1E3A8A", marginBottom: "5px", fontSize: "clamp(20px, 4vw, 28px)" }}>
+              Linhas de Produção
+            </h1>
+            <p style={{ color: "#666", fontSize: "14px" }}>
+              Gerencie as linhas de produção e configure os produtos associados
+            </p>
+          </div>
+          
+          <Link to="/linhas/novo" style={{ textDecoration: "none" }}>
+            <Botao variant="success" size="md">+ Nova Linha</Botao>
+          </Link>
         </div>
-        
-        <Link to="/linhas/novo" style={{ textDecoration: "none" }}>
-          <Botao variant="success" size="md">+ Nova Linha</Botao>
-        </Link>
+
+        {/* Informação do cliente selecionado em destaque */}
+        <div style={{ 
+          marginTop: "15px", 
+          paddingTop: "15px", 
+          borderTop: "1px solid #e5e7eb",
+          fontSize: "14px",
+          color: "#666"
+        }}>
+          Cliente selecionado: <strong style={{ color: "#1E3A8A" }}>{nomeCliente}</strong>
+        </div>
       </div>
 
       {carregando ? (
@@ -200,7 +220,7 @@ export default function Linhas() {
                   )}
                 </div>
 
-                {/* Botões na parte inferior - SEMPRE SEPARADOS */}
+                {/* Botões na parte inferior */}
                 <div style={{
                   display: 'flex',
                   justifyContent: 'flex-end',
@@ -209,7 +229,7 @@ export default function Linhas() {
                   borderTop: '1px solid #e5e7eb',
                   backgroundColor: '#f9fafb'
                 }}
-                onClick={(e) => e.stopPropagation()} // Impede que clique nos botões navegue
+                onClick={(e) => e.stopPropagation()}
                 >
                   <button
                     onClick={(e) => {
