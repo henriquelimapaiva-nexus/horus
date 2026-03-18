@@ -48,22 +48,40 @@ export default function PostoForm() {
     }
   }, [empresaId]);
 
+  // ✅ CORRIGIDO: Função buscarDadosLinha agora funciona corretamente
   async function buscarDadosLinha() {
     try {
-      // ✅ CORRIGIDO: /linhas/${linhaId} → /lines/${linhaId}
+      console.log('🔍 Buscando dados para linha ID:', linhaId);
+      
+      // Buscar linha específica pelo ID
       const res = await api.get(`/lines/${linhaId}`);
-      // A resposta de /lines/:linhaId retorna um ARRAY de linhas
-      if (res.data && res.data.length > 0) {
-        // Pega o empresa_id da primeira linha do array
-        const empresaId = res.data[0].empresa_id;
+      
+      console.log('📦 Resposta da linha:', res.data);
+      
+      // Verificar se é array ou objeto
+      let linha;
+      if (Array.isArray(res.data)) {
+        // Se for array, encontrar a linha com o ID correspondente
+        linha = res.data.find(l => l.id === parseInt(linhaId));
+      } else {
+        // Se for objeto direto, usar ele mesmo
+        linha = res.data;
+      }
+      
+      if (linha) {
+        const empresaId = linha.empresa_id;
+        console.log('🏢 empresa_id encontrado:', empresaId);
+        
         if (empresaId) {
           setEmpresaId(empresaId);
-          console.log('✅ empresaId encontrado:', empresaId);
+          toast.success(`Cargos da empresa serão carregados`);
         } else {
-          console.log('❌ empresaId não encontrado na linha');
+          console.error('❌ empresa_id não encontrado na linha');
+          toast.error("Linha não possui empresa vinculada");
         }
       } else {
-        console.log('❌ Nenhuma linha encontrada para o ID:', linhaId);
+        console.error('❌ Linha não encontrada para o ID:', linhaId);
+        toast.error("Linha não encontrada");
       }
     } catch (error) {
       console.error("Erro ao buscar dados da linha:", error);
@@ -73,9 +91,10 @@ export default function PostoForm() {
 
   async function carregarCargos() {
     try {
-      // ✅ CORRIGIDO: /cargos/${empresaId} → /roles/${empresaId}
+      console.log('📡 Carregando cargos para empresa:', empresaId);
       const res = await api.get(`/roles/${empresaId}`);
       setCargos(res.data);
+      console.log('✅ Cargos carregados:', res.data.length);
     } catch (error) {
       console.error("Erro ao carregar cargos:", error);
       toast.error("Erro ao carregar cargos");
@@ -84,10 +103,13 @@ export default function PostoForm() {
 
   async function carregarPosto() {
     try {
-      // ✅ CORRIGIDO: /postos/${linhaId} → /work-stations/${linhaId}
+      console.log('🔍 Carregando posto ID:', postoId, 'para linha:', linhaId);
+      
       const res = await api.get(`/work-stations/${linhaId}`);
       const posto = res.data.find(p => p.id === parseInt(postoId));
+      
       if (posto) {
+        console.log('✅ Posto encontrado:', posto);
         setForm({
           nome: posto.nome || "",
           linha_id: posto.linha_id || parseInt(linhaId),
@@ -97,6 +119,9 @@ export default function PostoForm() {
           cargo_id: posto.cargo_id || "",
           ordem_fluxo: posto.ordem_fluxo || ""
         });
+      } else {
+        console.error('❌ Posto não encontrado');
+        toast.error("Posto não encontrado");
       }
     } catch (error) {
       console.error("Erro ao carregar posto:", error);
@@ -117,7 +142,7 @@ export default function PostoForm() {
     
     try {
       if (postoId) {
-        // ✅ CORRIGIDO: /postos/${postoId} → /work-stations/${postoId}
+        // Edição
         await api.put(`/work-stations/${postoId}`, {
           nome: form.nome,
           tempo_ciclo_segundos: parseFloat(form.tempo_ciclo_segundos) || 0,
@@ -128,7 +153,7 @@ export default function PostoForm() {
         });
         toast.success("Posto atualizado com sucesso! ✅");
       } else {
-        // ✅ CORRIGIDO: /postos → /work-stations
+        // Criação
         await api.post("/work-stations", {
           linha_id: parseInt(linhaId),
           nome: form.nome,
@@ -136,7 +161,6 @@ export default function PostoForm() {
           tempo_setup_minutos: parseFloat(form.tempo_setup_minutos) || 0,
           disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 95,
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null
-          // ordem_fluxo será gerado automaticamente pelo backend
         });
         toast.success("Posto cadastrado com sucesso! ✅");
       }
@@ -148,7 +172,6 @@ export default function PostoForm() {
     } catch (error) {
       console.error(error);
       
-      // Tratamento de erro específico
       if (error.response?.status === 400) {
         toast.error(error.response.data.erro || "Erro ao salvar posto ❌");
       } else {
@@ -287,7 +310,7 @@ export default function PostoForm() {
             <option value="">Selecione um cargo (opcional)</option>
             {cargos.map((cargo) => (
               <option key={cargo.id} value={cargo.id}>
-                {truncarTexto(cargo.nome, 25)}
+                {truncarTexto(cargo.nome, 25)} - R$ {parseFloat(cargo.salario_base || 0).toLocaleString('pt-BR')}
               </option>
             ))}
           </select>
@@ -410,25 +433,4 @@ const inputStyleResponsivo = {
   fontSize: "clamp(13px, 1.8vw, 14px)",
   outline: "none",
   boxSizing: "border-box"
-};
-
-const thResponsivo = {
-  padding: "clamp(8px, 1vw, 12px) clamp(4px, 0.8vw, 8px)",
-  border: "1px solid #e5e7eb",
-  textAlign: "center",
-  fontSize: "clamp(11px, 1.5vw, 13px)",
-  fontWeight: "500",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap"
-};
-
-const tdResponsivo = {
-  padding: "clamp(6px, 0.8vw, 10px) clamp(4px, 0.6vw, 8px)",
-  border: "1px solid #e5e7eb",
-  textAlign: "center",
-  fontSize: "clamp(11px, 1.5vw, 13px)",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap"
-};
+};;

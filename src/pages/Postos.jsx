@@ -17,12 +17,13 @@ export default function Postos() {
   const [empresas, setEmpresas] = useState([]);
   const [linhas, setLinhas] = useState([]);
   const [postos, setPostos] = useState([]);
+  const [cargos, setCargos] = useState([]); // ✅ ADICIONADO: Estado para cargos
   const [carregando, setCarregando] = useState(false);
   const [empresaSelecionada, setEmpresaSelecionada] = useState(clienteAtual || "");
   const [linhaSelecionada, setLinhaSelecionada] = useState("");
 
+  // Carregar empresas
   useEffect(() => {
-    // ✅ CORRIGIDO: /empresas → /companies
     api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
@@ -31,21 +32,37 @@ export default function Postos() {
       });
   }, []);
 
+  // Carregar linhas quando empresa mudar
   useEffect(() => {
     if (empresaSelecionada) {
-      // ✅ CORRIGIDO: /linhas/${empresaSelecionada} → /lines/${empresaSelecionada}
       api.get(`/lines/${empresaSelecionada}`)
         .then(res => setLinhas(res.data))
         .catch(err => {
           console.error("Erro ao carregar linhas:", err);
           toast.error("Erro ao carregar linhas");
         });
+      
+      // ✅ ADICIONADO: Carregar cargos da empresa selecionada
+      carregarCargos(empresaSelecionada);
     } else {
       setLinhas([]);
       setLinhaSelecionada("");
+      setCargos([]); // Limpar cargos quando não há empresa
     }
   }, [empresaSelecionada]);
 
+  // ✅ ADICIONADO: Função para carregar cargos
+  async function carregarCargos(empresaId) {
+    try {
+      const response = await api.get(`/roles/${empresaId}`);
+      setCargos(response.data);
+      console.log("✅ Cargos carregados:", response.data);
+    } catch (error) {
+      console.error("❌ Erro ao carregar cargos:", error);
+    }
+  }
+
+  // Carregar postos quando linha mudar
   useEffect(() => {
     if (linhaSelecionada) {
       carregarPostos(linhaSelecionada);
@@ -57,7 +74,6 @@ export default function Postos() {
   async function carregarPostos(linhaId) {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /postos/${linhaId} → /work-stations/${linhaId}
       const res = await api.get(`/work-stations/${linhaId}`);
       setPostos(res.data);
       if (res.data.length > 0) {
@@ -75,14 +91,12 @@ export default function Postos() {
     if (!window.confirm("Excluir este posto?")) return;
     
     try {
-      // ✅ CORRIGIDO: /postos/${id} → /work-stations/${id}
       await api.delete(`/work-stations/${id}`);
       carregarPostos(linhaSelecionada);
       toast.success("Posto excluído com sucesso! ✅");
     } catch (error) {
       console.error("Erro ao excluir posto:", error);
       
-      // Tratamento de erro se o posto tiver vínculos
       if (error.response?.status === 409) {
         toast.error("Posto possui vínculos. Remova as alocações primeiro ❌");
       } else {
@@ -91,11 +105,11 @@ export default function Postos() {
     }
   }
 
-  // Buscar cargo pelo ID (mock - idealmente viria da API)
+  // ✅ CORRIGIDO: Função que busca nome do cargo no array de cargos
   const getCargoNome = (cargoId) => {
     if (!cargoId) return "-";
-    // Aqui você pode implementar uma busca real de cargos se necessário
-    return `Cargo ${cargoId}`;
+    const cargo = cargos.find(c => c.id === cargoId);
+    return cargo ? cargo.nome : `ID: ${cargoId}`;
   };
 
   return (
@@ -284,8 +298,8 @@ export default function Postos() {
                       {posto.disponibilidade_percentual || 0}%
                     </span>
                   </td>
-                  <td style={tdResponsivo} title={posto.cargo_id || "-"}>
-                    {truncarTexto(posto.cargo_id ? `Cargo ${posto.cargo_id}` : "-", 10)}
+                  <td style={tdResponsivo} title={getCargoNome(posto.cargo_id)}>
+                    {truncarTexto(getCargoNome(posto.cargo_id), 12)}
                   </td>
                   <td style={tdResponsivo}>
                     <Link to={`/postos/editar/${posto.id}/linha/${linhaSelecionada}`} style={{ textDecoration: "none", display: "inline-block" }}>
