@@ -20,8 +20,6 @@ export default function LinhaForm() {
   const [form, setForm] = useState({
     nome: "",
     empresa_id: clienteAtual || "",
-    takt_time_segundos: "",
-    meta_diaria: "",
     horas_produtivas_dia: "16"
   });
 
@@ -32,7 +30,7 @@ export default function LinhaForm() {
   const [carregando, setCarregando] = useState(false);
 
   // ========================================
-  // ✅ CORRIGIDO: Carregar produtos da empresa selecionada
+  // ✅ Carregar produtos da empresa selecionada
   // ========================================
   useEffect(() => {
     if (clienteAtual) {
@@ -44,7 +42,6 @@ export default function LinhaForm() {
 
   async function carregarProdutosDaEmpresa() {
     try {
-      // ✅ CORRIGIDO: /produtos/empresa/${clienteAtual} → /products/company/${clienteAtual}
       const res = await api.get(`/products/company/${clienteAtual}`);
       setProdutos(res.data);
     } catch (err) {
@@ -53,7 +50,9 @@ export default function LinhaForm() {
     }
   }
 
-  // Carregar dados da linha se for edição
+  // ========================================
+  // ✅ Carregar dados da linha se for edição
+  // ========================================
   useEffect(() => {
     if (id) {
       carregarLinha();
@@ -62,11 +61,12 @@ export default function LinhaForm() {
 
   async function carregarLinha() {
     try {
-      // ✅ CORRIGIDO: /linhas/${clienteAtual} → /lines/${clienteAtual}
+      // Buscar dados da linha
       const res = await api.get(`/lines/${clienteAtual}`);
       const linha = res.data.find(l => l.id === parseInt(id));
+      
       if (linha) {
-        // 👇 CORREÇÃO AQUI: definir horasFormatadas dentro do escopo
+        // Formatar horas
         const horasFormatadas = linha.horas_produtivas_dia 
           ? parseFloat(linha.horas_produtivas_dia).toString() 
           : "16";
@@ -74,22 +74,22 @@ export default function LinhaForm() {
         setForm({
           nome: linha.nome || "",
           empresa_id: linha.empresa_id || clienteAtual,
-          takt_time_segundos: linha.takt_time_segundos || "",
-          meta_diaria: linha.meta_diaria || "",
           horas_produtivas_dia: horasFormatadas
         });
 
-        // ✅ CORRIGIDO: /linha-produto/${id} → /line-products/${id}
+        // Buscar produtos vinculados
         try {
           const produtosRes = await api.get(`/line-products/${id}`);
           const produtosData = produtosRes.data.dados || produtosRes.data || [];
-          // 👇 AQUI ESTÁ A CORREÇÃO
+          
           const produtosVinculados = produtosData.map(p => ({
             id: p.produto_id,
             nome: p.produto_nome,
             takt: p.takt_configurado || "",
-            meta: p.meta_diaria || 0
+            meta: p.meta_diaria || 0,
+            vinculo_id: p.vinculo_id // Guardar ID do vínculo para edição
           }));
+          
           setProdutosSelecionados(produtosVinculados);
         } catch (error) {
           console.error("Erro ao carregar produtos da linha:", error);
@@ -108,14 +108,15 @@ export default function LinhaForm() {
     });
   };
 
-  // Função para adicionar produto à lista
+  // ========================================
+  // ✅ Funções para gerenciar produtos
+  // ========================================
   const adicionarProduto = () => {
     if (!produtoAtual) {
       toast.error("Selecione um produto");
       return;
     }
     
-    // Verificar se já foi adicionado
     if (produtosSelecionados.some(p => p.id === parseInt(produtoAtual))) {
       toast.error("Este produto já foi adicionado");
       return;
@@ -128,26 +129,18 @@ export default function LinhaForm() {
       takt: "", 
       meta: 0 
     }]);
-    setProdutoAtual(""); // limpa a seleção
+    setProdutoAtual("");
   };
 
-  // Função para remover produto da lista
   const removerProduto = (produtoId) => {
     setProdutosSelecionados(produtosSelecionados.filter(p => p.id !== produtoId));
   };
 
-  // Função para obter nome do produto pelo ID
-  const getNomeProduto = (id) => {
-    const produto = produtos.find(p => p.id === id);
-    return produto ? produto.nome : "Produto não encontrado";
-  };
-
-  // Atualizar takt e meta de um produto
   const atualizarProduto = (index, campo, valor) => {
     const novos = [...produtosSelecionados];
     novos[index][campo] = campo === 'takt' ? valor : parseInt(valor) || 0;
     
-    // Se tiver takt e horas, recalcula meta
+    // Recalcular meta se takt mudou
     if (campo === 'takt' && parseFloat(valor) > 0 && parseFloat(form.horas_produtivas_dia) > 0) {
       const horas = parseFloat(form.horas_produtivas_dia);
       const takt = parseFloat(valor);
@@ -157,10 +150,12 @@ export default function LinhaForm() {
     setProdutosSelecionados(novos);
   };
 
+  // ========================================
+  // ✅ HANDLE SUBMIT - AGORA COM EDIÇÃO FUNCIONAL
+  // ========================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validação: pelo menos um produto selecionado
     if (produtosSelecionados.length === 0) {
       toast.error("Selecione pelo menos um produto para a linha");
       return;
@@ -170,12 +165,54 @@ export default function LinhaForm() {
     
     try {
       if (id) {
-        // EDIÇÃO - precisamos criar um endpoint PUT /lines/:id no backend
-        // Por enquanto, manter como alerta
-        toast.error("Edição com múltiplos produtos será implementada depois");
-        // TODO: implementar edição com múltiplos produtos
+        // 🟢 EDIÇÃO - Atualizar dados da linha
+        await api.put(`/lines/${id}`, {
+          nome: form.nome,
+          horas_produtivas_dia: parseFloat(form.horas_produtivas_dia)
+        });
+
+        // Buscar produtos atuais para comparar
+        const produtosAtuaisRes = await api.get(`/line-products/${id}`);
+        const produtosAtuais = produtosAtuaisRes.data.dados || produtosAtuaisRes.data || [];
+        
+        // Criar mapa de produtos atuais por ID
+        const produtosAtuaisMap = new Map(
+          produtosAtuais.map(p => [p.produto_id, p])
+        );
+
+        // Processar cada produto selecionado
+        for (const prod of produtosSelecionados) {
+          const produtoAtual = produtosAtuaisMap.get(prod.id);
+          
+          if (produtoAtual) {
+            // Produto já existe - atualizar
+            if (produtoAtual.takt_configurado != prod.takt || produtoAtual.meta_diaria != prod.meta) {
+              await api.put(`/line-product/${produtoAtual.vinculo_id}`, {
+                takt_time_segundos: parseFloat(prod.takt) || 0,
+                meta_diaria: prod.meta || 0
+              });
+            }
+            // Remover do mapa para não excluir depois
+            produtosAtuaisMap.delete(prod.id);
+          } else {
+            // Produto novo - criar
+            await api.post("/line-product", {
+              linha_id: parseInt(id),
+              produto_id: prod.id,
+              takt_time_segundos: parseFloat(prod.takt) || 0,
+              meta_diaria: prod.meta || 0
+            });
+          }
+        }
+
+        // Excluir produtos que não estão mais na lista
+        for (const [_, produto] of produtosAtuaisMap) {
+          await api.delete(`/line-product/${produto.vinculo_id}`);
+        }
+
+        toast.success("Linha atualizada com sucesso! ✅");
       } else {
-        // CRIAÇÃO - ✅ CORRIGIDO: /linhas-com-multiplos-produtos → /lines-master
+        // 🟢 CRIAÇÃO
         await api.post("/lines-master", {
           empresa_id: parseInt(clienteAtual),
           nome: form.nome,
@@ -189,19 +226,6 @@ export default function LinhaForm() {
         toast.success("Linha cadastrada com sucesso! ✅");
       }
 
-      if (!id) {
-        // Limpar formulário
-        setForm({
-          nome: "",
-          empresa_id: clienteAtual,
-          takt_time_segundos: "",
-          meta_diaria: "",
-          horas_produtivas_dia: "16"
-        });
-        setProdutosSelecionados([]);
-        setProdutoAtual("");
-      }
-
       setTimeout(() => {
         navigate(`/linhas`);
       }, 1500);
@@ -209,9 +233,10 @@ export default function LinhaForm() {
     } catch (error) {
       console.error(error);
       
-      // Tratamento de erro específico
       if (error.response?.status === 400) {
         toast.error(error.response.data.erro || "Erro ao salvar linha ❌");
+      } else if (error.response?.status === 404) {
+        toast.error("Recurso não encontrado. Verifique as rotas no backend ❌");
       } else {
         toast.error("Erro ao salvar linha ❌");
       }
@@ -247,7 +272,7 @@ export default function LinhaForm() {
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho responsivo */}
+      {/* Cabeçalho */}
       <div style={{ 
         marginBottom: "clamp(20px, 3vw, 30px)",
         textAlign: "center"
@@ -267,7 +292,7 @@ export default function LinhaForm() {
         </p>
       </div>
 
-      {/* Formulário responsivo */}
+      {/* Formulário */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -295,13 +320,10 @@ export default function LinhaForm() {
           />
         </div>
 
-        {/* ======================================== */}
-        {/* SEÇÃO DE MÚLTIPLOS PRODUTOS */}
-        {/* ======================================== */}
+        {/* SEÇÃO DE PRODUTOS */}
         <div style={{ marginBottom: "clamp(20px, 3vw, 25px)" }}>
           <label style={labelStyleResponsivo}>Produtos da Linha *</label>
           
-          {/* Área de seleção com botão + */}
           <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
             <select
               value={produtoAtual}
@@ -334,7 +356,7 @@ export default function LinhaForm() {
             </Botao>
           </div>
           
-          {/* TABELA DE PRODUTOS COM TAKT E META */}
+          {/* TABELA DE PRODUTOS */}
           {produtosSelecionados.length > 0 && (
             <div style={{ marginTop: "20px", overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -385,7 +407,6 @@ export default function LinhaForm() {
             </div>
           )}
 
-          {/* Mensagem se nenhum produto selecionado */}
           {produtosSelecionados.length === 0 && (
             <p style={{ 
               color: "#dc2626", 
@@ -397,7 +418,6 @@ export default function LinhaForm() {
             </p>
           )}
 
-          {/* Mensagem se não há produtos cadastrados */}
           {produtos.length === 0 && (
             <p style={{ 
               color: "#f59e0b", 
@@ -443,7 +463,7 @@ export default function LinhaForm() {
             marginTop: "4px",
             fontSize: "clamp(11px, 1.5vw, 12px)"
           }}>
-            Horas disponíveis para produção (excluindo paradas planejadas)
+            Horas disponíveis para produção
           </small>
         </div>
 
