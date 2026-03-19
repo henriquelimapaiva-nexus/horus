@@ -29,9 +29,10 @@ export default function PostoForm() {
   const [empresaId, setEmpresaId] = useState(null);
   const [carregando, setCarregando] = useState(false);
   const [linha, setLinha] = useState(null);
+  const [empresaNome, setEmpresaNome] = useState("");
 
   // ========================================
-  // 1. BUSCAR DADOS DA LINHA
+  // 1. BUSCAR DADOS DA LINHA (CORRIGIDO - BUSCA EM TODAS EMPRESAS)
   // ========================================
   useEffect(() => {
     if (linhaId) {
@@ -58,7 +59,7 @@ export default function PostoForm() {
   }, [empresaId]);
 
   // ========================================
-  // FUNÇÃO: Buscar dados da linha
+  // FUNÇÃO CORRIGIDA: Buscar dados da linha em TODAS as empresas
   // ========================================
   async function buscarDadosLinha() {
     try {
@@ -69,39 +70,54 @@ export default function PostoForm() {
         return;
       }
 
-      // Buscar todas as linhas da empresa (ID 11 = Autopeças Sul)
-      const res = await api.get(`/lines/11`);
+      // Buscar todas as empresas
+      const empresasRes = await api.get("/companies");
+      console.log('📦 Empresas encontradas:', empresasRes.data.length);
       
-      console.log('📦 Todas as linhas da empresa:', res.data);
+      let linhaEncontrada = null;
+      let empresaEncontrada = null;
       
-      // Encontrar a linha pelo ID
-      const linhaEncontrada = res.data.find(l => l.id === parseInt(linhaId));
+      // Para cada empresa, buscar suas linhas
+      for (const empresa of empresasRes.data) {
+        try {
+          const linhasRes = await api.get(`/lines/${empresa.id}`);
+          const linha = linhasRes.data.find(l => l.id === parseInt(linhaId));
+          
+          if (linha) {
+            linhaEncontrada = linha;
+            empresaEncontrada = empresa;
+            break;
+          }
+        } catch (error) {
+          // Ignora erro e continua para próxima empresa
+          console.log(`Empresa ${empresa.id} - ${empresa.nome}: sem linhas ou erro`);
+        }
+      }
       
-      if (linhaEncontrada) {
+      if (linhaEncontrada && empresaEncontrada) {
         console.log('✅ Linha encontrada:', linhaEncontrada);
-        setLinha(linhaEncontrada);
+        console.log('🏢 Empresa:', empresaEncontrada.nome, 'ID:', empresaEncontrada.id);
         
-        const empresaId = linhaEncontrada.empresa_id;
-        console.log('🏢 empresa_id encontrado:', empresaId);
+        setLinha(linhaEncontrada);
+        setEmpresaNome(empresaEncontrada.nome);
+        
+        const empresaId = linhaEncontrada.empresa_id || empresaEncontrada.id;
+        console.log('🏢 empresa_id definido:', empresaId);
         
         if (empresaId) {
           setEmpresaId(empresaId);
+          toast.success(`Linha encontrada na empresa ${empresaEncontrada.nome}`);
         } else {
           toast.error("Linha não possui empresa vinculada");
         }
       } else {
-        console.error('❌ Linha não encontrada. IDs disponíveis:', 
-          res.data.map(l => ({ id: l.id, nome: l.nome })));
-        toast.error(`Linha ID ${linhaId} não encontrada`);
+        console.error('❌ Linha não encontrada em nenhuma empresa');
+        toast.error(`Linha ID ${linhaId} não encontrada em nenhuma empresa`);
       }
+      
     } catch (error) {
       console.error("Erro ao buscar dados da linha:", error);
-      
-      if (error.response?.status === 404) {
-        toast.error(`Linha ID ${linhaId} não existe no sistema`);
-      } else {
-        toast.error("Erro ao carregar dados da linha");
-      }
+      toast.error("Erro ao carregar dados da linha");
     }
   }
 
@@ -114,6 +130,10 @@ export default function PostoForm() {
       const res = await api.get(`/roles/${empresaId}`);
       setCargos(res.data);
       console.log('✅ Cargos carregados:', res.data.length);
+      
+      if (res.data.length === 0) {
+        toast.success('Nenhum cargo cadastrado para esta empresa');
+      }
     } catch (error) {
       console.error("Erro ao carregar cargos:", error);
       toast.error("Erro ao carregar cargos");
@@ -255,6 +275,7 @@ export default function PostoForm() {
           fontSize: "clamp(12px, 2vw, 14px)" 
         }}>
           Linha: {linha?.nome || `ID: ${linhaId}`}
+          {empresaNome && ` | Empresa: ${empresaNome}`}
         </p>
       </div>
 
@@ -330,7 +351,7 @@ export default function PostoForm() {
           />
         </div>
 
-        {/* ✅ SELECT DE CARGOS - CORRIGIDO (SEM SALÁRIO) */}
+        {/* SELECT DE CARGOS - APENAS NOME */}
         <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
           <label style={labelStyleResponsivo}>Cargo</label>
           <select
@@ -342,7 +363,7 @@ export default function PostoForm() {
             <option value="">Selecione um cargo (opcional)</option>
             {cargos.map((cargo) => (
               <option key={cargo.id} value={cargo.id}>
-                {truncarTexto(cargo.nome, 25)} {/* ✅ APENAS O NOME DO CARGO */}
+                {truncarTexto(cargo.nome, 25)}
               </option>
             ))}
           </select>
