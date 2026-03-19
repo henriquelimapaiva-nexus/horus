@@ -17,12 +17,14 @@ export default function Postos() {
   const [empresas, setEmpresas] = useState([]);
   const [linhas, setLinhas] = useState([]);
   const [postos, setPostos] = useState([]);
-  const [cargos, setCargos] = useState([]); // ✅ ADICIONADO: Estado para cargos
+  const [cargos, setCargos] = useState([]); // ✅ Estado para armazenar cargos
   const [carregando, setCarregando] = useState(false);
   const [empresaSelecionada, setEmpresaSelecionada] = useState(clienteAtual || "");
   const [linhaSelecionada, setLinhaSelecionada] = useState("");
 
-  // Carregar empresas
+  // ========================================
+  // 1. CARREGAR EMPRESAS (sempre ao iniciar)
+  // ========================================
   useEffect(() => {
     api.get("/companies")
       .then(res => setEmpresas(res.data))
@@ -32,9 +34,14 @@ export default function Postos() {
       });
   }, []);
 
-  // Carregar linhas quando empresa mudar
+  // ========================================
+  // 2. QUANDO EMPRESA MUDAR:
+  //    - Carregar linhas da empresa
+  //    - Carregar cargos da empresa
+  // ========================================
   useEffect(() => {
     if (empresaSelecionada) {
+      // Carregar linhas
       api.get(`/lines/${empresaSelecionada}`)
         .then(res => setLinhas(res.data))
         .catch(err => {
@@ -42,7 +49,7 @@ export default function Postos() {
           toast.error("Erro ao carregar linhas");
         });
       
-      // ✅ ADICIONADO: Carregar cargos da empresa selecionada
+      // ✅ Carregar cargos da empresa selecionada
       carregarCargos(empresaSelecionada);
     } else {
       setLinhas([]);
@@ -51,18 +58,24 @@ export default function Postos() {
     }
   }, [empresaSelecionada]);
 
-  // ✅ ADICIONADO: Função para carregar cargos
+  // ========================================
+  // 3. FUNÇÃO PARA CARREGAR CARGOS
+  // ========================================
   async function carregarCargos(empresaId) {
     try {
+      console.log('📡 Carregando cargos da empresa:', empresaId);
       const response = await api.get(`/roles/${empresaId}`);
       setCargos(response.data);
-      console.log("✅ Cargos carregados:", response.data);
+      console.log('✅ Cargos carregados:', response.data.length);
     } catch (error) {
       console.error("❌ Erro ao carregar cargos:", error);
+      toast.error("Erro ao carregar lista de cargos");
     }
   }
 
-  // Carregar postos quando linha mudar
+  // ========================================
+  // 4. QUANDO LINHA MUDAR: carregar postos
+  // ========================================
   useEffect(() => {
     if (linhaSelecionada) {
       carregarPostos(linhaSelecionada);
@@ -71,13 +84,16 @@ export default function Postos() {
     }
   }, [linhaSelecionada]);
 
+  // ========================================
+  // 5. FUNÇÃO PARA CARREGAR POSTOS
+  // ========================================
   async function carregarPostos(linhaId) {
     setCarregando(true);
     try {
       const res = await api.get(`/work-stations/${linhaId}`);
       setPostos(res.data);
       if (res.data.length > 0) {
-        toast.success(`Carregados ${res.data.length} postos`);
+        toast.success(`${res.data.length} postos carregados`);
       }
     } catch (error) {
       console.error("Erro ao carregar postos:", error);
@@ -87,6 +103,9 @@ export default function Postos() {
     }
   }
 
+  // ========================================
+  // 6. FUNÇÃO PARA EXCLUIR POSTO
+  // ========================================
   async function excluirPosto(id) {
     if (!window.confirm("Excluir este posto?")) return;
     
@@ -105,11 +124,13 @@ export default function Postos() {
     }
   }
 
-  // ✅ CORRIGIDO: Função que busca nome do cargo no array de cargos
+  // ========================================
+  // 7. ✅ FUNÇÃO CORRIGIDA: Busca nome do cargo pelo ID
+  // ========================================
   const getCargoNome = (cargoId) => {
     if (!cargoId) return "-";
     const cargo = cargos.find(c => c.id === cargoId);
-    return cargo ? cargo.nome : `ID: ${cargoId}`;
+    return cargo ? cargo.nome : `Cargo ID: ${cargoId}`;
   };
 
   return (
@@ -121,7 +142,7 @@ export default function Postos() {
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho responsivo */}
+      {/* Cabeçalho */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -144,7 +165,7 @@ export default function Postos() {
         </p>
       </div>
 
-      {/* Filtros responsivos */}
+      {/* Filtros */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -158,6 +179,7 @@ export default function Postos() {
         width: "100%",
         boxSizing: "border-box"
       }}>
+        {/* Select de Empresa */}
         <div style={{ 
           flex: "1 1 250px",
           minWidth: "200px"
@@ -170,11 +192,14 @@ export default function Postos() {
           >
             <option value="">Selecione...</option>
             {empresas.map(emp => (
-              <option key={emp.id} value={emp.id}>{truncarTexto(emp.nome, 25)}</option>
+              <option key={emp.id} value={emp.id}>
+                {truncarTexto(emp.nome, 25)}
+              </option>
             ))}
           </select>
         </div>
 
+        {/* Select de Linha */}
         <div style={{ 
           flex: "1 1 250px",
           minWidth: "200px"
@@ -188,11 +213,14 @@ export default function Postos() {
           >
             <option value="">Selecione...</option>
             {linhas.map(linha => (
-              <option key={linha.id} value={linha.id}>{truncarTexto(linha.nome, 25)}</option>
+              <option key={linha.id} value={linha.id}>
+                {truncarTexto(linha.nome, 25)}
+              </option>
             ))}
           </select>
         </div>
 
+        {/* Botão Novo Posto */}
         {linhaSelecionada && (
           <div style={{ 
             flex: "0 0 auto",
@@ -208,18 +236,10 @@ export default function Postos() {
         )}
       </div>
 
-      {/* Tabela de postos responsiva */}
+      {/* Lista de Postos */}
       {carregando ? (
-        <div style={{ 
-          textAlign: "center", 
-          padding: "clamp(20px, 4vw, 40px)" 
-        }}>
-          <Botao 
-            variant="primary" 
-            size="lg" 
-            loading={true}
-            disabled={true}
-          >
+        <div style={{ textAlign: "center", padding: "clamp(20px, 4vw, 40px)" }}>
+          <Botao variant="primary" size="lg" loading={true} disabled={true}>
             Carregando postos...
           </Botao>
         </div>
@@ -249,29 +269,15 @@ export default function Postos() {
           )}
         </div>
       ) : (
-        <div style={{ 
-          overflowX: "auto",
-          width: "100%",
-          WebkitOverflowScrolling: "touch"
-        }}>
+        <div style={{ overflowX: "auto", width: "100%" }}>
           <table style={{ 
             width: "100%", 
             borderCollapse: "collapse", 
             backgroundColor: "white",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
             borderRadius: "8px",
-            minWidth: "700px",
-            tableLayout: "fixed"
+            minWidth: "700px"
           }}>
-            <colgroup>
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "22%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "16%" }} />
-            </colgroup>
             <thead>
               <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
                 <th style={thResponsivo}>Ordem</th>
@@ -287,7 +293,9 @@ export default function Postos() {
               {postos.map((posto, index) => (
                 <tr key={posto.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                   <td style={tdResponsivo}>{posto.ordem_fluxo || index + 1}</td>
-                  <td style={tdResponsivo} title={posto.nome}>{truncarTexto(posto.nome, 15)}</td>
+                  <td style={tdResponsivo} title={posto.nome}>
+                    {truncarTexto(posto.nome, 15)}
+                  </td>
                   <td style={tdResponsivo}>{posto.tempo_ciclo_segundos || 0}s</td>
                   <td style={tdResponsivo}>{posto.tempo_setup_minutos || 0} min</td>
                   <td style={tdResponsivo}>
@@ -299,23 +307,17 @@ export default function Postos() {
                     </span>
                   </td>
                   <td style={tdResponsivo} title={getCargoNome(posto.cargo_id)}>
+                    {/* ✅ AGORA MOSTRA O NOME REAL DO CARGO */}
                     {truncarTexto(getCargoNome(posto.cargo_id), 12)}
                   </td>
                   <td style={tdResponsivo}>
-                    <Link to={`/postos/editar/${posto.id}/linha/${linhaSelecionada}`} style={{ textDecoration: "none", display: "inline-block" }}>
-                      <Botao
-                        variant="primary"
-                        size="sm"
-                        style={{ marginRight: "5px" }}
-                      >
+                    <Link to={`/postos/editar/${posto.id}/linha/${linhaSelecionada}`} 
+                          style={{ textDecoration: "none", display: "inline-block" }}>
+                      <Botao variant="primary" size="sm" style={{ marginRight: "5px" }}>
                         Editar
                       </Botao>
                     </Link>
-                    <Botao
-                      variant="danger"
-                      size="sm"
-                      onClick={() => excluirPosto(posto.id)}
-                    >
+                    <Botao variant="danger" size="sm" onClick={() => excluirPosto(posto.id)}>
                       Excluir
                     </Botao>
                   </td>

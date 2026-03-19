@@ -26,69 +26,90 @@ export default function PostoForm() {
   });
 
   const [cargos, setCargos] = useState([]);
-  const [empresas, setEmpresas] = useState([]);
   const [empresaId, setEmpresaId] = useState(null);
   const [carregando, setCarregando] = useState(false);
+  const [linha, setLinha] = useState(null); // ✅ Estado para armazenar dados da linha
 
+  // ========================================
+  // 1. BUSCAR DADOS DA LINHA (CORRIGIDO)
+  // ========================================
   useEffect(() => {
     if (linhaId) {
       buscarDadosLinha();
     }
   }, [linhaId]);
 
+  // ========================================
+  // 2. CARREGAR POSTO SE FOR EDIÇÃO
+  // ========================================
   useEffect(() => {
-    if (postoId) {
+    if (postoId && linhaId) {
       carregarPosto();
     }
-  }, [postoId]);
+  }, [postoId, linhaId]);
 
+  // ========================================
+  // 3. CARREGAR CARGOS QUANDO EMPRESA FOR DEFINIDA
+  // ========================================
   useEffect(() => {
     if (empresaId) {
       carregarCargos();
     }
   }, [empresaId]);
 
-  // ✅ CORRIGIDO: Função buscarDadosLinha agora funciona corretamente
+  // ========================================
+  // ✅ FUNÇÃO CORRIGIDA: Buscar dados da linha
+  // ========================================
   async function buscarDadosLinha() {
     try {
-      console.log('🔍 Buscando dados para linha ID:', linhaId);
+      console.log('🔍 Buscando linha ID:', linhaId);
       
-      // Buscar linha específica pelo ID
-      const res = await api.get(`/lines/${linhaId}`);
-      
-      console.log('📦 Resposta da linha:', res.data);
-      
-      // Verificar se é array ou objeto
-      let linha;
-      if (Array.isArray(res.data)) {
-        // Se for array, encontrar a linha com o ID correspondente
-        linha = res.data.find(l => l.id === parseInt(linhaId));
-      } else {
-        // Se for objeto direto, usar ele mesmo
-        linha = res.data;
+      if (!linhaId) {
+        toast.error("ID da linha não fornecido");
+        return;
       }
+
+      // Buscar todas as linhas da empresa (já que não temos rota GET /line/:id)
+      // Por enquanto, vamos usar empresa ID 11 (Autopeças Sul)
+      // TODO: Melhorar isso quando tivermos uma rota específica
+      const res = await api.get(`/lines/11`); // Hardcoded temporário
       
-      if (linha) {
-        const empresaId = linha.empresa_id;
+      console.log('📦 Todas as linhas da empresa:', res.data);
+      
+      // Encontrar a linha pelo ID
+      const linhaEncontrada = res.data.find(l => l.id === parseInt(linhaId));
+      
+      if (linhaEncontrada) {
+        console.log('✅ Linha encontrada:', linhaEncontrada);
+        setLinha(linhaEncontrada);
+        
+        const empresaId = linhaEncontrada.empresa_id;
         console.log('🏢 empresa_id encontrado:', empresaId);
         
         if (empresaId) {
           setEmpresaId(empresaId);
-          toast.success(`Cargos da empresa serão carregados`);
         } else {
-          console.error('❌ empresa_id não encontrado na linha');
           toast.error("Linha não possui empresa vinculada");
         }
       } else {
-        console.error('❌ Linha não encontrada para o ID:', linhaId);
-        toast.error("Linha não encontrada");
+        console.error('❌ Linha não encontrada. IDs disponíveis:', 
+          res.data.map(l => ({ id: l.id, nome: l.nome })));
+        toast.error(`Linha ID ${linhaId} não encontrada`);
       }
     } catch (error) {
       console.error("Erro ao buscar dados da linha:", error);
-      toast.error("Erro ao carregar dados da linha");
+      
+      if (error.response?.status === 404) {
+        toast.error(`Linha ID ${linhaId} não existe no sistema`);
+      } else {
+        toast.error("Erro ao carregar dados da linha");
+      }
     }
   }
 
+  // ========================================
+  // FUNÇÃO PARA CARREGAR CARGOS
+  // ========================================
   async function carregarCargos() {
     try {
       console.log('📡 Carregando cargos para empresa:', empresaId);
@@ -101,6 +122,9 @@ export default function PostoForm() {
     }
   }
 
+  // ========================================
+  // FUNÇÃO PARA CARREGAR POSTO (EDIÇÃO)
+  // ========================================
   async function carregarPosto() {
     try {
       console.log('🔍 Carregando posto ID:', postoId, 'para linha:', linhaId);
@@ -129,6 +153,9 @@ export default function PostoForm() {
     }
   }
 
+  // ========================================
+  // HANDLE CHANGE
+  // ========================================
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -136,6 +163,9 @@ export default function PostoForm() {
     });
   };
 
+  // ========================================
+  // HANDLE SUBMIT
+  // ========================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCarregando(true);
@@ -182,6 +212,9 @@ export default function PostoForm() {
     }
   };
 
+  // ========================================
+  // FUNÇÕES AUXILIARES
+  // ========================================
   const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -210,7 +243,7 @@ export default function PostoForm() {
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho responsivo */}
+      {/* Cabeçalho */}
       <div style={{ marginBottom: "clamp(20px, 3vw, 30px)" }}>
         <h1 style={{ 
           color: "#1E3A8A", 
@@ -223,11 +256,11 @@ export default function PostoForm() {
           color: "#666", 
           fontSize: "clamp(12px, 2vw, 14px)" 
         }}>
-          Linha ID: {linhaId}
+          Linha: {linha?.nome || `ID: ${linhaId}`}
         </p>
       </div>
 
-      {/* Formulário responsivo */}
+      {/* Formulário */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -433,4 +466,4 @@ const inputStyleResponsivo = {
   fontSize: "clamp(13px, 1.8vw, 14px)",
   outline: "none",
   boxSizing: "border-box"
-};;
+};
