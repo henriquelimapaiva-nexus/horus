@@ -32,13 +32,12 @@ export default function Perdas() {
     dataFim: ""
   });
 
-  // ✅ CORRIGIDO: Data do formulário começa VAZIA
   const [form, setForm] = useState({
     linha_produto_id: "",
     microparadas_minutos: "",
     retrabalho_pecas: "",
     refugo_pecas: "",
-    data: "" // 👈 AGORA VAZIO!
+    data: "" // Data vazia no início
   });
 
   const [editId, setEditId] = useState(null);
@@ -99,7 +98,6 @@ export default function Perdas() {
     }
   }
 
-  // ✅ CORRIGIDO: Função que DELEGA o filtro para o BACKEND
   async function carregarPerdas() {
     if (!filtros.linhaId) {
       setPerdas([]);
@@ -112,7 +110,6 @@ export default function Perdas() {
       let url = `/losses/${filtros.linhaId}`;
       const params = new URLSearchParams();
       
-      // Adicionar filtros de data se existirem
       if (filtros.dataInicio) {
         params.append('data_inicio', filtros.dataInicio);
       }
@@ -121,12 +118,10 @@ export default function Perdas() {
         params.append('data_fim', filtros.dataFim);
       }
       
-      // Adicionar parâmetros à URL
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
       
-      console.log('📡 Buscando perdas:', url);
       const res = await api.get(url);
       setPerdas(res.data);
       
@@ -174,6 +169,7 @@ export default function Perdas() {
     });
   };
 
+  // ✅ CORREÇÃO PRINCIPAL: handleSubmit com os campos corretos
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -185,6 +181,7 @@ export default function Perdas() {
     setCarregando(true);
     try {
       if (editId) {
+        // Atualização
         await api.put(`/losses/${editId}`, {
           microparadas_minutos: parseFloat(form.microparadas_minutos) || 0,
           retrabalho_pecas: parseInt(form.retrabalho_pecas) || 0,
@@ -193,23 +190,27 @@ export default function Perdas() {
         toast.success("Perda atualizada com sucesso! ✅");
         setEditId(null);
       } else {
+        // ✅ CRIAÇÃO - com os campos corretos
         await api.post("/losses", {
-          linha_produto_id: parseInt(form.linha_produto_id),
+          linha_produto_id: parseInt(form.linha_produto_id), // Usa o vinculo_id
           microparadas_minutos: parseFloat(form.microparadas_minutos) || 0,
           retrabalho_pecas: parseInt(form.retrabalho_pecas) || 0,
-          refugo_pecas: parseInt(form.refugo_pecas) || 0
+          refugo_pecas: parseInt(form.refugo_pecas) || 0,
+          data_perda: form.data // Mapeia 'data' do form para 'data_perda' no backend
         });
         toast.success("Perda registrada com sucesso! ✅");
       }
 
+      // Limpar formulário
       setForm({
         linha_produto_id: "",
         microparadas_minutos: "",
         retrabalho_pecas: "",
         refugo_pecas: "",
-        data: "" // 👈 VAZIO após cadastrar também
+        data: ""
       });
 
+      // Recarregar perdas
       carregarPerdas();
 
     } catch (error) {
@@ -217,6 +218,8 @@ export default function Perdas() {
       
       if (error.response?.status === 400) {
         toast.error("Dados inválidos. Verifique os valores ❌");
+      } else if (error.response?.status === 409) {
+        toast.error("Já existe um registro para esta data e produto ❌");
       } else {
         toast.error("Erro ao salvar perda ❌");
       }
@@ -227,13 +230,13 @@ export default function Perdas() {
 
   function handleEdit(perda) {
     setForm({
-      linha_produto_id: perda.linha_produto_id,
+      linha_produto_id: perda.linha_produto_id || perda.vinculo_id || "",
       microparadas_minutos: perda.microparadas_minutos || "",
       retrabalho_pecas: perda.retrabalho_pecas || "",
       refugo_pecas: perda.refugo_pecas || "",
-      data: perda.data_medicao || "" // 👈 VAZIO se não tiver data
+      data: perda.data_perda || perda.data_medicao || "" // Pega a data do registro
     });
-    setEditId(perda.id);
+    setEditId(perda.perda_id || perda.id);
   }
 
   async function handleDelete(id) {
@@ -254,7 +257,7 @@ export default function Perdas() {
 
   const formatarData = (dataString) => {
     if (!dataString) return "";
-    // Se a data já vier no formato DD/MM/YYYY, retorna ela mesma
+    // Se já vier no formato DD/MM/YYYY, retorna
     if (dataString.includes('/')) return dataString;
     
     // Se vier no formato ISO, converte
@@ -574,7 +577,7 @@ export default function Perdas() {
                     microparadas_minutos: "",
                     retrabalho_pecas: "",
                     refugo_pecas: "",
-                    data: "" // 👈 VAZIO ao cancelar
+                    data: ""
                   });
                 }}
               >
