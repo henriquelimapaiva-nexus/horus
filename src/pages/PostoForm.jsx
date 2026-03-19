@@ -32,7 +32,7 @@ export default function PostoForm() {
   const [empresaNome, setEmpresaNome] = useState("");
 
   // ========================================
-  // 1. BUSCAR DADOS DA LINHA (CORRIGIDO - BUSCA EM TODAS EMPRESAS)
+  // 1. BUSCAR DADOS DA LINHA
   // ========================================
   useEffect(() => {
     if (linhaId) {
@@ -59,7 +59,7 @@ export default function PostoForm() {
   }, [empresaId]);
 
   // ========================================
-  // FUNÇÃO CORRIGIDA: Buscar dados da linha em TODAS as empresas
+  // FUNÇÃO: Buscar dados da linha
   // ========================================
   async function buscarDadosLinha() {
     try {
@@ -72,12 +72,10 @@ export default function PostoForm() {
 
       // Buscar todas as empresas
       const empresasRes = await api.get("/companies");
-      console.log('📦 Empresas encontradas:', empresasRes.data.length);
       
       let linhaEncontrada = null;
       let empresaEncontrada = null;
       
-      // Para cada empresa, buscar suas linhas
       for (const empresa of empresasRes.data) {
         try {
           const linhasRes = await api.get(`/lines/${empresa.id}`);
@@ -89,30 +87,27 @@ export default function PostoForm() {
             break;
           }
         } catch (error) {
-          // Ignora erro e continua para próxima empresa
-          console.log(`Empresa ${empresa.id} - ${empresa.nome}: sem linhas ou erro`);
+          // Ignora erro e continua
         }
       }
       
       if (linhaEncontrada && empresaEncontrada) {
         console.log('✅ Linha encontrada:', linhaEncontrada);
-        console.log('🏢 Empresa:', empresaEncontrada.nome, 'ID:', empresaEncontrada.id);
+        console.log('🏢 Empresa:', empresaEncontrada.nome);
         
         setLinha(linhaEncontrada);
         setEmpresaNome(empresaEncontrada.nome);
         
         const empresaId = linhaEncontrada.empresa_id || empresaEncontrada.id;
-        console.log('🏢 empresa_id definido:', empresaId);
         
         if (empresaId) {
           setEmpresaId(empresaId);
-          toast.success(`Linha encontrada na empresa ${empresaEncontrada.nome}`);
         } else {
           toast.error("Linha não possui empresa vinculada");
         }
       } else {
-        console.error('❌ Linha não encontrada em nenhuma empresa');
-        toast.error(`Linha ID ${linhaId} não encontrada em nenhuma empresa`);
+        console.error('❌ Linha não encontrada');
+        toast.error(`Linha ID ${linhaId} não encontrada`);
       }
       
     } catch (error) {
@@ -126,14 +121,8 @@ export default function PostoForm() {
   // ========================================
   async function carregarCargos() {
     try {
-      console.log('📡 Carregando cargos para empresa:', empresaId);
       const res = await api.get(`/roles/${empresaId}`);
       setCargos(res.data);
-      console.log('✅ Cargos carregados:', res.data.length);
-      
-      if (res.data.length === 0) {
-        toast.success('Nenhum cargo cadastrado para esta empresa');
-      }
     } catch (error) {
       console.error("Erro ao carregar cargos:", error);
       toast.error("Erro ao carregar cargos");
@@ -145,13 +134,10 @@ export default function PostoForm() {
   // ========================================
   async function carregarPosto() {
     try {
-      console.log('🔍 Carregando posto ID:', postoId, 'para linha:', linhaId);
-      
       const res = await api.get(`/work-stations/${linhaId}`);
       const posto = res.data.find(p => p.id === parseInt(postoId));
       
       if (posto) {
-        console.log('✅ Posto encontrado:', posto);
         setForm({
           nome: posto.nome || "",
           linha_id: posto.linha_id || parseInt(linhaId),
@@ -162,7 +148,6 @@ export default function PostoForm() {
           ordem_fluxo: posto.ordem_fluxo || ""
         });
       } else {
-        console.error('❌ Posto não encontrado');
         toast.error("Posto não encontrado");
       }
     } catch (error) {
@@ -190,7 +175,7 @@ export default function PostoForm() {
     
     try {
       if (postoId) {
-        // Edição
+        // EDIÇÃO
         await api.put(`/work-stations/${postoId}`, {
           nome: form.nome,
           tempo_ciclo_segundos: parseFloat(form.tempo_ciclo_segundos) || 0,
@@ -199,9 +184,15 @@ export default function PostoForm() {
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null,
           ordem_fluxo: form.ordem_fluxo ? parseInt(form.ordem_fluxo) : null
         });
+        
         toast.success("Posto atualizado com sucesso! ✅");
+        
+        setTimeout(() => {
+          navigate(`/postos?linha=${linhaId}`);
+        }, 1500);
+        
       } else {
-        // Criação
+        // CRIAÇÃO
         await api.post("/work-stations", {
           linha_id: parseInt(linhaId),
           nome: form.nome,
@@ -210,12 +201,22 @@ export default function PostoForm() {
           disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 95,
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null
         });
+        
         toast.success("Posto cadastrado com sucesso! ✅");
+        
+        // Limpar formulário
+        setForm({
+          nome: "",
+          linha_id: linhaId || "",
+          tempo_ciclo_segundos: "",
+          tempo_setup_minutos: "",
+          disponibilidade_percentual: "95",
+          cargo_id: "",
+          ordem_fluxo: ""
+        });
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-
-      setTimeout(() => {
-        navigate(`/linhas/${linhaId}?aba=postos`);
-      }, 1500);
 
     } catch (error) {
       console.error(error);
@@ -256,30 +257,57 @@ export default function PostoForm() {
     <div style={{ 
       padding: "clamp(15px, 3vw, 30px)", 
       width: "100%",
-      maxWidth: "800px",
+      maxWidth: "1200px",
       margin: "0 auto",
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho */}
-      <div style={{ marginBottom: "clamp(20px, 3vw, 30px)" }}>
-        <h1 style={{ 
-          color: "#1E3A8A", 
-          marginBottom: "5px", 
-          fontSize: "clamp(20px, 4vw, 28px)" 
-        }}>
-          {postoId ? "Editar Posto" : "Novo Posto de Trabalho"}
-        </h1>
-        <p style={{ 
-          color: "#666", 
-          fontSize: "clamp(12px, 2vw, 14px)" 
-        }}>
-          Linha: {linha?.nome || `ID: ${linhaId}`}
-          {empresaNome && ` | Empresa: ${empresaNome}`}
-        </p>
+      {/* ======================================== */}
+      {/* 🎯 MOLDURA DO TÍTULO (PADRÃO DO SISTEMA) */}
+      {/* ======================================== */}
+      <div style={{ 
+        backgroundColor: "white", 
+        borderRadius: "8px", 
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)", 
+        padding: "25px 30px",
+        marginBottom: "30px",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "15px"
+      }}>
+        <div>
+          <h1 style={{ 
+            color: "#1E3A8A", 
+            marginBottom: "5px", 
+            fontSize: "clamp(20px, 4vw, 28px)" 
+          }}>
+            {postoId ? "Editar Posto" : "Novo Posto de Trabalho"}
+          </h1>
+          <p style={{ 
+            color: "#666", 
+            fontSize: "clamp(12px, 2vw, 14px)" 
+          }}>
+            {linha?.nome ? `Linha: ${linha.nome}` : `ID da Linha: ${linhaId}`}
+            {empresaNome && ` | Empresa: ${empresaNome}`}
+          </p>
+        </div>
+
+        {/* 🔵 BOTÃO VOLTAR PERTO DO TÍTULO */}
+        <Botao
+          variant="primary"
+          size="md"
+          onClick={() => navigate(`/postos?linha=${linhaId}`)}
+          style={{ minWidth: "120px" }}
+        >
+          ← Voltar para Postos
+        </Botao>
       </div>
 
-      {/* Formulário */}
+      {/* ======================================== */}
+      {/* 📋 FORMULÁRIO */}
+      {/* ======================================== */}
       <form
         onSubmit={handleSubmit}
         style={{
@@ -351,7 +379,7 @@ export default function PostoForm() {
           />
         </div>
 
-        {/* SELECT DE CARGOS - APENAS NOME */}
+        {/* SELECT DE CARGOS */}
         <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
           <label style={labelStyleResponsivo}>Cargo</label>
           <select
@@ -373,7 +401,7 @@ export default function PostoForm() {
             marginTop: "4px",
             fontSize: "clamp(11px, 1.5vw, 12px)"
           }}>
-            O cargo define o custo da mão de obra para cálculos financeiros
+            O cargo define o custo da mão de obra
           </small>
         </div>
 
@@ -391,10 +419,7 @@ export default function PostoForm() {
               flexWrap: "wrap",
               gap: "10px"
             }}>
-              <span style={{ 
-                color: "#666", 
-                fontSize: "clamp(12px, 1.8vw, 14px)" 
-              }}>
+              <span style={{ color: "#666", fontSize: "clamp(12px, 1.8vw, 14px)" }}>
                 Custo mensal estimado:
               </span>
               <span style={{ 
@@ -404,14 +429,6 @@ export default function PostoForm() {
               }}>
                 {formatarMoeda(calcularCustoEstimado())}
               </span>
-            </div>
-            <div style={{ 
-              fontSize: "clamp(10px, 1.3vw, 12px)", 
-              color: "#666", 
-              marginTop: "5px",
-              fontStyle: "italic"
-            }}>
-              * Baseado no salário e encargos do cargo selecionado
             </div>
           </div>
         )}
@@ -427,39 +444,39 @@ export default function PostoForm() {
             style={inputStyleResponsivo}
             placeholder="Ex: 1"
           />
-          <small style={{ 
-            color: "#666", 
-            display: "block", 
-            marginTop: "4px",
-            fontSize: "clamp(11px, 1.5vw, 12px)"
-          }}>
+          <small style={{ color: "#666", display: "block", marginTop: "4px" }}>
             Posição do posto na linha. Deixe em branco para ordem automática.
           </small>
         </div>
 
+        {/* ======================================== */}
+        {/* 🟢 BOTÕES DO FORMULÁRIO (APENAS 2) */}
+        {/* ======================================== */}
         <div style={{ 
           display: "flex", 
           gap: "clamp(8px, 1.5vw, 10px)", 
           marginTop: "clamp(20px, 3vw, 30px)",
           flexWrap: "wrap"
         }}>
+          {/* Botão Cadastrar (verde) */}
           <Botao
             type="submit"
-            variant="primary"
+            variant="success"
             size="lg"
-            fullWidth={true}
+            style={{ flex: 2 }}
             loading={carregando}
             disabled={carregando}
           >
             {postoId ? "Atualizar Posto" : "Cadastrar Posto"}
           </Botao>
           
+          {/* Botão Cancelar (cinza) */}
           <Botao
             type="button"
             variant="secondary"
             size="lg"
-            fullWidth={true}
-            onClick={() => navigate(`/postos`)}
+            style={{ flex: 1 }}
+            onClick={() => navigate(`/postos?linha=${linhaId}`)}
           >
             Cancelar
           </Botao>
