@@ -193,7 +193,7 @@ export default function Postos() {
             <option value="">Selecione...</option>
             {empresas.map(emp => (
               <option key={emp.id} value={emp.id}>
-                {truncarTexto(emp.nome, 25)}
+                {emp.nome} {/* ✅ NOME COMPLETO, SEM TRUNCAR */}
               </option>
             ))}
           </select>
