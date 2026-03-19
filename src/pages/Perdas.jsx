@@ -10,7 +10,7 @@ import GraficoPizza from "../components/graficos/GraficoPizza";
 import GraficoBarras from "../components/graficos/GraficoBarras";
 import { coresNexus } from "../components/graficos/GraficoBase";
 
-// Função auxiliar para truncar texto
+// Função auxiliar para truncar texto (mantida para outros lugares, mas não usada na tabela)
 const truncarTexto = (texto, maxLength = 20) => {
   if (!texto) return "";
   return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
@@ -98,7 +98,7 @@ export default function Perdas() {
     }
   }
 
-  // ✅ FUNÇÃO CORRIGIDA - Converte datas de DD/MM/YYYY para ISO antes de enviar
+  // Função corrigida - Converte datas de DD/MM/YYYY para ISO antes de enviar
   async function carregarPerdas() {
     if (!filtros.linhaId) {
       setPerdas([]);
@@ -115,7 +115,7 @@ export default function Perdas() {
       if (filtros.dataInicio) {
         const partes = filtros.dataInicio.split('/');
         if (partes.length === 3) {
-          const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`; // "2026-03-16"
+          const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
           params.append('data_inicio', dataISO);
           console.log('📅 Data início convertida:', filtros.dataInicio, '→', dataISO);
         }
@@ -183,7 +183,7 @@ export default function Perdas() {
     });
   };
 
-  // ✅ HANDLE SUBMIT CORRIGIDO - Converte data para ISO
+  // Handle submit corrigido - Converte data para ISO
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -219,7 +219,7 @@ export default function Perdas() {
           microparadas_minutos: parseFloat(form.microparadas_minutos) || 0,
           retrabalho_pecas: parseInt(form.retrabalho_pecas) || 0,
           refugo_pecas: parseInt(form.refugo_pecas) || 0,
-          data_perda: dataISO // Data no formato ISO
+          data_perda: dataISO
         });
         toast.success("Perda registrada com sucesso! ✅");
       }
@@ -257,7 +257,7 @@ export default function Perdas() {
     if (dataFormatada && dataFormatada.includes('-')) {
       const partes = dataFormatada.split('T')[0].split('-');
       if (partes.length === 3) {
-        dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`; // YYYY-MM-DD → DD/MM/YYYY
+        dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`;
       }
     }
 
@@ -289,10 +289,7 @@ export default function Perdas() {
 
   const formatarData = (dataString) => {
     if (!dataString) return "";
-    // Se já vier no formato DD/MM/YYYY, retorna
     if (dataString.includes('/')) return dataString;
-    
-    // Se vier no formato ISO, converte
     const data = new Date(dataString);
     return data.toLocaleDateString('pt-BR');
   };
@@ -620,7 +617,7 @@ export default function Perdas() {
         </form>
       </div>
 
-      {/* Tabela de Perdas */}
+      {/* Tabela de Perdas - CORRIGIDA (SEM TRUNCATE NO PRODUTO) */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -690,7 +687,7 @@ export default function Perdas() {
                   <tr key={perda.perda_id || perda.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={tdResponsivo}>{formatarData(perda.data_perda || perda.data_medicao)}</td>
                     <td style={tdResponsivo} title={perda.produto_nome || getProdutoNome(perda.linha_produto_id)}>
-                      {truncarTexto(perda.produto_nome || getProdutoNome(perda.linha_produto_id), 15)}
+                      {perda.produto_nome || getProdutoNome(perda.linha_produto_id)} {/* ✅ NOME COMPLETO */}
                     </td>
                     <td style={tdResponsivo}>{parseFloat(perda.microparadas_minutos) || 0} min</td>
                     <td style={tdResponsivo}>{parseInt(perda.retrabalho_pecas) || 0} pç</td>
