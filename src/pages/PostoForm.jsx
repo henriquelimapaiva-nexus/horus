@@ -459,7 +459,7 @@ export default function PostoForm() {
             variant="secondary"
             size="lg"
             fullWidth={true}
-            onClick={() => navigate(`/linhas/${linhaId}?aba=postos`)}
+            onClick={() => navigate(`/postos`)}
           >
             Cancelar
           </Botao>
