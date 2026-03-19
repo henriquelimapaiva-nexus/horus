@@ -98,7 +98,7 @@ export default function Perdas() {
     }
   }
 
-  // ✅ FUNÇÃO CORRIGIDA - Funciona para data única e períodos
+  // Função corrigida - Converte datas de DD/MM/YYYY para ISO antes de enviar
   async function carregarPerdas() {
     if (!filtros.linhaId) {
       setPerdas([]);
@@ -145,6 +145,9 @@ export default function Perdas() {
       
       console.log('📡 Buscando perdas com URL:', url);
       const res = await api.get(url);
+      
+      // ✅ LOG DOS DADOS RECEBIDOS
+      console.log('📦 Dados recebidos do backend:', res.data);
       setPerdas(res.data);
       
     } catch (error) {
@@ -155,7 +158,10 @@ export default function Perdas() {
     }
   }
 
+  // ✅ FUNÇÃO COM LOGS DE DEBUG
   const calcularDadosGrafico = () => {
+    console.log('📊 Calculando gráfico com perdas:', perdas);
+    
     let totalMicro = 0;
     let totalRetrabalho = 0;
     let totalRefugo = 0;
@@ -165,6 +171,8 @@ export default function Perdas() {
       totalRetrabalho += parseInt(p.retrabalho_pecas) || 0;
       totalRefugo += parseInt(p.refugo_pecas) || 0;
     });
+
+    console.log('📊 Totais calculados:', { totalMicro, totalRetrabalho, totalRefugo });
 
     if (totalMicro === 0 && totalRetrabalho === 0 && totalRefugo === 0) {
       setDadosGrafico({ labels: [], valores: [] });
