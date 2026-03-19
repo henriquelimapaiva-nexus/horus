@@ -294,7 +294,7 @@ export default function Postos() {
                 <tr key={posto.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                   <td style={tdResponsivo}>{posto.ordem_fluxo || index + 1}</td>
                   <td style={tdResponsivo} title={posto.nome}>
-                    {truncarTexto(posto.nome, 15)}
+                    {posto.nome} {/* ✅ NOME COMPLETO */}
                   </td>
                   <td style={tdResponsivo}>{posto.tempo_ciclo_segundos || 0}s</td>
                   <td style={tdResponsivo}>{posto.tempo_setup_minutos || 0} min</td>
@@ -308,7 +308,7 @@ export default function Postos() {
                   </td>
                   <td style={tdResponsivo} title={getCargoNome(posto.cargo_id)}>
                     {/* ✅ AGORA MOSTRA O NOME REAL DO CARGO */}
-                    {truncarTexto(getCargoNome(posto.cargo_id), 12)}
+                    {getCargoNome(posto.cargo_id)} {/* ✅ CARGO COMPLETO */}
                   </td>
                   <td style={tdResponsivo}>
                     <Link to={`/postos/editar/${posto.id}/linha/${linhaSelecionada}`} 
