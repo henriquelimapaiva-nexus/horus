@@ -28,10 +28,10 @@ export default function PostoForm() {
   const [cargos, setCargos] = useState([]);
   const [empresaId, setEmpresaId] = useState(null);
   const [carregando, setCarregando] = useState(false);
-  const [linha, setLinha] = useState(null); // ✅ Estado para armazenar dados da linha
+  const [linha, setLinha] = useState(null);
 
   // ========================================
-  // 1. BUSCAR DADOS DA LINHA (CORRIGIDO)
+  // 1. BUSCAR DADOS DA LINHA
   // ========================================
   useEffect(() => {
     if (linhaId) {
@@ -58,7 +58,7 @@ export default function PostoForm() {
   }, [empresaId]);
 
   // ========================================
-  // ✅ FUNÇÃO CORRIGIDA: Buscar dados da linha
+  // FUNÇÃO: Buscar dados da linha
   // ========================================
   async function buscarDadosLinha() {
     try {
@@ -69,10 +69,8 @@ export default function PostoForm() {
         return;
       }
 
-      // Buscar todas as linhas da empresa (já que não temos rota GET /line/:id)
-      // Por enquanto, vamos usar empresa ID 11 (Autopeças Sul)
-      // TODO: Melhorar isso quando tivermos uma rota específica
-      const res = await api.get(`/lines/11`); // Hardcoded temporário
+      // Buscar todas as linhas da empresa (ID 11 = Autopeças Sul)
+      const res = await api.get(`/lines/11`);
       
       console.log('📦 Todas as linhas da empresa:', res.data);
       
@@ -108,7 +106,7 @@ export default function PostoForm() {
   }
 
   // ========================================
-  // FUNÇÃO PARA CARREGAR CARGOS
+  // FUNÇÃO: Carregar cargos
   // ========================================
   async function carregarCargos() {
     try {
@@ -123,7 +121,7 @@ export default function PostoForm() {
   }
 
   // ========================================
-  // FUNÇÃO PARA CARREGAR POSTO (EDIÇÃO)
+  // FUNÇÃO: Carregar posto (para edição)
   // ========================================
   async function carregarPosto() {
     try {
@@ -332,6 +330,7 @@ export default function PostoForm() {
           />
         </div>
 
+        {/* ✅ SELECT DE CARGOS - CORRIGIDO (SEM SALÁRIO) */}
         <div style={{ marginBottom: "clamp(15px, 2vw, 20px)" }}>
           <label style={labelStyleResponsivo}>Cargo</label>
           <select
@@ -343,7 +342,7 @@ export default function PostoForm() {
             <option value="">Selecione um cargo (opcional)</option>
             {cargos.map((cargo) => (
               <option key={cargo.id} value={cargo.id}>
-                {truncarTexto(cargo.nome, 25)} - R$ {parseFloat(cargo.salario_base || 0).toLocaleString('pt-BR')}
+                {truncarTexto(cargo.nome, 25)} {/* ✅ APENAS O NOME DO CARGO */}
               </option>
             ))}
           </select>
