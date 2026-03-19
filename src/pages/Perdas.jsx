@@ -10,7 +10,7 @@ import GraficoPizza from "../components/graficos/GraficoPizza";
 import GraficoBarras from "../components/graficos/GraficoBarras";
 import { coresNexus } from "../components/graficos/GraficoBase";
 
-// Função auxiliar para truncar texto (mantida para outros lugares, mas não usada na tabela)
+// Função auxiliar para truncar texto (mantida para outros lugares, mas NÃO usada na tabela de produtos)
 const truncarTexto = (texto, maxLength = 20) => {
   if (!texto) return "";
   return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
@@ -617,7 +617,7 @@ export default function Perdas() {
         </form>
       </div>
 
-      {/* Tabela de Perdas - CORRIGIDA (SEM TRUNCATE NO PRODUTO) */}
+      {/* TABELA DE PERDAS - CORRIGIDA (SEM TRUNCATE) */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -686,8 +686,9 @@ export default function Perdas() {
                 {perdas.map((perda) => (
                   <tr key={perda.perda_id || perda.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={tdResponsivo}>{formatarData(perda.data_perda || perda.data_medicao)}</td>
+                    {/* ✅ LINHA CORRIGIDA - SEM TRUNCAR TEXTO */}
                     <td style={tdResponsivo} title={perda.produto_nome || getProdutoNome(perda.linha_produto_id)}>
-                      {perda.produto_nome || getProdutoNome(perda.linha_produto_id)} {/* ✅ NOME COMPLETO */}
+                      {perda.produto_nome || getProdutoNome(perda.linha_produto_id)}
                     </td>
                     <td style={tdResponsivo}>{parseFloat(perda.microparadas_minutos) || 0} min</td>
                     <td style={tdResponsivo}>{parseInt(perda.retrabalho_pecas) || 0} pç</td>
