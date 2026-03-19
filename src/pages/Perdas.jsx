@@ -98,6 +98,7 @@ export default function Perdas() {
     }
   }
 
+  // ✅ FUNÇÃO CORRIGIDA - Converte datas de DD/MM/YYYY para ISO antes de enviar
   async function carregarPerdas() {
     if (!filtros.linhaId) {
       setPerdas([]);
@@ -110,18 +111,31 @@ export default function Perdas() {
       let url = `/losses/${filtros.linhaId}`;
       const params = new URLSearchParams();
       
+      // Converter data_inicio de DD/MM/YYYY para YYYY-MM-DD
       if (filtros.dataInicio) {
-        params.append('data_inicio', filtros.dataInicio);
+        const partes = filtros.dataInicio.split('/');
+        if (partes.length === 3) {
+          const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`; // "2026-03-16"
+          params.append('data_inicio', dataISO);
+          console.log('📅 Data início convertida:', filtros.dataInicio, '→', dataISO);
+        }
       }
       
+      // Converter data_fim de DD/MM/YYYY para YYYY-MM-DD
       if (filtros.dataFim) {
-        params.append('data_fim', filtros.dataFim);
+        const partes = filtros.dataFim.split('/');
+        if (partes.length === 3) {
+          const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
+          params.append('data_fim', dataISO);
+          console.log('📅 Data fim convertida:', filtros.dataFim, '→', dataISO);
+        }
       }
       
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
       
+      console.log('📡 Buscando perdas com URL:', url);
       const res = await api.get(url);
       setPerdas(res.data);
       
@@ -169,7 +183,7 @@ export default function Perdas() {
     });
   };
 
-  // ✅ CORREÇÃO PRINCIPAL: handleSubmit com os campos corretos
+  // ✅ HANDLE SUBMIT CORRIGIDO - Converte data para ISO
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -180,6 +194,15 @@ export default function Perdas() {
 
     setCarregando(true);
     try {
+      // Converter data de DD/MM/YYYY para YYYY-MM-DD se necessário
+      let dataISO = form.data;
+      if (form.data && form.data.includes('/')) {
+        const partes = form.data.split('/');
+        if (partes.length === 3) {
+          dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
+        }
+      }
+
       if (editId) {
         // Atualização
         await api.put(`/losses/${editId}`, {
@@ -190,13 +213,13 @@ export default function Perdas() {
         toast.success("Perda atualizada com sucesso! ✅");
         setEditId(null);
       } else {
-        // ✅ CRIAÇÃO - com os campos corretos
+        // Criação - com campos corretos
         await api.post("/losses", {
-          linha_produto_id: parseInt(form.linha_produto_id), // Usa o vinculo_id
+          linha_produto_id: parseInt(form.linha_produto_id),
           microparadas_minutos: parseFloat(form.microparadas_minutos) || 0,
           retrabalho_pecas: parseInt(form.retrabalho_pecas) || 0,
           refugo_pecas: parseInt(form.refugo_pecas) || 0,
-          data_perda: form.data // Mapeia 'data' do form para 'data_perda' no backend
+          data_perda: dataISO // Data no formato ISO
         });
         toast.success("Perda registrada com sucesso! ✅");
       }
@@ -229,12 +252,21 @@ export default function Perdas() {
   };
 
   function handleEdit(perda) {
+    // Converter data de volta para DD/MM/YYYY se vier em ISO
+    let dataFormatada = perda.data_perda || perda.data_medicao || "";
+    if (dataFormatada && dataFormatada.includes('-')) {
+      const partes = dataFormatada.split('T')[0].split('-');
+      if (partes.length === 3) {
+        dataFormatada = `${partes[2]}/${partes[1]}/${partes[0]}`; // YYYY-MM-DD → DD/MM/YYYY
+      }
+    }
+
     setForm({
       linha_produto_id: perda.linha_produto_id || perda.vinculo_id || "",
       microparadas_minutos: perda.microparadas_minutos || "",
       retrabalho_pecas: perda.retrabalho_pecas || "",
       refugo_pecas: perda.refugo_pecas || "",
-      data: perda.data_perda || perda.data_medicao || "" // Pega a data do registro
+      data: dataFormatada
     });
     setEditId(perda.perda_id || perda.id);
   }
