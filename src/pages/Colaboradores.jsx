@@ -5,7 +5,7 @@ import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast';
 
-// Função auxiliar para truncar texto
+// Função auxiliar para truncar texto (mantida para outros lugares, mas não usada na tabela)
 const truncarTexto = (texto, maxLength = 20) => {
   if (!texto) return "";
   return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
@@ -43,11 +43,9 @@ export default function Colaboradores() {
   // Carregar empresas
   async function carregarEmpresas() {
     try {
-      // ✅ CORRIGIDO: /empresas → /companies
       const res = await api.get("/companies");
       setEmpresas(res.data);
       
-      // Se tiver clienteAtual, carrega dados
       if (clienteAtual) {
         setFiltroEmpresa(clienteAtual);
         await carregarCargos(clienteAtual);
@@ -63,7 +61,6 @@ export default function Colaboradores() {
     if (!empresaId) return;
     
     try {
-      // ✅ CORRIGIDO: /cargos/${empresaId} → /roles/${empresaId}
       const res = await api.get(`/roles/${empresaId}`);
       setCargos(res.data);
     } catch (error) {
@@ -76,7 +73,6 @@ export default function Colaboradores() {
     if (!filtroEmpresa) return;
     
     try {
-      // ✅ CORRIGIDO: /colaboradores/${filtroEmpresa} → /employees/${filtroEmpresa}
       const res = await api.get(`/employees/${filtroEmpresa}`);
       setColaboradores(res.data);
     } catch (error) {
@@ -108,7 +104,6 @@ export default function Colaboradores() {
     setCarregando(true);
     try {
       if (editId) {
-        // ✅ CORRIGIDO: /colaboradores/${editId} → /employees/${editId}
         await api.put(`/employees/${editId}`, {
           nome: form.nome,
           empresa_id: parseInt(form.empresa_id),
@@ -117,7 +112,6 @@ export default function Colaboradores() {
         toast.success("Colaborador atualizado com sucesso! ✅");
         setEditId(null);
       } else {
-        // ✅ CORRIGIDO: /colaboradores → /employees
         await api.post("/employees", {
           empresa_id: parseInt(form.empresa_id),
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null,
@@ -137,7 +131,6 @@ export default function Colaboradores() {
     } catch (error) {
       console.error("Erro ao salvar colaborador:", error);
       
-      // Tratamento de erro específico
       if (error.response?.status === 400) {
         toast.error("Dados inválidos. Verifique empresa e cargo ❌");
       } else {
@@ -166,14 +159,12 @@ export default function Colaboradores() {
     
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /colaboradores/${id} → /employees/${id}
       await api.delete(`/employees/${id}`);
       await carregarColaboradores();
       toast.success("Colaborador excluído com sucesso ✅");
     } catch (error) {
       console.error("Erro ao excluir colaborador:", error);
       
-      // Tratamento de erro se o colaborador tiver vínculos
       if (error.response?.status === 400) {
         toast.error("Colaborador possui registros de atividades vinculados ❌");
       } else {
@@ -245,7 +236,7 @@ export default function Colaboradores() {
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho responsivo */}
+      {/* Cabeçalho */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -269,7 +260,7 @@ export default function Colaboradores() {
         </p>
       </div>
 
-      {/* Formulário responsivo */}
+      {/* Formulário */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -316,11 +307,11 @@ export default function Colaboradores() {
               }}
               style={inputStyleResponsivo}
               required
-              disabled={!!clienteAtual} // Desabilita se já tem cliente selecionado
+              disabled={!!clienteAtual}
             >
               <option value="">Selecione uma empresa...</option>
               {empresas.map(emp => (
-                <option key={emp.id} value={emp.id}>{truncarTexto(emp.nome, 25)}</option>
+                <option key={emp.id} value={emp.id}>{emp.nome}</option>
               ))}
             </select>
           </div>
@@ -336,7 +327,7 @@ export default function Colaboradores() {
             >
               <option value="">Selecione um cargo...</option>
               {cargos.map(cargo => (
-                <option key={cargo.id} value={cargo.id}>{truncarTexto(cargo.nome, 25)}</option>
+                <option key={cargo.id} value={cargo.id}>{cargo.nome}</option>
               ))}
             </select>
             <small style={{ 
@@ -387,7 +378,7 @@ export default function Colaboradores() {
         </form>
       </div>
 
-      {/* Filtros responsivos */}
+      {/* Filtros */}
       <div style={{ 
         display: "flex", 
         justifyContent: "space-between", 
@@ -433,13 +424,13 @@ export default function Colaboradores() {
             }}
           >
             {empresas.map(emp => (
-              <option key={emp.id} value={emp.id}>{truncarTexto(emp.nome, 20)}</option>
+              <option key={emp.id} value={emp.id}>{emp.nome}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Tabela de colaboradores responsiva */}
+      {/* Tabela de colaboradores - CORRIGIDA (SEM TRUNCAR) */}
       {carregando && colaboradores.length === 0 ? (
         <div style={{ 
           textAlign: "center", 
@@ -496,29 +487,54 @@ export default function Colaboradores() {
                 colaboradoresFiltrados.map((colaborador) => (
                   <tr key={colaborador.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={tdResponsivo}>{colaborador.id}</td>
-                    <td style={tdResponsivo} title={colaborador.nome}>{truncarTexto(colaborador.nome, 20)}</td>
+                    <td style={tdResponsivo} title={colaborador.nome}>
+                      {colaborador.nome}  {/* ✅ NOME COMPLETO */}
+                    </td>
                     <td style={tdResponsivo} title={getEmpresaNome(colaborador.empresa_id)}>
-                      {truncarTexto(getEmpresaNome(colaborador.empresa_id), 15)}
+                      {getEmpresaNome(colaborador.empresa_id)}  {/* ✅ EMPRESA COMPLETA */}
                     </td>
                     <td style={tdResponsivo} title={getCargoNome(colaborador.cargo_id)}>
-                      {truncarTexto(getCargoNome(colaborador.cargo_id), 15)}
+                      {getCargoNome(colaborador.cargo_id)}  {/* ✅ CARGO COMPLETO */}
                     </td>
                     <td style={tdResponsivo}>
-                      <Botao
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleEdit(colaborador)}
-                        style={{ marginRight: "5px" }}
-                      >
-                        Editar
-                      </Botao>
-                      <Botao
-                        variant="danger"
-                        size="sm"
-                        onClick={() => handleDelete(colaborador.id)}
-                      >
-                        Excluir
-                      </Botao>
+                      <div style={{ display: "flex", gap: "5px", justifyContent: "center" }}>
+                        <button
+                          onClick={() => handleEdit(colaborador)}
+                          style={{
+                            padding: "4px 12px",
+                            backgroundColor: "#dbeafe",
+                            color: "#1e40af",
+                            border: "none",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            cursor: "pointer",
+                            transition: "background-color 0.2s"
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#bfdbfe"}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#dbeafe"}
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDelete(colaborador.id)}
+                          style={{
+                            padding: "4px 12px",
+                            backgroundColor: "#fee2e2",
+                            color: "#b91c1c",
+                            border: "none",
+                            borderRadius: "4px",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                            cursor: "pointer",
+                            transition: "background-color 0.2s"
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#fecaca"}
+                          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#fee2e2"}
+                        >
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
