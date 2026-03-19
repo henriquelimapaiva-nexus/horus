@@ -10,7 +10,7 @@ import GraficoPizza from "../components/graficos/GraficoPizza";
 import GraficoBarras from "../components/graficos/GraficoBarras";
 import { coresNexus } from "../components/graficos/GraficoBase";
 
-// Função auxiliar para truncar texto (mantida para outros lugares, mas NÃO usada na tabela de produtos)
+// Função auxiliar para truncar texto
 const truncarTexto = (texto, maxLength = 20) => {
   if (!texto) return "";
   return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
@@ -98,7 +98,7 @@ export default function Perdas() {
     }
   }
 
-  // Função corrigida - Converte datas de DD/MM/YYYY para ISO antes de enviar
+  // ✅ FUNÇÃO CORRIGIDA - Funciona para data única e períodos
   async function carregarPerdas() {
     if (!filtros.linhaId) {
       setPerdas([]);
@@ -107,7 +107,7 @@ export default function Perdas() {
 
     setCarregando(true);
     try {
-      // Construir URL com parâmetros
+      // Construir URL base
       let url = `/losses/${filtros.linhaId}`;
       const params = new URLSearchParams();
       
@@ -131,6 +131,14 @@ export default function Perdas() {
         }
       }
       
+      // Log para verificar os parâmetros
+      console.log('📋 Parâmetros enviados:', {
+        dataInicio: filtros.dataInicio,
+        dataFim: filtros.dataFim,
+        paramsString: params.toString()
+      });
+      
+      // Adicionar parâmetros à URL se existirem
       if (params.toString()) {
         url += `?${params.toString()}`;
       }
@@ -183,7 +191,7 @@ export default function Perdas() {
     });
   };
 
-  // Handle submit corrigido - Converte data para ISO
+  // Handle submit - Converte data para ISO
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -617,7 +625,7 @@ export default function Perdas() {
         </form>
       </div>
 
-      {/* TABELA DE PERDAS - CORRIGIDA (SEM TRUNCATE) */}
+      {/* Tabela de Perdas - SEM TRUNCATE */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -686,7 +694,7 @@ export default function Perdas() {
                 {perdas.map((perda) => (
                   <tr key={perda.perda_id || perda.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={tdResponsivo}>{formatarData(perda.data_perda || perda.data_medicao)}</td>
-                    {/* ✅ LINHA CORRIGIDA - SEM TRUNCAR TEXTO */}
+                    {/* ✅ PRODUTO SEM TRUNCATE */}
                     <td style={tdResponsivo} title={perda.produto_nome || getProdutoNome(perda.linha_produto_id)}>
                       {perda.produto_nome || getProdutoNome(perda.linha_produto_id)}
                     </td>
