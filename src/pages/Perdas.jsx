@@ -32,12 +32,13 @@ export default function Perdas() {
     dataFim: ""
   });
 
+  // ✅ CORRIGIDO: Data do formulário começa VAZIA
   const [form, setForm] = useState({
     linha_produto_id: "",
     microparadas_minutos: "",
     retrabalho_pecas: "",
     refugo_pecas: "",
-    data: new Date().toISOString().split('T')[0]
+    data: "" // 👈 AGORA VAZIO!
   });
 
   const [editId, setEditId] = useState(null);
@@ -49,7 +50,6 @@ export default function Perdas() {
   });
 
   useEffect(() => {
-    // ✅ CORRIGIDO: /empresas → /companies
     api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
@@ -60,7 +60,6 @@ export default function Perdas() {
 
   useEffect(() => {
     if (filtros.empresaId) {
-      // ✅ CORRIGIDO: /linhas/${filtros.empresaId} → /lines/${filtros.empresaId}
       api.get(`/lines/${filtros.empresaId}`)
         .then(res => setLinhas(res.data))
         .catch(err => {
@@ -91,7 +90,6 @@ export default function Perdas() {
 
   async function carregarLinhaProdutos(linhaId) {
     try {
-      // ✅ CORRIGIDO: /linha-produto/${linhaId} → /line-products/${linhaId}
       const res = await api.get(`/line-products/${linhaId}`);
       const produtosData = res.data.dados || res.data || [];
       setLinhaProdutos(produtosData);
@@ -101,6 +99,7 @@ export default function Perdas() {
     }
   }
 
+  // ✅ CORRIGIDO: Função que DELEGA o filtro para o BACKEND
   async function carregarPerdas() {
     if (!filtros.linhaId) {
       setPerdas([]);
@@ -109,23 +108,28 @@ export default function Perdas() {
 
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /perdas/${filtros.linhaId} → /losses/${filtros.linhaId}
-      const res = await api.get(`/losses/${filtros.linhaId}`);
+      // Construir URL com parâmetros
+      let url = `/losses/${filtros.linhaId}`;
+      const params = new URLSearchParams();
       
-      // Filtrar por data se necessário
-      let perdasFiltradas = res.data;
+      // Adicionar filtros de data se existirem
       if (filtros.dataInicio) {
-        perdasFiltradas = perdasFiltradas.filter(p => 
-          new Date(p.data_medicao) >= new Date(filtros.dataInicio)
-        );
-      }
-      if (filtros.dataFim) {
-        perdasFiltradas = perdasFiltradas.filter(p => 
-          new Date(p.data_medicao) <= new Date(filtros.dataFim)
-        );
+        params.append('data_inicio', filtros.dataInicio);
       }
       
-      setPerdas(perdasFiltradas);
+      if (filtros.dataFim) {
+        params.append('data_fim', filtros.dataFim);
+      }
+      
+      // Adicionar parâmetros à URL
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
+      
+      console.log('📡 Buscando perdas:', url);
+      const res = await api.get(url);
+      setPerdas(res.data);
+      
     } catch (error) {
       console.error("Erro ao carregar perdas:", error);
       toast.error("Erro ao carregar perdas");
@@ -140,9 +144,9 @@ export default function Perdas() {
     let totalRefugo = 0;
 
     perdas.forEach(p => {
-      totalMicro += p.microparadas_minutos || 0;
-      totalRetrabalho += p.retrabalho_pecas || 0;
-      totalRefugo += p.refugo_pecas || 0;
+      totalMicro += parseFloat(p.microparadas_minutos) || 0;
+      totalRetrabalho += parseInt(p.retrabalho_pecas) || 0;
+      totalRefugo += parseInt(p.refugo_pecas) || 0;
     });
 
     if (totalMicro === 0 && totalRetrabalho === 0 && totalRefugo === 0) {
@@ -181,7 +185,6 @@ export default function Perdas() {
     setCarregando(true);
     try {
       if (editId) {
-        // ✅ CORRIGIDO: /perdas/${editId} → /losses/${editId}
         await api.put(`/losses/${editId}`, {
           microparadas_minutos: parseFloat(form.microparadas_minutos) || 0,
           retrabalho_pecas: parseInt(form.retrabalho_pecas) || 0,
@@ -190,7 +193,6 @@ export default function Perdas() {
         toast.success("Perda atualizada com sucesso! ✅");
         setEditId(null);
       } else {
-        // ✅ CORRIGIDO: /perdas → /losses
         await api.post("/losses", {
           linha_produto_id: parseInt(form.linha_produto_id),
           microparadas_minutos: parseFloat(form.microparadas_minutos) || 0,
@@ -205,7 +207,7 @@ export default function Perdas() {
         microparadas_minutos: "",
         retrabalho_pecas: "",
         refugo_pecas: "",
-        data: new Date().toISOString().split('T')[0]
+        data: "" // 👈 VAZIO após cadastrar também
       });
 
       carregarPerdas();
@@ -213,7 +215,6 @@ export default function Perdas() {
     } catch (error) {
       console.error("Erro ao salvar perda:", error);
       
-      // Tratamento de erro específico
       if (error.response?.status === 400) {
         toast.error("Dados inválidos. Verifique os valores ❌");
       } else {
@@ -230,7 +231,7 @@ export default function Perdas() {
       microparadas_minutos: perda.microparadas_minutos || "",
       retrabalho_pecas: perda.retrabalho_pecas || "",
       refugo_pecas: perda.refugo_pecas || "",
-      data: perda.data_medicao || new Date().toISOString().split('T')[0]
+      data: perda.data_medicao || "" // 👈 VAZIO se não tiver data
     });
     setEditId(perda.id);
   }
@@ -240,7 +241,6 @@ export default function Perdas() {
     
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /perdas/${id} → /losses/${id}
       await api.delete(`/losses/${id}`);
       carregarPerdas();
       toast.success("Registro excluído com sucesso ✅");
@@ -254,6 +254,10 @@ export default function Perdas() {
 
   const formatarData = (dataString) => {
     if (!dataString) return "";
+    // Se a data já vier no formato DD/MM/YYYY, retorna ela mesma
+    if (dataString.includes('/')) return dataString;
+    
+    // Se vier no formato ISO, converte
     const data = new Date(dataString);
     return data.toLocaleDateString('pt-BR');
   };
@@ -272,7 +276,7 @@ export default function Perdas() {
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho responsivo */}
+      {/* Cabeçalho */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -295,7 +299,7 @@ export default function Perdas() {
         </p>
       </div>
 
-      {/* Filtros responsivos */}
+      {/* Filtros */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -373,7 +377,7 @@ export default function Perdas() {
         </div>
       </div>
 
-      {/* GRÁFICO DE PERDAS responsivo */}
+      {/* GRÁFICO DE PERDAS */}
       {filtros.linhaId && dadosGrafico.valores.length > 0 && (
         <div style={{ 
           backgroundColor: "white", 
@@ -442,7 +446,7 @@ export default function Perdas() {
         </div>
       )}
 
-      {/* Formulário responsivo */}
+      {/* Formulário */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -570,7 +574,7 @@ export default function Perdas() {
                     microparadas_minutos: "",
                     retrabalho_pecas: "",
                     refugo_pecas: "",
-                    data: new Date().toISOString().split('T')[0]
+                    data: "" // 👈 VAZIO ao cancelar
                   });
                 }}
               >
@@ -581,7 +585,7 @@ export default function Perdas() {
         </form>
       </div>
 
-      {/* Tabela de Perdas responsiva */}
+      {/* Tabela de Perdas */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -649,13 +653,13 @@ export default function Perdas() {
               <tbody>
                 {perdas.map((perda) => (
                   <tr key={perda.perda_id || perda.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={tdResponsivo}>{formatarData(perda.data_medicao)}</td>
+                    <td style={tdResponsivo}>{formatarData(perda.data_perda || perda.data_medicao)}</td>
                     <td style={tdResponsivo} title={perda.produto_nome || getProdutoNome(perda.linha_produto_id)}>
                       {truncarTexto(perda.produto_nome || getProdutoNome(perda.linha_produto_id), 15)}
                     </td>
-                    <td style={tdResponsivo}>{perda.microparadas_minutos || 0} min</td>
-                    <td style={tdResponsivo}>{perda.retrabalho_pecas || 0} pç</td>
-                    <td style={tdResponsivo}>{perda.refugo_pecas || 0} pç</td>
+                    <td style={tdResponsivo}>{parseFloat(perda.microparadas_minutos) || 0} min</td>
+                    <td style={tdResponsivo}>{parseInt(perda.retrabalho_pecas) || 0} pç</td>
+                    <td style={tdResponsivo}>{parseInt(perda.refugo_pecas) || 0} pç</td>
                     <td style={tdResponsivo}>
                       <Botao
                         variant="primary"
