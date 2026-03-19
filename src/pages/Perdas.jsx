@@ -98,7 +98,7 @@ export default function Perdas() {
     }
   }
 
-  // Função corrigida - Converte datas de DD/MM/YYYY para ISO antes de enviar
+  // ✅ FUNÇÃO CORRIGIDA - Parâmetros são adicionados corretamente à URL
   async function carregarPerdas() {
     if (!filtros.linhaId) {
       setPerdas([]);
@@ -111,43 +111,53 @@ export default function Perdas() {
       let url = `/losses/${filtros.linhaId}`;
       const params = new URLSearchParams();
       
-      // Converter data_inicio de DD/MM/YYYY para YYYY-MM-DD
+      // Converter data_inicio para YYYY-MM-DD
       if (filtros.dataInicio) {
-        const partes = filtros.dataInicio.split('/');
-        if (partes.length === 3) {
-          const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
-          params.append('data_inicio', dataISO);
-          console.log('📅 Data início convertida:', filtros.dataInicio, '→', dataISO);
+        // Verificar se já está no formato ISO
+        if (filtros.dataInicio.includes('-')) {
+          params.append('data_inicio', filtros.dataInicio);
+        } else {
+          const partes = filtros.dataInicio.split('/');
+          if (partes.length === 3) {
+            const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
+            params.append('data_inicio', dataISO);
+            console.log('📅 Data início convertida:', filtros.dataInicio, '→', dataISO);
+          }
         }
       }
       
-      // Converter data_fim de DD/MM/YYYY para YYYY-MM-DD
+      // Converter data_fim para YYYY-MM-DD
       if (filtros.dataFim) {
-        const partes = filtros.dataFim.split('/');
-        if (partes.length === 3) {
-          const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
-          params.append('data_fim', dataISO);
-          console.log('📅 Data fim convertida:', filtros.dataFim, '→', dataISO);
+        if (filtros.dataFim.includes('-')) {
+          params.append('data_fim', filtros.dataFim);
+        } else {
+          const partes = filtros.dataFim.split('/');
+          if (partes.length === 3) {
+            const dataISO = `${partes[2]}-${partes[1]}-${partes[0]}`;
+            params.append('data_fim', dataISO);
+            console.log('📅 Data fim convertida:', filtros.dataFim, '→', dataISO);
+          }
         }
       }
       
       // Log para verificar os parâmetros
-      console.log('📋 Parâmetros enviados:', {
+      console.log('📋 Parâmetros:', {
         dataInicio: filtros.dataInicio,
         dataFim: filtros.dataFim,
-        paramsString: params.toString()
+        paramsString: params.toString(),
+        hasParams: params.toString() ? 'SIM' : 'NÃO'
       });
       
-      // Adicionar parâmetros à URL se existirem
+      // ✅ CORREÇÃO: Adicionar parâmetros à URL
       if (params.toString()) {
         url += `?${params.toString()}`;
+        console.log('📡 URL com parâmetros:', url);
+      } else {
+        console.log('📡 URL sem parâmetros:', url);
       }
       
-      console.log('📡 Buscando perdas com URL:', url);
       const res = await api.get(url);
-      
-      // ✅ LOG DOS DADOS RECEBIDOS
-      console.log('📦 Dados recebidos do backend:', res.data);
+      console.log('📦 Dados recebidos:', res.data.length, 'registros');
       setPerdas(res.data);
       
     } catch (error) {
@@ -158,7 +168,7 @@ export default function Perdas() {
     }
   }
 
-  // ✅ FUNÇÃO COM LOGS DE DEBUG
+  // Função com logs de debug
   const calcularDadosGrafico = () => {
     console.log('📊 Calculando gráfico com perdas:', perdas);
     
