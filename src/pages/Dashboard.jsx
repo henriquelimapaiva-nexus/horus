@@ -107,7 +107,7 @@ export default function Dashboard() {
           
           let faturamentoLinha = 0;
           if (produtos.length > 0) {
-            const valorMedio = produtos.reduce((acc, p) => acc + (p.valor_unitario || 50), 0) / produtos.length;
+            const valorMedio = produtos.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 0), 0) / produtos.length;
             faturamentoLinha = producaoLinha * valorMedio * 22;
           }
           faturamentoTotal += faturamentoLinha;
@@ -140,7 +140,7 @@ export default function Dashboard() {
         refugo: perdasTotales * 0.25
       };
 
-      setDadosDashboard({
+      const dados = {
         empresa: empresaAtual.nome,
         empresaId: empresaAtual.id,
         totalLinhas: linhas.length,
@@ -165,7 +165,18 @@ export default function Dashboard() {
           },
           distribuicaoPerdas
         }
+      };
+
+      // 👇 LOG DE DEBUG
+      console.log('📊 Dashboard - dados calculados:', {
+        faturamento: faturamentoTotal,
+        perdas: perdasTotales,
+        oeeMedio,
+        totalLinhas: linhas.length,
+        nomesLinhas
       });
+
+      setDadosDashboard(dados);
 
       toast.success("Dashboard carregado com sucesso!");
 
@@ -184,6 +195,9 @@ export default function Dashboard() {
       currency: 'BRL'
     }).format(valor || 0);
   };
+
+  // 👇 LOG DE RENDERIZAÇÃO
+  console.log('🖥️ Renderizando Dashboard - dadosDashboard:', dadosDashboard);
 
   if (!clienteAtual) {
     return (
