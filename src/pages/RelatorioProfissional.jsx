@@ -152,7 +152,7 @@ export default function RelatorioProfissional() {
     }
   };
 
-  // ✅ NOVA FUNÇÃO: Calcular variabilidade por posto
+  // ✅ FUNÇÃO: Calcular variabilidade por posto
   const calcularVariabilidadePostos = async (postos, linhaId) => {
     const resultados = [];
     
@@ -191,7 +191,7 @@ export default function RelatorioProfissional() {
     return resultados;
   };
 
-  // ✅ NOVA FUNÇÃO: Gerar análise técnica detalhada
+  // ✅ FUNÇÃO: Gerar análise técnica detalhada (com texto corrido)
   const gerarAnaliseTecnicaDetalhada = (dados) => {
     let analise = "";
     
@@ -251,12 +251,10 @@ export default function RelatorioProfissional() {
       
       O impacto financeiro anual das perdas é de ${formatarMoeda(perdasTotal * 12)}.
       
-      6.4 MATRIZ DE PRIORIZAÇÃO (GUT)
+      6.4 PRIORIZAÇÃO DAS AÇÕES (MATRIZ GUT)
       ------------------------------------------------------------------------------
       A matriz GUT (Gravidade, Urgência, Tendência) foi aplicada para priorizar as ações:
       
-      | Ação | G | U | T | Score | Prioridade |
-      |------|---|---|---|-------|------------|
     `;
     
     // Criar ações baseadas nos dados reais
@@ -306,7 +304,7 @@ export default function RelatorioProfissional() {
     });
     
     acoes.forEach(acao => {
-      analise += `\n      | ${acao.nome.padEnd(25)} | ${acao.gravidade} | ${acao.urgencia} | ${acao.tendencia} | ${acao.score} | ${acao.prioridade.padEnd(8)} |`;
+      analise += `      • ${acao.nome}: Score ${acao.score} (${acao.prioridade}) - G:${acao.gravidade} | U:${acao.urgencia} | T:${acao.tendencia}\n`;
     });
     
     analise += `
@@ -370,13 +368,8 @@ export default function RelatorioProfissional() {
     `;
     
     if (dados.analiseVariabilidade && dados.analiseVariabilidade.length > 0) {
-      analise += `
-      | Posto | Ciclo Médio (s) | Desvio (s) | CV (%) | Classificação |
-      |-------|-----------------|------------|--------|---------------|
-      `;
-      
       dados.analiseVariabilidade.forEach(p => {
-        analise += `| ${p.posto.padEnd(20)} | ${p.cicloMedio} | ${p.desvio} | ${p.cv}% | ${p.classificacao} |\n`;
+        analise += `      • ${p.posto}: Ciclo médio ${p.cicloMedio}s | CV ${p.cv}% | ${p.classificacao}\n`;
       });
     } else {
       analise += `      Dados de variabilidade não disponíveis para análise detalhada.\n`;
@@ -391,39 +384,62 @@ export default function RelatorioProfissional() {
       • Refugo: ${formatarMoeda(perdas.refugo)}/mês (${((perdas.refugo / perdasTotal) * 100).toFixed(1)}% do total)
       • Total de perdas mensais: ${formatarMoeda(perdasTotal)}/mês
       
-      6.4 ANÁLISE DO GARGALO - ${gargalo}
+      6.4 PRIORIZAÇÃO DAS AÇÕES (MATRIZ GUT)
       ------------------------------------------------------------------------------
-      O gargalo é o posto que limita a capacidade produtiva da linha. 
-      Qualquer melhoria neste posto impacta diretamente a produção total.
+      A matriz GUT (Gravidade, Urgência, Tendência) foi aplicada para priorizar as ações:
       
-      Recomendações específicas para o gargalo:
-      • Realizar cronoanálise detalhada do posto
-      • Identificar e eliminar desperdícios
-      • Reduzir tempo de setup (se aplicável)
-      • Melhorar disponibilidade do equipamento
-      
-      6.5 MATRIZ DE PRIORIZAÇÃO (GUT)
-      ------------------------------------------------------------------------------
-      
-      | Ação | G | U | T | Score | Prioridade |
-      |------|---|---|---|-------|------------|
     `;
     
     // Ações específicas para linha
+    const acoes = [];
+    
     if (perdas.setup > 0) {
-      analise += `\n      | Redução de Setup | 4 | 5 | 4 | 80 | ALTA |`;
+      acoes.push({
+        nome: "Redução de Setup",
+        gravidade: 4,
+        urgencia: 5,
+        tendencia: 4,
+        score: 80,
+        prioridade: "ALTA"
+      });
     }
     if (perdas.micro > 0) {
-      analise += `\n      | Eliminação de Microparadas | 3 | 4 | 3 | 36 | MÉDIA |`;
+      acoes.push({
+        nome: "Eliminação de Microparadas",
+        gravidade: 3,
+        urgencia: 4,
+        tendencia: 3,
+        score: 36,
+        prioridade: "MÉDIA"
+      });
     }
     if (perdas.refugo > 0) {
-      analise += `\n      | Redução de Refugo | 4 | 3 | 4 | 48 | MÉDIA-ALTA |`;
+      acoes.push({
+        nome: "Redução de Refugo",
+        gravidade: 4,
+        urgencia: 3,
+        tendencia: 4,
+        score: 48,
+        prioridade: "MÉDIA-ALTA"
+      });
     }
     
+    acoes.push({
+      nome: "Balanceamento da Linha",
+      gravidade: 3,
+      urgencia: 3,
+      tendencia: 4,
+      score: 36,
+      prioridade: "MÉDIA"
+    });
+    
+    acoes.forEach(acao => {
+      analise += `      • ${acao.nome}: Score ${acao.score} (${acao.prioridade}) - G:${acao.gravidade} | U:${acao.urgencia} | T:${acao.tendencia}\n`;
+    });
+    
     analise += `
-      | Balanceamento da Linha | 3 | 3 | 4 | 36 | MÉDIA |
       
-      6.6 RECOMENDAÇÕES ESTRATÉGICAS
+      6.5 RECOMENDAÇÕES ESTRATÉGICAS
       ------------------------------------------------------------------------------
       
       CURTO PRAZO (0-3 MESES):
@@ -441,7 +457,7 @@ export default function RelatorioProfissional() {
       • Estabelecer cultura de melhoria contínua
       • Implementar sistema de gestão visual
       
-      6.7 PROJEÇÃO DE RESULTADOS
+      6.6 PROJEÇÃO DE RESULTADOS
       ------------------------------------------------------------------------------
       • Ganho mensal estimado: ${formatarMoeda(perdasTotal * 0.3)}
       • Payback do investimento: ${((dados.roi.investimento || 50000) / (perdasTotal * 0.3)).toFixed(1)} meses
@@ -460,18 +476,6 @@ export default function RelatorioProfissional() {
       currency: 'BRL'
     }).format(valor || 0);
   };
-
-  const formatarPercentual = (valor) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'percent',
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1
-    }).format((valor || 0) / 100);
-  };
-
-  // ========================================
-  // FUNÇÕES PRINCIPAIS
-  // ========================================
 
   const calcularProjecoes = (dados) => {
     let oeeAtual, capacidadeAtual, perdasAtuais;
@@ -623,7 +627,6 @@ export default function RelatorioProfissional() {
     setErroIA("");
 
     try {
-      // Gerar análise técnica detalhada
       const analiseTecnica = gerarAnaliseTecnicaDetalhada(dados);
       setRelatorioIA(analiseTecnica);
       toast.success("Análise técnica gerada com sucesso!");
@@ -808,7 +811,6 @@ export default function RelatorioProfissional() {
           const perdasFinanceiras = await calcularPerdasFinanceiras(filtros.linhaId, custoMinuto);
           const roi = calcularROI(perdasFinanceiras.total);
           
-          // ✅ Calcular variabilidade dos postos
           const analiseVariabilidade = await calcularVariabilidadePostos(postos.data, filtros.linhaId);
 
           const linha = linhas.find(l => l.id === parseInt(filtros.linhaId));
@@ -1201,7 +1203,7 @@ export default function RelatorioProfissional() {
                       <th style={thStyle}>Gargalo</th>
                       <th style={thStyle}>Custo Mensal</th>
                       <th style={thStyle}>Perdas Estimadas</th>
-                    </tr>
+                      </tr>
                   </thead>
                   <tbody>
                     {dadosRelatorio.linhas.map((linha, idx) => {
@@ -1259,7 +1261,7 @@ export default function RelatorioProfissional() {
               />
             </div>
 
-            {/* SEÇÃO 6 - ANÁLISE TÉCNICA E RECOMENDAÇÕES (NOVA VERSÃO DETALHADA) */}
+            {/* SEÇÃO 6 - ANÁLISE TÉCNICA E RECOMENDAÇÕES */}
             {relatorioIA && (
               <>
                 <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px" }}>
