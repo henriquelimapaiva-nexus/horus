@@ -11,6 +11,7 @@ export default function RH() {
   const [empresas, setEmpresas] = useState([]);
   const [colaboradores, setColaboradores] = useState([]);
   const [treinamentos, setTreinamentos] = useState([]);
+  const [habilidades, setHabilidades] = useState([]); // ✅ ADICIONADO
   
   const [filtros, setFiltros] = useState({
     empresaId: clienteAtual || "",
@@ -62,6 +63,7 @@ export default function RH() {
     }
   }, [filtros.colaboradorId]);
 
+  // ✅ FUNÇÃO CORRIGIDA - Carrega treinamentos E habilidades
   async function carregarDados() {
     setCarregando(true);
     try {
@@ -70,6 +72,7 @@ export default function RH() {
         api.get(`/rh/habilidades/colaborador/${filtros.colaboradorId}`)
       ]);
       setTreinamentos(treinamentosRes.data || []);
+      setHabilidades(habilidadesRes.data || []);
     } catch (error) {
       console.error("Erro:", error);
     } finally {
@@ -199,7 +202,7 @@ export default function RH() {
                 {treinamentos.length === 0 ? <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Nenhum treinamento registrado.</div> : (
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead><tr style={{ backgroundColor: "#1E3A8A", color: "white" }}><th style={thStyle}>Data</th><th style={thStyle}>Curso</th><th style={thStyle}>Carga</th><th style={thStyle}>Certificado</th></tr></thead>
+                      <thead><tr style={{ backgroundColor: "#1E3A8A", color: "white" }}><th style={thStyle}>Data</th><th style={thStyle}>Curso</th><th style={thStyle}>Carga</th><th style={thStyle}>Certificado</th> </tr></thead>
                       <tbody>
                         {treinamentos.map((t, idx) => (
                           <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
@@ -217,17 +220,58 @@ export default function RH() {
             </>
           )}
 
+          {/* ✅ ABA HABILIDADES CORRIGIDA COM LISTA */}
           {abaAtiva === "habilidades" && (
-            <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px" }}>
-              <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>➕ Nova Habilidade</h3>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px", marginBottom: "15px" }}>
-                <input type="text" placeholder="Habilidade *" value={novaHabilidade.habilidade} onChange={(e) => setNovaHabilidade({ ...novaHabilidade, habilidade: e.target.value, colaborador_id: filtros.colaboradorId })} style={inputStyle} />
-                <select value={novaHabilidade.nivel} onChange={(e) => setNovaHabilidade({ ...novaHabilidade, nivel: e.target.value })} style={inputStyle}>
-                  {niveisHabilidade.map(n => <option key={n.valor} value={n.valor}>{n.label}</option>)}
-                </select>
+            <>
+              <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", marginBottom: "30px" }}>
+                <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>➕ Nova Habilidade</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px", marginBottom: "15px" }}>
+                  <input type="text" placeholder="Habilidade *" value={novaHabilidade.habilidade} onChange={(e) => setNovaHabilidade({ ...novaHabilidade, habilidade: e.target.value, colaborador_id: filtros.colaboradorId })} style={inputStyle} />
+                  <select value={novaHabilidade.nivel} onChange={(e) => setNovaHabilidade({ ...novaHabilidade, nivel: e.target.value })} style={inputStyle}>
+                    {niveisHabilidade.map(n => <option key={n.valor} value={n.valor}>{n.label}</option>)}
+                  </select>
+                </div>
+                <Botao variant="success" size="md" fullWidth onClick={salvarHabilidade} loading={salvando}>Registrar Habilidade</Botao>
               </div>
-              <Botao variant="success" size="md" fullWidth onClick={salvarHabilidade} loading={salvando}>Registrar Habilidade</Botao>
-            </div>
+
+              <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px" }}>
+                <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>⭐ Matriz de Habilidades</h3>
+                {habilidades.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Nenhuma habilidade registrada.</div>
+                ) : (
+                  <div style={{ overflowX: "auto" }}>
+                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                      <thead>
+                        <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+                          <th style={thStyle}>Habilidade</th>
+                          <th style={thStyle}>Nível</th>
+                          <th style={thStyle}>Data Registro</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {habilidades.map((h, idx) => (
+                          <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                            <td style={tdStyle}>{h.habilidade}</td>
+                            <td style={tdStyle}>
+                              <span style={{
+                                padding: "4px 8px",
+                                borderRadius: "4px",
+                                fontSize: "11px",
+                                backgroundColor: h.nivel >= 4 ? "#16a34a20" : h.nivel >= 3 ? "#3b82f620" : "#f59e0b20",
+                                color: h.nivel >= 4 ? "#16a34a" : h.nivel >= 3 ? "#3b82f6" : "#f59e0b"
+                              }}>
+                                {niveisHabilidade.find(n => n.valor === String(h.nivel))?.label || `Nível ${h.nivel}`}
+                              </span>
+                            </td>
+                            <td style={tdStyle}>{new Date(h.criado_em).toLocaleDateString('pt-BR')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </>
       )}
