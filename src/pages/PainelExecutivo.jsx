@@ -103,7 +103,6 @@ export default function PainelExecutivo() {
           const producaoLinha = analise.capacidade_estimada_dia || 0;
           producaoTotal += producaoLinha;
 
-          // ✅ ADICIONEI LOGS AQUI
           if (produtos.length > 0) {
             console.log(`📦 Produtos da linha ${linha.nome}:`, produtos.map(p => ({ nome: p.produto_nome, valor: p.valor_unitario })));
             const valorMedio = produtos.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 0), 0) / produtos.length;
@@ -147,7 +146,6 @@ export default function PainelExecutivo() {
         oee: oees[idx] || 0
       })).sort((a, b) => b.perda - a.perda);
 
-      // ✅ LOGS FINAIS
       console.log('📊 Painel Executivo - faturamentoTotal:', faturamentoTotal);
       console.log('📊 Painel Executivo - perdasTotais:', perdasTotais);
 
@@ -384,7 +382,7 @@ export default function PainelExecutivo() {
           overflow: "hidden"
         }}>
           <GraficoBarras 
-            labels={dadosPainel.graficos.perdasPorLinha.labels.map(l => truncarTexto(l, 15))}
+            labels={dadosPainel.graficos.perdasPorLinha.labels}
             valores={dadosPainel.graficos.perdasPorLinha.valores}
             titulo="Perdas por Linha (R$/mês)"
             cor={coresNexus.danger}
@@ -412,7 +410,7 @@ export default function PainelExecutivo() {
         </div>
       </div>
 
-      {/* Top 5 Oportunidades responsivo */}
+      {/* Top 5 Oportunidades responsivo - SEM TRUNCATE */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -457,7 +455,7 @@ export default function PainelExecutivo() {
                     overflow: "hidden"
                   }}>
                     <span style={{ fontWeight: "bold", fontSize: "clamp(14px, 2vw, 16px)" }}>
-                      {index + 1}. {truncarTexto(opp.nome, 25)}
+                      {index + 1}. {opp.nome}
                     </span>
                     <span style={{ 
                       color: "#666", 
@@ -465,7 +463,7 @@ export default function PainelExecutivo() {
                       marginLeft: "clamp(5px, 1vw, 10px)",
                       display: "inline-block"
                     }}>
-                      {truncarTexto(opp.linha, 15)}
+                      {opp.linha}
                     </span>
                   </div>
                   <span style={{ 
@@ -498,7 +496,7 @@ export default function PainelExecutivo() {
         </div>
       </div>
 
-      {/* Ranking de Linhas por Perda responsivo */}
+      {/* Ranking de Linhas por Perda responsivo - SEM TRUNCATE */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -543,7 +541,7 @@ export default function PainelExecutivo() {
                 <th style={thStyle}>Perda Mensal</th>
                 <th style={thStyle}>%</th>
                 <th style={thStyle}>Ação</th>
-               </tr>
+                </tr>
             </thead>
             <tbody>
               {dadosPainel.rankLinhas.map((linha, index) => (
@@ -564,7 +562,7 @@ export default function PainelExecutivo() {
                     </span>
                   </td>
                   <td style={tdStyle} title={linha.nome}>
-                    {truncarTexto(linha.nome, 15)}
+                    {linha.nome}
                   </td>
                   <td style={tdStyle}>
                     <span style={{ 
