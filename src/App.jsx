@@ -17,7 +17,7 @@ import Conhecimento from "./pages/Conhecimento";
 
 // Cadastro de Linhas e Postos
 import LinhaForm from "./pages/LinhaForm";
-import NovaLinha from "./pages/NovaLinha"; // 🟢 NOVO COMPONENTE MASTER
+import NovaLinha from "./pages/NovaLinha";
 import PostoForm from "./pages/PostoForm";
 
 // Coleta de Dados
@@ -50,7 +50,7 @@ import PropostaComercial from "./pages/PropostaComercial";
 // Página de Listagem de Postos
 import Postos from "./pages/Postos";
 
-// 👇 IMPORTS DO CONSULTOR (incluindo login e proteção)
+// 👇 IMPORTS DO CONSULTOR
 import ConsultorLogin from "./pages/consultor/ConsultorLogin";
 import ConsultorPrivateLayout from "./pages/consultor/ConsultorPrivateLayout";
 import ConsultorLayout from "./pages/consultor/ConsultorLayout";
@@ -134,13 +134,12 @@ function App() {
               <Route path="/empresas" element={<Empresa />} />
               <Route path="/conhecimento" element={<Conhecimento />} />
               
-              {/* ✅ ROTA ATUALIZADA PARA O NÍVEL MASTER */}
               <Route path="/linhas/novo" element={<NovaLinha />} />
-              
               <Route path="/linhas/editar/:id" element={<LinhaForm />} />
               <Route path="/postos/novo/:linhaId" element={<PostoForm />} />
               <Route path="/postos/editar/:postoId/linha/:linhaId" element={<PostoForm />} />
               <Route path="/coleta/:linhaId" element={<ColetaDados />} />
+              <Route path="/coleta-dados" element={<ColetaDados />} />  {/* 👈 NOVA ROTA */}
               <Route path="/relatorios" element={<RelatorioProfissional />} />
               <Route path="/produtos" element={<Produtos />} />
               <Route path="/cargos" element={<Cargos />} />

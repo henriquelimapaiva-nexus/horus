@@ -254,7 +254,7 @@ function PrivateLayout() {
               )}
             </div>
 
-            {/* Menu Operação */}
+            {/* ✅ Menu Operação COM COLETA DE DADOS */}
             <div style={{ position: "relative" }}>
               <div style={menuItemStyle} onClick={(e) => toggleMenu('operacao', e)}>
                 Operação {menuAberto === 'operacao' ? '▼' : '▶'}
@@ -263,6 +263,7 @@ function PrivateLayout() {
                 <div style={submenuStyle}>
                   <Link to="/linhas" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Linhas</Link>
                   <Link to="/postos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Postos</Link>
+                  <Link to="/coleta-dados" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Coleta de Dados</Link>
                 </div>
               )}
             </div>
