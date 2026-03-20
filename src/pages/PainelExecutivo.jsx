@@ -62,6 +62,11 @@ export default function PainelExecutivo() {
         return;
       }
 
+      // ✅ PEGAR NOME DA EMPRESA
+      const empresaAtual = empresas.find(e => e.id === parseInt(empresaSelecionada));
+      const nomeEmpresa = empresaAtual?.nome || `Empresa ${empresaSelecionada}`;
+      console.log('🏢 Nome da empresa:', nomeEmpresa);
+
       let faturamentoTotal = 0;
       let perdasTotais = 0;
       let oees = [];
@@ -149,8 +154,9 @@ export default function PainelExecutivo() {
       console.log('📊 Painel Executivo - faturamentoTotal:', faturamentoTotal);
       console.log('📊 Painel Executivo - perdasTotais:', perdasTotais);
 
+      // ✅ SET DADOS COM NOME CORRETO
       setDadosPainel({
-        empresa: empresas.find(e => e.id === parseInt(empresaSelecionada))?.nome || `Empresa ${empresaSelecionada}`,
+        empresa: nomeEmpresa,
         totalLinhas: linhas.length,
         faturamento: faturamentoTotal,
         perdas: perdasTotais,
@@ -541,7 +547,7 @@ export default function PainelExecutivo() {
                 <th style={thStyle}>Perda Mensal</th>
                 <th style={thStyle}>%</th>
                 <th style={thStyle}>Ação</th>
-                </tr>
+                 </tr>
             </thead>
             <tbody>
               {dadosPainel.rankLinhas.map((linha, index) => (
@@ -560,10 +566,10 @@ export default function PainelExecutivo() {
                     }}>
                       {index + 1}
                     </span>
-                  </td>
+                   </td>
                   <td style={tdStyle} title={linha.nome}>
                     {linha.nome}
-                  </td>
+                   </td>
                   <td style={tdStyle}>
                     <span style={{ 
                       color: linha.oee >= 80 ? "#16a34a" : linha.oee >= 60 ? "#f59e0b" : "#dc2626",
@@ -571,21 +577,21 @@ export default function PainelExecutivo() {
                     }}>
                       {linha.oee.toFixed(1)}%
                     </span>
-                  </td>
+                   </td>
                   <td style={tdStyle}>{formatarMoeda(linha.perda)}</td>
                   <td style={tdStyle}>
                     {((linha.perda / dadosPainel.perdas) * 100).toFixed(1)}%
-                  </td>
+                   </td>
                   <td style={tdStyle}>
                     {index === 0 && "🔴 Intervenção Imediata"}
                     {index === 1 && "🟡 Análise Prioritária"}
                     {index === 2 && "🟢 Monitoramento"}
                     {index > 2 && "✅ OK"}
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
             </tbody>
-          </table>
+           </table>
         </div>
       </div>
 
