@@ -5,39 +5,60 @@ import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast';
 
-// Função auxiliar para truncar texto
-const truncarTexto = (texto, maxLength = 20) => {
-  if (!texto) return "";
-  return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
-};
-
 export default function ColetaDados() {
   const { linhaId } = useParams();
   const { clienteAtual } = useOutletContext();
   const navigate = useNavigate();
 
-  // ✅ ESTADOS ADICIONADOS
+  // Estados
   const [linhaSelecionada, setLinhaSelecionada] = useState("");
   const [linhasDisponiveis, setLinhasDisponiveis] = useState([]);
-
   const [postos, setPostos] = useState([]);
   const [postoSelecionado, setPostoSelecionado] = useState("");
-  const [modoColeta, setModoColeta] = useState("ciclo");
+  const [operadores, setOperadores] = useState([]);
   const [medicoes, setMedicoes] = useState([]);
   const [carregando, setCarregando] = useState(false);
-  const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [analiseEstatistica, setAnaliseEstatistica] = useState(null);
 
+  // Formulário de medição
   const [novaMedicao, setNovaMedicao] = useState({
+    operador_id: "",
+    elemento: "",
     tempo_ciclo_segundos: "",
-    tipo_parada: "microparada",
-    tempo_parada_minutos: "",
-    descricao: "",
-    turno: "1",
-    data: new Date().toISOString().split('T')[0]
+    metodo: "padrao",
+    condicao: "normal",
+    observacao: ""
   });
 
-  // ✅ CARREGAR LINHAS DA EMPRESA
+  // Elementos predefinidos para cronoanálise
+  const elementosPadrao = [
+    "Pegar peça",
+    "Posicionar",
+    "Operação principal",
+    "Inspecionar",
+    "Remover peça",
+    "Aguardar ciclo",
+    "Movimentação"
+  ];
+
+  // Métodos disponíveis
+  const metodos = [
+    { value: "padrao", label: "Padrão (POP)" },
+    { value: "melhorado", label: "Melhorado (Kaizen)" },
+    { value: "fora_padrao", label: "Fora do padrão" }
+  ];
+
+  // Condições disponíveis
+  const condicoes = [
+    { value: "normal", label: "Normal" },
+    { value: "problema_material", label: "Problema com material" },
+    { value: "problema_ferramenta", label: "Problema com ferramenta" },
+    { value: "treinamento", label: "Operador em treinamento" },
+    { value: "falta_operador", label: "Falta de operador" }
+  ];
+
+  // Carregar linhas da empresa
   useEffect(() => {
     if (clienteAtual) {
       carregarLinhas();
@@ -54,7 +75,7 @@ export default function ColetaDados() {
     }
   }
 
-  // ✅ CARREGAR POSTOS (usa linhaId ou linhaSelecionada)
+  // Carregar postos
   useEffect(() => {
     const idParaUsar = linhaId || linhaSelecionada;
     if (!idParaUsar) return;
@@ -67,40 +88,69 @@ export default function ColetaDados() {
       });
   }, [linhaId, linhaSelecionada]);
 
+  // Carregar operadores da empresa
   useEffect(() => {
-    if (!linhaId && !linhaSelecionada) return;
+    if (clienteAtual) {
+      api.get(`/employees/${clienteAtual}`)
+        .then((res) => setOperadores(res.data))
+        .catch((err) => {
+          console.error("Erro ao carregar operadores:", err);
+        });
+    }
+  }, [clienteAtual]);
+
+  // Carregar medições existentes
+  useEffect(() => {
     if (!postoSelecionado) return;
-    
     carregarMedicoes();
-  }, [linhaId, linhaSelecionada, postoSelecionado]);
+  }, [postoSelecionado]);
 
   async function carregarMedicoes() {
     setCarregando(true);
     try {
-      const response = await api.get(`/measurements/stats/${postoSelecionado}`);
-      
-      const medicoesFormatadas = [];
-      if (response.data.analise_estatistica) {
-        response.data.analise_estatistica.forEach(stat => {
-          medicoesFormatadas.push({
-            id: `${stat.tipo}-${Date.now()}`,
-            data_medicao: new Date().toISOString().split('T')[0],
-            tipo: stat.tipo,
-            valor_numerico: stat.media,
-            descricao: `Média de ${stat.amostras} medições`,
-            turno: "1"
-          });
-        });
-      }
-      setMedicoes(medicoesFormatadas);
-      setErro("");
+      const response = await api.get(`/cycle-measurements?posto_id=${postoSelecionado}`);
+      const dados = response.data || [];
+      setMedicoes(dados);
+      calcularEstatisticas(dados);
     } catch (error) {
       console.error("Erro ao carregar medições:", error);
-      setErro("Erro ao carregar medições");
-      toast.error("Erro ao carregar medições");
+      setMedicoes([]);
     } finally {
       setCarregando(false);
     }
+  }
+
+  function calcularEstatisticas(medicoesList) {
+    if (medicoesList.length === 0) {
+      setAnaliseEstatistica(null);
+      return;
+    }
+
+    const tempos = medicoesList.map(m => parseFloat(m.tempo_ciclo_segundos)).filter(t => t > 0);
+    if (tempos.length === 0) {
+      setAnaliseEstatistica(null);
+      return;
+    }
+
+    const soma = tempos.reduce((a, b) => a + b, 0);
+    const media = soma / tempos.length;
+    const minimo = Math.min(...tempos);
+    const maximo = Math.max(...tempos);
+    
+    // Cálculo do desvio padrão
+    const variancia = tempos.reduce((acc, val) => acc + Math.pow(val - media, 2), 0) / tempos.length;
+    const desvio = Math.sqrt(variancia);
+    const cv = (desvio / media) * 100;
+
+    setAnaliseEstatistica({
+      total_amostras: tempos.length,
+      media: media.toFixed(2),
+      minimo: minimo.toFixed(2),
+      maximo: maximo.toFixed(2),
+      desvio: desvio.toFixed(2),
+      cv: cv.toFixed(2),
+      classificacao: cv < 5 ? "Excelente" : cv < 10 ? "Bom" : cv < 20 ? "Regular" : "Crítico"
+    });
   }
 
   const handleInputChange = (e) => {
@@ -116,78 +166,58 @@ export default function ColetaDados() {
       return;
     }
 
-    if (modoColeta === "ciclo" && !novaMedicao.tempo_ciclo_segundos) {
+    if (!novaMedicao.tempo_ciclo_segundos) {
       toast.error("Informe o tempo de ciclo");
       return;
     }
 
-    if (modoColeta === "parada" && !novaMedicao.tempo_parada_minutos) {
-      toast.error("Informe o tempo de parada");
+    if (!novaMedicao.elemento) {
+      toast.error("Selecione um elemento");
       return;
     }
 
     setSalvando(true);
     try {
-      let dados = {};
+      const dados = {
+        posto_id: parseInt(postoSelecionado),
+        operador_id: novaMedicao.operador_id ? parseInt(novaMedicao.operador_id) : null,
+        elemento: novaMedicao.elemento,
+        tempo_ciclo_segundos: parseFloat(novaMedicao.tempo_ciclo_segundos),
+        metodo: novaMedicao.metodo,
+        condicao: novaMedicao.condicao,
+        observacao: novaMedicao.observacao || null
+      };
       
-      if (modoColeta === "ciclo") {
-        dados = {
-          posto_id: parseInt(postoSelecionado),
-          tempo_ciclo_segundos: parseFloat(novaMedicao.tempo_ciclo_segundos)
-        };
-        
-        const response = await api.post("/cycle-measurements", dados);
-        
-        const novaMed = {
-          id: response.data.id,
-          data_medicao: new Date().toISOString().split('T')[0],
-          tipo: "ciclo",
-          valor_numerico: response.data.tempo_ciclo_segundos,
-          descricao: "",
-          turno: parseInt(novaMedicao.turno)
-        };
-        
-        setMedicoes([novaMed, ...medicoes]);
-        setNovaMedicao({ ...novaMedicao, tempo_ciclo_segundos: "" });
-        toast.success("Ciclo registrado com sucesso! ✅");
-        
-      } else if (modoColeta === "parada" || modoColeta === "evento") {
-        dados = {
-          posto_id: parseInt(postoSelecionado),
-          tipo: modoColeta === "parada" ? novaMedicao.tipo_parada : "evento",
-          valor_numerico: modoColeta === "parada" ? parseFloat(novaMedicao.tempo_parada_minutos) : 0,
-          turno: parseInt(novaMedicao.turno),
-          data_medicao: novaMedicao.data,
-          descricao: novaMedicao.descricao || null
-        };
-        
-        const response = await api.post("/measurements", dados);
-        
-        const novaMed = {
-          id: response.data.protocolo || response.data.id,
-          data_medicao: response.data.data_medicao || novaMedicao.data,
-          tipo: modoColeta,
-          valor_numerico: dados.valor_numerico,
-          descricao: response.data.descricao || novaMedicao.descricao,
-          turno: response.data.turno || parseInt(novaMedicao.turno)
-        };
-        
-        setMedicoes([novaMed, ...medicoes]);
-        
-        if (modoColeta === "parada") {
-          setNovaMedicao({ ...novaMedicao, tempo_parada_minutos: "", descricao: "" });
-        } else {
-          setNovaMedicao({ ...novaMedicao, descricao: "" });
-        }
-        
-        toast.success(`${modoColeta === "parada" ? "Parada" : "Evento"} registrado com sucesso! ✅`);
-      }
+      const response = await api.post("/cycle-measurements", dados);
       
-      setErro("");
+      const novaMed = {
+        id: response.data.id,
+        data_medicao: new Date().toISOString().split('T')[0],
+        hora_medicao: new Date().toLocaleTimeString('pt-BR'),
+        elemento: novaMedicao.elemento,
+        tempo_ciclo_segundos: response.data.tempo_ciclo_segundos,
+        metodo: novaMedicao.metodo,
+        condicao: novaMedicao.condicao,
+        operador_id: novaMedicao.operador_id,
+        observacao: novaMedicao.observacao
+      };
+      
+      setMedicoes([novaMed, ...medicoes]);
+      calcularEstatisticas([novaMed, ...medicoes]);
+      
+      setNovaMedicao({
+        operador_id: "",
+        elemento: "",
+        tempo_ciclo_segundos: "",
+        metodo: "padrao",
+        condicao: "normal",
+        observacao: ""
+      });
+      
+      toast.success("Medição registrada com sucesso! ✅");
       
     } catch (error) {
       console.error("Erro ao salvar medição:", error);
-      setErro("Erro ao salvar medição");
       toast.error("Erro ao salvar medição ❌");
     } finally {
       setSalvando(false);
@@ -198,42 +228,34 @@ export default function ColetaDados() {
     if (!window.confirm("Excluir esta medição?")) return;
     
     try {
-      try {
-        await api.delete(`/measurements/${id}`);
-      } catch {
-        await api.delete(`/cycle-measurements/${id}`).catch(() => {
-          throw new Error("Não foi possível excluir");
-        });
-      }
-      
-      setMedicoes(medicoes.filter(m => m.id !== id));
-      setErro("");
+      await api.delete(`/cycle-measurements/${id}`);
+      const novasMedicoes = medicoes.filter(m => m.id !== id);
+      setMedicoes(novasMedicoes);
+      calcularEstatisticas(novasMedicoes);
       toast.success("Medição excluída com sucesso ✅");
     } catch (error) {
       console.error("Erro ao excluir medição:", error);
-      setErro("Erro ao excluir medição");
       toast.error("Erro ao excluir medição ❌");
     }
   }
 
   const exportarCSV = () => {
-    let csv = "Data,Posto,Tipo,Valor,Descrição,Turno\n";
+    let csv = "Data,Hora,Posto,Elemento,Tempo (s),Método,Condição,Operador,Observação\n";
     
     medicoes.forEach(m => {
-      const postoNome = postos.find(p => p.id === m.posto_id)?.nome || 
-                       postos.find(p => p.id === parseInt(postoSelecionado))?.nome || 
-                       `Posto ${postoSelecionado}`;
-      const valor = m.tipo === "ciclo" ? `${m.valor_numerico}s` : 
-                   m.tipo === "parada" || m.tipo?.includes("parada") ? `${m.valor_numerico}min` : "-";
+      const postoNome = postos.find(p => p.id === parseInt(postoSelecionado))?.nome || `Posto ${postoSelecionado}`;
+      const operadorNome = operadores.find(op => op.id === m.operador_id)?.nome || "-";
+      const metodoLabel = metodos.find(met => met.value === m.metodo)?.label || m.metodo;
+      const condicaoLabel = condicoes.find(c => c.value === m.condicao)?.label || m.condicao;
       
-      csv += `${m.data_medicao},${postoNome},${m.tipo},${valor},${m.descricao || "-"},${m.turno}\n`;
+      csv += `${m.data_medicao},${m.hora_medicao || "-"},${postoNome},${m.elemento},${m.tempo_ciclo_segundos},${metodoLabel},${condicaoLabel},${operadorNome},${m.observacao || "-"}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `medicoes_linha_${linhaId || linhaSelecionada}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `cronoanalise_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     
     toast.success("Arquivo CSV exportado com sucesso!");
@@ -245,7 +267,7 @@ export default function ColetaDados() {
     return data.toLocaleDateString('pt-BR');
   };
 
-  // ✅ NOVA CONDIÇÃO: Se não tem linha, mostra seletor
+  // Seletor de linha (quando não tem linhaId na URL)
   if (!linhaId && !linhaSelecionada) {
     return (
       <div style={{ 
@@ -295,8 +317,8 @@ export default function ColetaDados() {
     );
   }
 
-  // Se tem linhaId na URL ou linhaSelecionada, mostrar o formulário de coleta
   const linhaIdAtual = linhaId || linhaSelecionada;
+  const postoAtual = postos.find(p => p.id === parseInt(postoSelecionado));
 
   return (
     <div style={{ 
@@ -307,7 +329,7 @@ export default function ColetaDados() {
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho responsivo */}
+      {/* Cabeçalho */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -326,13 +348,13 @@ export default function ColetaDados() {
             marginBottom: "5px", 
             fontSize: "clamp(20px, 4vw, 28px)" 
           }}>
-            Coleta de Dados
+            Cronoanálise
           </h1>
           <p style={{ 
             color: "#666", 
             fontSize: "clamp(12px, 2vw, 14px)" 
           }}>
-            Registre medições de ciclo, paradas e observações em campo
+            Registre medições de ciclo por elemento de trabalho
           </p>
         </div>
         <Botao
@@ -344,7 +366,7 @@ export default function ColetaDados() {
         </Botao>
       </div>
 
-      {/* Seletor de Posto e Modo */}
+      {/* Seletores */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -354,25 +376,10 @@ export default function ColetaDados() {
         width: "100%",
         boxSizing: "border-box"
       }}>
-        
-        {erro && (
-          <div style={{ 
-            backgroundColor: "#fee2e2", 
-            color: "#dc2626", 
-            padding: "clamp(8px, 1.5vw, 10px)", 
-            borderRadius: "4px",
-            marginBottom: "15px",
-            fontSize: "clamp(13px, 1.8vw, 14px)"
-          }}>
-            {erro}
-          </div>
-        )}
-
         <div style={{ 
           display: "grid", 
           gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 250px), 1fr))", 
-          gap: "clamp(15px, 2vw, 20px)", 
-          marginBottom: "20px" 
+          gap: "clamp(15px, 2vw, 20px)" 
         }}>
           <div>
             <label style={labelStyleResponsivo}>Posto de Trabalho *</label>
@@ -383,155 +390,171 @@ export default function ColetaDados() {
             >
               <option value="">Selecione um posto</option>
               {postos.map((posto) => (
-                <option key={posto.id} value={posto.id}>{truncarTexto(posto.nome, 25)}</option>
+                <option key={posto.id} value={posto.id}>{posto.nome}</option>
               ))}
             </select>
           </div>
 
           <div>
-            <label style={labelStyleResponsivo}>Tipo de Coleta</label>
-            <div style={{ 
-              display: "flex", 
-              gap: "clamp(5px, 1vw, 10px)", 
-              marginTop: "6px",
-              flexWrap: "wrap"
-            }}>
-              {["ciclo", "parada", "evento"].map((modo) => (
-                <Botao
-                  key={modo}
-                  variant={modoColeta === modo ? "primary" : "outline"}
-                  size="sm"
-                  fullWidth={true}
-                  onClick={() => setModoColeta(modo)}
-                >
-                  {modo === "ciclo" ? "⏱️ Ciclo" : 
-                   modo === "parada" ? "⛔ Parada" : "📝 Evento"}
-                </Botao>
+            <label style={labelStyleResponsivo}>Operador</label>
+            <select
+              name="operador_id"
+              value={novaMedicao.operador_id}
+              onChange={handleInputChange}
+              style={inputStyleResponsivo}
+              disabled={!postoSelecionado}
+            >
+              <option value="">Selecione (opcional)</option>
+              {operadores.map(op => (
+                <option key={op.id} value={op.id}>{op.nome}</option>
               ))}
-            </div>
+            </select>
           </div>
         </div>
+      </div>
 
-        {/* Formulário dinâmico */}
+      {/* Painel de Estatísticas */}
+      {postoSelecionado && analiseEstatistica && (
         <div style={{ 
-          backgroundColor: "#f9fafb", 
+          backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
-          borderRadius: "8px",
-          marginTop: "10px",
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          marginBottom: "clamp(20px, 3vw, 30px)",
           width: "100%",
           boxSizing: "border-box"
         }}>
           <h3 style={{ 
             color: "#1E3A8A", 
             marginBottom: "clamp(10px, 1.5vw, 15px)", 
-            fontSize: "clamp(15px, 2.2vw, 16px)" 
+            fontSize: "clamp(16px, 2.5vw, 18px)" 
           }}>
-            {modoColeta === "ciclo" && "⏱️ Nova Medição de Ciclo"}
-            {modoColeta === "parada" && "⛔ Registrar Parada"}
-            {modoColeta === "evento" && "📝 Registrar Evento"}
+            📊 Análise Estatística - {postoAtual?.nome}
+          </h3>
+          
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 120px), 1fr))", 
+            gap: "clamp(10px, 1.5vw, 15px)" 
+          }}>
+            <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>AMOSTRAS</div>
+              <div style={{ fontSize: "20px", fontWeight: "bold", color: "#1E3A8A" }}>{analiseEstatistica.total_amostras}</div>
+            </div>
+            <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>MÉDIA (s)</div>
+              <div style={{ fontSize: "20px", fontWeight: "bold", color: "#16a34a" }}>{analiseEstatistica.media}</div>
+            </div>
+            <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>MIN / MAX</div>
+              <div style={{ fontSize: "14px", fontWeight: "bold" }}>{analiseEstatistica.minimo} / {analiseEstatistica.maximo}</div>
+            </div>
+            <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>DESVIO PADRÃO</div>
+              <div style={{ fontSize: "16px", fontWeight: "bold", color: "#f59e0b" }}>{analiseEstatistica.desvio}s</div>
+            </div>
+            <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>CV (%)</div>
+              <div style={{ fontSize: "16px", fontWeight: "bold", color: analiseEstatistica.cv < 10 ? "#16a34a" : "#dc2626" }}>{analiseEstatistica.cv}</div>
+              <div style={{ fontSize: "10px", color: "#666" }}>{analiseEstatistica.classificacao}</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Formulário de Medição */}
+      {postoSelecionado && (
+        <div style={{ 
+          backgroundColor: "white", 
+          padding: "clamp(15px, 2vw, 25px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          marginBottom: "clamp(20px, 3vw, 30px)",
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
+          <h3 style={{ 
+            color: "#1E3A8A", 
+            marginBottom: "clamp(15px, 2vw, 20px)", 
+            fontSize: "clamp(16px, 2.5vw, 18px)" 
+          }}>
+            ⏱️ Nova Medição de Ciclo
           </h3>
 
           <div style={{ 
             display: "grid", 
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", 
-            gap: "clamp(10px, 1.5vw, 15px)" 
+            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", 
+            gap: "clamp(15px, 2vw, 20px)" 
           }}>
-            
             <div>
-              <label style={labelStyleResponsivo}>Turno</label>
+              <label style={labelStyleResponsivo}>Elemento *</label>
               <select
-                name="turno"
-                value={novaMedicao.turno}
+                name="elemento"
+                value={novaMedicao.elemento}
                 onChange={handleInputChange}
                 style={inputStyleResponsivo}
-                disabled={salvando}
+                required
               >
-                <option value="1">Turno 1</option>
-                <option value="2">Turno 2</option>
-                <option value="3">Turno 3</option>
+                <option value="">Selecione um elemento</option>
+                {elementosPadrao.map(elem => (
+                  <option key={elem} value={elem}>{elem}</option>
+                ))}
               </select>
             </div>
 
             <div>
-              <label style={labelStyleResponsivo}>Data</label>
+              <label style={labelStyleResponsivo}>Tempo de Ciclo (s) *</label>
               <input
-                type="date"
-                name="data"
-                value={novaMedicao.data}
+                type="number"
+                name="tempo_ciclo_segundos"
+                value={novaMedicao.tempo_ciclo_segundos}
                 onChange={handleInputChange}
+                step="0.1"
+                min="0"
                 style={inputStyleResponsivo}
-                disabled={salvando}
+                placeholder="Ex: 45.5"
               />
             </div>
 
-            {modoColeta === "ciclo" && (
-              <div style={{ gridColumn: "span 1" }}>
-                <label style={labelStyleResponsivo}>Tempo de Ciclo (s) *</label>
-                <input
-                  type="number"
-                  name="tempo_ciclo_segundos"
-                  value={novaMedicao.tempo_ciclo_segundos}
-                  onChange={handleInputChange}
-                  step="0.1"
-                  min="0"
-                  style={inputStyleResponsivo}
-                  placeholder="Ex: 45.5"
-                  disabled={salvando}
-                />
-              </div>
-            )}
+            <div>
+              <label style={labelStyleResponsivo}>Método</label>
+              <select
+                name="metodo"
+                value={novaMedicao.metodo}
+                onChange={handleInputChange}
+                style={inputStyleResponsivo}
+              >
+                {metodos.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
 
-            {modoColeta === "parada" && (
-              <>
-                <div>
-                  <label style={labelStyleResponsivo}>Tipo de Parada</label>
-                  <select
-                    name="tipo_parada"
-                    value={novaMedicao.tipo_parada}
-                    onChange={handleInputChange}
-                    style={inputStyleResponsivo}
-                    disabled={salvando}
-                  >
-                    <option value="microparada">Microparada</option>
-                    <option value="setup">Setup</option>
-                    <option value="manutencao">Manutenção</option>
-                    <option value="falta_material">Falta Material</option>
-                    <option value="outro">Outro</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={labelStyleResponsivo}>Tempo (min) *</label>
-                  <input
-                    type="number"
-                    name="tempo_parada_minutos"
-                    value={novaMedicao.tempo_parada_minutos}
-                    onChange={handleInputChange}
-                    step="0.5"
-                    min="0"
-                    style={inputStyleResponsivo}
-                    placeholder="Ex: 5.5"
-                    disabled={salvando}
-                  />
-                </div>
-              </>
-            )}
+            <div>
+              <label style={labelStyleResponsivo}>Condição</label>
+              <select
+                name="condicao"
+                value={novaMedicao.condicao}
+                onChange={handleInputChange}
+                style={inputStyleResponsivo}
+              >
+                {condicoes.map(c => (
+                  <option key={c.value} value={c.value}>{c.label}</option>
+                ))}
+              </select>
+            </div>
 
-            {(modoColeta === "parada" || modoColeta === "evento") && (
-              <div style={{ 
-                gridColumn: modoColeta === "evento" ? "1 / -1" : "span 1"
-              }}>
-                <label style={labelStyleResponsivo}>Descrição</label>
-                <input
-                  type="text"
-                  name="descricao"
-                  value={novaMedicao.descricao}
-                  onChange={handleInputChange}
-                  style={inputStyleResponsivo}
-                  placeholder={modoColeta === "evento" ? "Descreva o evento..." : "Descreva a causa da parada..."}
-                  disabled={salvando}
-                />
-              </div>
-            )}
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={labelStyleResponsivo}>Observação</label>
+              <input
+                type="text"
+                name="observacao"
+                value={novaMedicao.observacao}
+                onChange={handleInputChange}
+                style={inputStyleResponsivo}
+                placeholder="Anotações sobre a medição..."
+              />
+            </div>
           </div>
 
           <Botao
@@ -539,149 +562,138 @@ export default function ColetaDados() {
             size="md"
             fullWidth={true}
             onClick={adicionarMedicao}
-            disabled={salvando}
+            disabled={salvando || !novaMedicao.elemento || !novaMedicao.tempo_ciclo_segundos}
             loading={salvando}
             style={{ marginTop: "20px" }}
           >
-            + Registrar {modoColeta === "ciclo" ? "Medição" : 
-                         modoColeta === "parada" ? "Parada" : "Evento"}
+            + Registrar Medição
           </Botao>
         </div>
-      </div>
+      )}
 
-      {/* Lista de medições */}
-      <div style={{ 
-        backgroundColor: "white", 
-        padding: "clamp(15px, 2vw, 25px)", 
-        borderRadius: "8px", 
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        width: "100%",
-        boxSizing: "border-box"
-      }}>
+      {/* Histórico de Medições */}
+      {postoSelecionado && (
         <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center",
-          marginBottom: "clamp(15px, 2vw, 20px)",
-          flexWrap: "wrap",
-          gap: "10px"
+          backgroundColor: "white", 
+          padding: "clamp(15px, 2vw, 25px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          width: "100%",
+          boxSizing: "border-box"
         }}>
-          <h2 style={{ 
-            color: "#1E3A8A", 
-            fontSize: "clamp(16px, 2.5vw, 18px)" 
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "space-between", 
+            alignItems: "center",
+            marginBottom: "clamp(15px, 2vw, 20px)",
+            flexWrap: "wrap",
+            gap: "10px"
           }}>
-            Histórico de Coletas {postoSelecionado ? `- ${truncarTexto(postos.find(p => p.id === parseInt(postoSelecionado))?.nome, 20)}` : ""}
-          </h2>
-          {medicoes.length > 0 && (
-            <Botao
-              variant="secondary"
-              size="sm"
-              onClick={exportarCSV}
-            >
-              📥 Exportar CSV
-            </Botao>
+            <h2 style={{ 
+              color: "#1E3A8A", 
+              fontSize: "clamp(16px, 2.5vw, 18px)" 
+            }}>
+              Histórico de Medições {postoAtual?.nome ? `- ${postoAtual.nome}` : ""}
+            </h2>
+            {medicoes.length > 0 && (
+              <Botao
+                variant="secondary"
+                size="sm"
+                onClick={exportarCSV}
+              >
+                📥 Exportar CSV
+              </Botao>
+            )}
+          </div>
+
+          {carregando ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+              Carregando medições...
+            </div>
+          ) : medicoes.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+              Nenhuma medição registrada para este posto.
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto", width: "100%" }}>
+              <table style={{ 
+                width: "100%", 
+                borderCollapse: "collapse",
+                minWidth: "800px",
+                backgroundColor: "white"
+              }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+                    <th style={thResponsivo}>Data/Hora</th>
+                    <th style={thResponsivo}>Elemento</th>
+                    <th style={thResponsivo}>Tempo (s)</th>
+                    <th style={thResponsivo}>Método</th>
+                    <th style={thResponsivo}>Condição</th>
+                    <th style={thResponsivo}>Operador</th>
+                    <th style={thResponsivo}>Observação</th>
+                    <th style={thResponsivo}>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {medicoes.map((med) => (
+                    <tr key={med.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                      <td style={tdResponsivo}>
+                        {formatarData(med.data_medicao)}<br/>
+                        <span style={{ fontSize: "11px", color: "#666" }}>{med.hora_medicao || "-"}</span>
+                      </td>
+                      <td style={tdResponsivo}>{med.elemento}</td>
+                      <td style={tdResponsivo}>
+                        <span style={{ fontWeight: "bold", color: "#16a34a" }}>
+                          {parseFloat(med.tempo_ciclo_segundos).toFixed(2)}s
+                        </span>
+                      </td>
+                      <td style={tdResponsivo}>
+                        <span style={{
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontSize: "11px",
+                          backgroundColor: med.metodo === "padrao" ? "#16a34a20" : 
+                                         med.metodo === "melhorado" ? "#3b82f620" : "#dc262620",
+                          color: med.metodo === "padrao" ? "#16a34a" : 
+                                 med.metodo === "melhorado" ? "#3b82f6" : "#dc2626"
+                        }}>
+                          {metodos.find(m => m.value === med.metodo)?.label || med.metodo}
+                        </span>
+                      </td>
+                      <td style={tdResponsivo}>
+                        <span style={{
+                          padding: "2px 8px",
+                          borderRadius: "4px",
+                          fontSize: "11px",
+                          backgroundColor: med.condicao === "normal" ? "#16a34a20" : "#f59e0b20",
+                          color: med.condicao === "normal" ? "#16a34a" : "#f59e0b"
+                        }}>
+                          {condicoes.find(c => c.value === med.condicao)?.label || med.condicao}
+                        </span>
+                      </td>
+                      <td style={tdResponsivo}>
+                        {operadores.find(op => op.id === med.operador_id)?.nome || "-"}
+                      </td>
+                      <td style={tdResponsivo} title={med.observacao || "-"}>
+                        {med.observacao ? (med.observacao.length > 20 ? med.observacao.substring(0, 20) + '...' : med.observacao) : "-"}
+                      </td>
+                      <td style={tdResponsivo}>
+                        <Botao
+                          variant="danger"
+                          size="sm"
+                          onClick={() => excluirMedicao(med.id)}
+                        >
+                          Excluir
+                        </Botao>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
-
-        {!postoSelecionado ? (
-          <div style={{ 
-            textAlign: "center", 
-            padding: "clamp(20px, 4vw, 40px)", 
-            color: "#666",
-            fontSize: "clamp(14px, 2vw, 16px)"
-          }}>
-            Selecione um posto para ver as medições.
-          </div>
-        ) : carregando ? (
-          <div style={{ 
-            textAlign: "center", 
-            padding: "clamp(20px, 4vw, 40px)", 
-            color: "#666",
-            fontSize: "clamp(14px, 2vw, 16px)"
-          }}>
-            Carregando medições...
-          </div>
-        ) : medicoes.length === 0 ? (
-          <div style={{ 
-            textAlign: "center", 
-            padding: "clamp(20px, 4vw, 40px)", 
-            color: "#666",
-            fontSize: "clamp(14px, 2vw, 16px)"
-          }}>
-            Nenhuma medição registrada para este posto.
-          </div>
-        ) : (
-          <div style={{ 
-            overflowX: "auto",
-            width: "100%",
-            WebkitOverflowScrolling: "touch"
-          }}>
-            <table style={{ 
-              width: "100%", 
-              borderCollapse: "collapse",
-              minWidth: "600px",
-              tableLayout: "fixed"
-            }}>
-              <colgroup>
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "20%" }} />
-              </colgroup>
-              <thead>
-                <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-                  <th style={thResponsivo}>Data</th>
-                  <th style={thResponsivo}>Tipo</th>
-                  <th style={thResponsivo}>Valor</th>
-                  <th style={thResponsivo}>Descrição</th>
-                  <th style={thResponsivo}>Turno</th>
-                  <th style={thResponsivo}>Ações</th>
-                 </tr>
-              </thead>
-              <tbody>
-                {medicoes.map((med) => (
-                  <tr key={med.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={tdResponsivo}>{formatarData(med.data_medicao)}</td>
-                    <td style={tdResponsivo}>
-                      <span style={{
-                        padding: "4px 8px",
-                        borderRadius: "4px",
-                        fontSize: "clamp(10px, 1.3vw, 12px)",
-                        backgroundColor: med.tipo === "ciclo" ? "#16a34a20" :
-                                       med.tipo === "parada" || med.tipo?.includes("parada") ? "#dc262620" : "#f59e0b20",
-                        color: med.tipo === "ciclo" ? "#16a34a" :
-                               med.tipo === "parada" || med.tipo?.includes("parada") ? "#dc2626" : "#f59e0b"
-                      }}>
-                        {med.tipo === "ciclo" ? "⏱️ Ciclo" :
-                         med.tipo === "parada" || med.tipo?.includes("parada") ? "⛔ Parada" : "📝 Evento"}
-                      </span>
-                    </td>
-                    <td style={tdResponsivo}>
-                      {med.tipo === "ciclo" ? `${med.valor_numerico}s` :
-                       (med.tipo === "parada" || med.tipo?.includes("parada")) ? `${med.valor_numerico}min` : "-"}
-                    </td>
-                    <td style={tdResponsivo} title={med.descricao || "-"}>
-                      {truncarTexto(med.descricao || "-", 15)}
-                    </td>
-                    <td style={tdResponsivo}>{med.turno}º</td>
-                    <td style={tdResponsivo}>
-                      <Botao
-                        variant="danger"
-                        size="sm"
-                        onClick={() => excluirMedicao(med.id)}
-                      >
-                        Excluir
-                      </Botao>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
