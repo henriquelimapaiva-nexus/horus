@@ -16,6 +16,10 @@ export default function ColetaDados() {
   const { clienteAtual } = useOutletContext();
   const navigate = useNavigate();
 
+  // ✅ ESTADOS ADICIONADOS
+  const [linhaSelecionada, setLinhaSelecionada] = useState("");
+  const [linhasDisponiveis, setLinhasDisponiveis] = useState([]);
+
   const [postos, setPostos] = useState([]);
   const [postoSelecionado, setPostoSelecionado] = useState("");
   const [modoColeta, setModoColeta] = useState("ciclo");
@@ -33,39 +37,51 @@ export default function ColetaDados() {
     data: new Date().toISOString().split('T')[0]
   });
 
+  // ✅ CARREGAR LINHAS DA EMPRESA
   useEffect(() => {
-    if (!linhaId) return;
+    if (clienteAtual) {
+      carregarLinhas();
+    }
+  }, [clienteAtual]);
+
+  async function carregarLinhas() {
+    try {
+      const res = await api.get(`/lines/${clienteAtual}`);
+      setLinhasDisponiveis(res.data);
+    } catch (error) {
+      console.error("Erro ao carregar linhas:", error);
+      toast.error("Erro ao carregar linhas");
+    }
+  }
+
+  // ✅ CARREGAR POSTOS (usa linhaId ou linhaSelecionada)
+  useEffect(() => {
+    const idParaUsar = linhaId || linhaSelecionada;
+    if (!idParaUsar) return;
     
-    // ✅ CORRIGIDO: /postos → /work-stations
-    api.get(`/work-stations/${linhaId}`)
+    api.get(`/work-stations/${idParaUsar}`)
       .then((res) => setPostos(res.data))
       .catch((err) => {
         console.error("Erro ao carregar postos:", err);
         toast.error("Erro ao carregar postos");
       });
-  }, [linhaId]);
+  }, [linhaId, linhaSelecionada]);
 
   useEffect(() => {
-    if (!linhaId || !postoSelecionado) return;
+    if (!linhaId && !linhaSelecionada) return;
+    if (!postoSelecionado) return;
     
     carregarMedicoes();
-  }, [linhaId, postoSelecionado]);
+  }, [linhaId, linhaSelecionada, postoSelecionado]);
 
   async function carregarMedicoes() {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /medicoes/${postoSelecionado} → /measurements/stats/${postoSelecionado}
-      // O backend não tem rota para listar medições por posto, então vamos usar a rota de estatísticas
-      // e depois buscar as medições individuais se necessário
-      
-      // Por enquanto, vamos usar a rota de estatísticas e mostrar dados agregados
       const response = await api.get(`/measurements/stats/${postoSelecionado}`);
       
-      // Transformar os dados de estatísticas em um formato similar ao que a tabela espera
       const medicoesFormatadas = [];
       if (response.data.analise_estatistica) {
         response.data.analise_estatistica.forEach(stat => {
-          // Criar uma entrada fictícia para cada tipo
           medicoesFormatadas.push({
             id: `${stat.tipo}-${Date.now()}`,
             data_medicao: new Date().toISOString().split('T')[0],
@@ -77,10 +93,6 @@ export default function ColetaDados() {
         });
       }
       setMedicoes(medicoesFormatadas);
-      
-      // TODO: Se precisar das medições individuais, precisaremos criar uma rota no backend
-      // GET /cycle-measurements?posto_id=:postoId
-      
       setErro("");
     } catch (error) {
       console.error("Erro ao carregar medições:", error);
@@ -119,7 +131,6 @@ export default function ColetaDados() {
       let dados = {};
       
       if (modoColeta === "ciclo") {
-        // ✅ Para ciclo: usa /cycle-measurements
         dados = {
           posto_id: parseInt(postoSelecionado),
           tempo_ciclo_segundos: parseFloat(novaMedicao.tempo_ciclo_segundos)
@@ -127,7 +138,6 @@ export default function ColetaDados() {
         
         const response = await api.post("/cycle-measurements", dados);
         
-        // Formatar resposta para a tabela
         const novaMed = {
           id: response.data.id,
           data_medicao: new Date().toISOString().split('T')[0],
@@ -142,7 +152,6 @@ export default function ColetaDados() {
         toast.success("Ciclo registrado com sucesso! ✅");
         
       } else if (modoColeta === "parada" || modoColeta === "evento") {
-        // ✅ Para paradas e eventos: usa /measurements
         dados = {
           posto_id: parseInt(postoSelecionado),
           tipo: modoColeta === "parada" ? novaMedicao.tipo_parada : "evento",
@@ -154,7 +163,6 @@ export default function ColetaDados() {
         
         const response = await api.post("/measurements", dados);
         
-        // Formatar resposta para a tabela
         const novaMed = {
           id: response.data.protocolo || response.data.id,
           data_medicao: response.data.data_medicao || novaMedicao.data,
@@ -190,8 +198,6 @@ export default function ColetaDados() {
     if (!window.confirm("Excluir esta medição?")) return;
     
     try {
-      // Tentar excluir em /measurements primeiro (para paradas/eventos)
-      // Se falhar, tentar /cycle-measurements (para ciclos)
       try {
         await api.delete(`/measurements/${id}`);
       } catch {
@@ -227,7 +233,7 @@ export default function ColetaDados() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `medicoes_linha_${linhaId}_${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `medicoes_linha_${linhaId || linhaSelecionada}_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     
     toast.success("Arquivo CSV exportado com sucesso!");
@@ -239,17 +245,58 @@ export default function ColetaDados() {
     return data.toLocaleDateString('pt-BR');
   };
 
-  if (!linhaId) {
+  // ✅ NOVA CONDIÇÃO: Se não tem linha, mostra seletor
+  if (!linhaId && !linhaSelecionada) {
     return (
       <div style={{ 
         padding: "clamp(20px, 5vw, 40px)", 
+        maxWidth: "600px",
+        margin: "0 auto",
         textAlign: "center" 
       }}>
-        <h2 style={{ color: "#dc2626", fontSize: "clamp(18px, 4vw, 22px)" }}>Linha não especificada</h2>
-        <p style={{ fontSize: "clamp(14px, 2vw, 16px)" }}>Selecione uma linha para iniciar a coleta.</p>
+        <div style={{
+          backgroundColor: "white",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          padding: "30px"
+        }}>
+          <h2 style={{ color: "#1E3A8A", marginBottom: "20px" }}>Selecionar Linha</h2>
+          <p style={{ color: "#666", marginBottom: "20px" }}>Escolha uma linha para iniciar a coleta de dados:</p>
+          
+          <select
+            value={linhaSelecionada}
+            onChange={(e) => setLinhaSelecionada(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px",
+              borderRadius: "4px",
+              border: "1px solid #d1d5db",
+              fontSize: "14px",
+              marginBottom: "20px"
+            }}
+          >
+            <option value="">Selecione uma linha...</option>
+            {linhasDisponiveis.map(linha => (
+              <option key={linha.id} value={linha.id}>{linha.nome}</option>
+            ))}
+          </select>
+          
+          <Botao
+            variant="primary"
+            size="lg"
+            fullWidth={true}
+            onClick={() => navigate(`/coleta/${linhaSelecionada}`)}
+            disabled={!linhaSelecionada}
+          >
+            Iniciar Coleta
+          </Botao>
+        </div>
       </div>
     );
   }
+
+  // Se tem linhaId na URL ou linhaSelecionada, mostrar o formulário de coleta
+  const linhaIdAtual = linhaId || linhaSelecionada;
 
   return (
     <div style={{ 
@@ -291,7 +338,7 @@ export default function ColetaDados() {
         <Botao
           variant="secondary"
           size="md"
-          onClick={() => navigate(`/linhas/${linhaId}`)}
+          onClick={() => navigate(`/linhas/${linhaIdAtual}`)}
         >
           ← Voltar
         </Botao>
@@ -591,7 +638,7 @@ export default function ColetaDados() {
                   <th style={thResponsivo}>Descrição</th>
                   <th style={thResponsivo}>Turno</th>
                   <th style={thResponsivo}>Ações</th>
-                </tr>
+                 </tr>
               </thead>
               <tbody>
                 {medicoes.map((med) => (
