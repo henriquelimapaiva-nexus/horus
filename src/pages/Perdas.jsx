@@ -406,7 +406,7 @@ export default function Perdas() {
             >
               <option value="">Selecione...</option>
               {linhas.map(linha => (
-                <option key={linha.id} value={linha.id}>{truncarTexto(linha.nome, 20)}</option>
+                <option key={linha.id} value={linha.id}>{linha.nome}</option>
               ))}
             </select>
           </div>
