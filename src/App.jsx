@@ -23,6 +23,9 @@ import PostoForm from "./pages/PostoForm";
 // Coleta de Dados
 import ColetaDados from "./pages/ColetaDados";
 
+// 🟢 NOVO IMPORT - OEE
+import OEE from "./pages/OEE";
+
 // Relatório Profissional (único)
 import RelatorioProfissional from "./pages/RelatorioProfissional";
 
@@ -139,7 +142,11 @@ function App() {
               <Route path="/postos/novo/:linhaId" element={<PostoForm />} />
               <Route path="/postos/editar/:postoId/linha/:linhaId" element={<PostoForm />} />
               <Route path="/coleta/:linhaId" element={<ColetaDados />} />
-              <Route path="/coleta-dados" element={<ColetaDados />} />  {/* 👈 NOVA ROTA */}
+              <Route path="/coleta-dados" element={<ColetaDados />} />
+              
+              {/* 🟢 NOVA ROTA - OEE em Tempo Real */}
+              <Route path="/oee" element={<OEE />} />
+              
               <Route path="/relatorios" element={<RelatorioProfissional />} />
               <Route path="/produtos" element={<Produtos />} />
               <Route path="/cargos" element={<Cargos />} />
