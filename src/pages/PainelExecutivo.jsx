@@ -29,7 +29,6 @@ export default function PainelExecutivo() {
   }, [clienteAtual]);
 
   useEffect(() => {
-    // ✅ CORRIGIDO: /empresas → /companies
     api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
@@ -52,7 +51,6 @@ export default function PainelExecutivo() {
     setErro("");
     
     try {
-      // ✅ CORRIGIDO: /linhas/${empresaSelecionada} → /lines/${empresaSelecionada}
       const linhasRes = await api.get(`/lines/${empresaSelecionada}`);
       const linhas = linhasRes.data;
 
@@ -74,7 +72,6 @@ export default function PainelExecutivo() {
 
       for (const linha of linhas) {
         try {
-          // ✅ CORRIGIDO: /analise-linha mantido (já corrigido anteriormente)
           const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
           const analise = analiseRes.data;
           
@@ -83,14 +80,12 @@ export default function PainelExecutivo() {
             nomesLinhas.push(linha.nome);
           }
 
-          // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
           const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
           const postos = postosRes.data;
 
           let custoLinha = 0;
           for (const posto of postos) {
             if (posto.cargo_id) {
-              // ✅ CORRIGIDO: /cargos/${empresaSelecionada} → /roles/${empresaSelecionada}
               const cargosRes = await api.get(`/roles/${empresaSelecionada}`).catch(() => ({ data: [] }));
               const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
               if (cargo) {
@@ -102,16 +97,21 @@ export default function PainelExecutivo() {
           }
           custosPorLinha.push(custoLinha);
 
-          // ✅ CORRIGIDO: /linha-produto/${linha.id} → /line-products/${linha.id}
           const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
           const produtos = produtosRes.data.dados || produtosRes.data || [];
           
-          let producaoLinha = analise.capacidade_estimada_dia || 0;
+          const producaoLinha = analise.capacidade_estimada_dia || 0;
           producaoTotal += producaoLinha;
 
+          // ✅ ADICIONEI LOGS AQUI
           if (produtos.length > 0) {
-            const valorMedio = produtos.reduce((acc, p) => acc + (p.valor_unitario || 50), 0) / produtos.length;
-            faturamentoTotal += producaoLinha * valorMedio * 22;
+            console.log(`📦 Produtos da linha ${linha.nome}:`, produtos.map(p => ({ nome: p.produto_nome, valor: p.valor_unitario })));
+            const valorMedio = produtos.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 0), 0) / produtos.length;
+            const faturamentoLinha = producaoLinha * valorMedio * 22;
+            console.log(`💰 Linha ${linha.nome}: produção=${producaoLinha}, valorMedio=${valorMedio}, faturamento=${faturamentoLinha}`);
+            faturamentoTotal += faturamentoLinha;
+          } else {
+            console.log(`⚠️ Linha ${linha.nome} não tem produtos vinculados`);
           }
 
           const perdaEstimada = custoLinha * 0.2;
@@ -146,6 +146,10 @@ export default function PainelExecutivo() {
         perda: perdasPorLinha[idx] || 0,
         oee: oees[idx] || 0
       })).sort((a, b) => b.perda - a.perda);
+
+      // ✅ LOGS FINAIS
+      console.log('📊 Painel Executivo - faturamentoTotal:', faturamentoTotal);
+      console.log('📊 Painel Executivo - perdasTotais:', perdasTotais);
 
       setDadosPainel({
         empresa: empresas.find(e => e.id === parseInt(empresaSelecionada))?.nome || `Empresa ${empresaSelecionada}`,
@@ -187,7 +191,6 @@ export default function PainelExecutivo() {
     }).format(valor || 0);
   };
 
-  // Função para truncar texto longo
   const truncarTexto = (texto, maxLength = 20) => {
     if (!texto) return "";
     return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
@@ -346,7 +349,7 @@ export default function PainelExecutivo() {
         <CardExecutivo 
           titulo="Perdas Totais"
           valor={formatarMoeda(dadosPainel.perdas)}
-          subtitulo={`${(dadosPainel.perdas / dadosPainel.faturamento * 100).toFixed(1)}% do faturamento`}
+          subtitulo={`${(dadosPainel.perdas / (dadosPainel.faturamento || 1) * 100).toFixed(1)}% do faturamento`}
           cor={coresNexus.danger}
         />
         <CardExecutivo 
@@ -540,7 +543,7 @@ export default function PainelExecutivo() {
                 <th style={thStyle}>Perda Mensal</th>
                 <th style={thStyle}>%</th>
                 <th style={thStyle}>Ação</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {dadosPainel.rankLinhas.map((linha, index) => (
