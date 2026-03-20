@@ -29,6 +29,12 @@ import OEE from "./pages/OEE";
 // 🟢 SPC - Controle de Qualidade
 import SPC from "./pages/SPC";
 
+// 🟢 TPM - Manutenção
+import TPM from "./pages/TPM";
+
+// 🟢 RH - Gestão de Talentos
+import RH from "./pages/RH";
+
 // Relatório Profissional (único)
 import RelatorioProfissional from "./pages/RelatorioProfissional";
 
@@ -152,6 +158,12 @@ function App() {
               
               {/* 🟢 SPC - Controle de Qualidade */}
               <Route path="/spc" element={<SPC />} />
+              
+              {/* 🟢 TPM - Manutenção */}
+              <Route path="/tpm" element={<TPM />} />
+              
+              {/* 🟢 RH - Gestão de Talentos */}
+              <Route path="/rh" element={<RH />} />
               
               <Route path="/relatorios" element={<RelatorioProfissional />} />
               <Route path="/produtos" element={<Produtos />} />

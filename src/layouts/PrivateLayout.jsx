@@ -253,7 +253,7 @@ function PrivateLayout() {
               )}
             </div>
 
-            {/* ✅ Menu Operação COM SPC */}
+            {/* ✅ Menu Operação COM TODOS OS MÓDULOS */}
             <div style={{ position: "relative" }}>
               <div style={menuItemStyle} onClick={(e) => toggleMenu('operacao', e)}>
                 Operação {menuAberto === 'operacao' ? '▼' : '▶'}
@@ -265,6 +265,8 @@ function PrivateLayout() {
                   <Link to="/coleta-dados" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Coleta de Dados</Link>
                   <Link to="/oee" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>OEE em Tempo Real</Link>
                   <Link to="/spc" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>SPC - Controle de Qualidade</Link>
+                  <Link to="/tpm" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>🔧 TPM - Manutenção</Link>
+                  <Link to="/rh" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>👥 RH - Treinamento</Link>
                 </div>
               )}
             </div>
