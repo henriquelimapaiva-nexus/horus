@@ -32,7 +32,8 @@ export default function Dashboard() {
     setErro("");
     
     try {
-      const empresasRes = await api.get("/empresas");
+      // ✅ CORRIGIDO: /empresas → /companies
+      const empresasRes = await api.get("/companies");
       const empresaId = parseInt(clienteAtual);
       const empresaAtual = empresasRes.data.find(e => e.id === empresaId);
       
@@ -58,7 +59,7 @@ export default function Dashboard() {
       }
 
       let faturamentoTotal = 0;
-      let perdasTotais = 0;
+      let perdasTotales = 0;
       let oees = [];
       let nomesLinhas = [];
       let perdasPorLinha = [];
@@ -94,13 +95,14 @@ export default function Dashboard() {
           }
 
           const perdaEstimada = custoLinha * 0.2;
-          perdasTotais += perdaEstimada;
+          perdasTotales += perdaEstimada;
           perdasPorLinha.push(perdaEstimada);
 
           const producaoLinha = analise.capacidade_estimada_dia || 0;
           producoesPorLinha.push(producaoLinha);
 
-          const produtosRes = await api.get(`/linha-produto/${linha.id}`).catch(() => ({ data: [] }));
+          // ✅ CORRIGIDO: /linha-produto/ → /line-products/
+          const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
           const produtos = produtosRes.data;
           
           let faturamentoLinha = 0;
@@ -123,19 +125,19 @@ export default function Dashboard() {
 
       const meses = ['Out/23', 'Nov/23', 'Dez/23', 'Jan/24', 'Fev/24', 'Mar/24'];
       const evolucaoPerdas = meses.map((_, i) => {
-        return perdasTotais * (0.7 + (i * 0.05));
+        return perdasTotales * (0.7 + (i * 0.05));
       });
 
       const oportunidades = [
-        { nome: "Redução de Setup", ganho: perdasTotais * 0.15, linha: nomesLinhas[0] || "Linha 1" },
-        { nome: "Eliminação de Refugo", ganho: perdasTotais * 0.12, linha: nomesLinhas[1] || "Linha 2" },
-        { nome: "Redução de Microparadas", ganho: perdasTotais * 0.08, linha: nomesLinhas[2] || "Linha 3" }
+        { nome: "Redução de Setup", ganho: perdasTotales * 0.15, linha: nomesLinhas[0] || "Linha 1" },
+        { nome: "Eliminação de Refugo", ganho: perdasTotales * 0.12, linha: nomesLinhas[1] || "Linha 2" },
+        { nome: "Redução de Microparadas", ganho: perdasTotales * 0.08, linha: nomesLinhas[2] || "Linha 3" }
       ].sort((a, b) => b.ganho - a.ganho);
 
       const distribuicaoPerdas = {
-        setup: perdasTotais * 0.4,
-        microparadas: perdasTotais * 0.35,
-        refugo: perdasTotais * 0.25
+        setup: perdasTotales * 0.4,
+        microparadas: perdasTotales * 0.35,
+        refugo: perdasTotales * 0.25
       };
 
       setDadosDashboard({
@@ -143,7 +145,7 @@ export default function Dashboard() {
         empresaId: empresaAtual.id,
         totalLinhas: linhas.length,
         faturamento: faturamentoTotal,
-        perdas: perdasTotais,
+        perdas: perdasTotales,
         oeeMedio,
         oeeMin,
         oeeMax,
@@ -273,7 +275,7 @@ export default function Dashboard() {
       boxSizing: "border-box"
     }}>
       
-      {/* Cabeçalho responsivo */}
+      {/* Cabeçalho */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 25px)", 
@@ -297,7 +299,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Cards executivos responsivos */}
+      {/* Cards executivos */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", 
@@ -330,7 +332,7 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* GRÁFICOS - LINHA 1 responsivos */}
+      {/* GRÁFICOS */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 450px), 1fr))", 
@@ -374,7 +376,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* GRÁFICOS - LINHA 2 responsivos */}
+      {/* GRÁFICOS - LINHA 2 */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 450px), 1fr))", 
@@ -421,7 +423,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Top 3 Oportunidades responsivo */}
+      {/* Top 3 Oportunidades */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -502,7 +504,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Resumo Executivo responsivo */}
+      {/* Resumo Executivo */}
       <div style={{ 
         marginTop: "clamp(20px, 4vw, 30px)", 
         padding: "clamp(15px, 2vw, 20px)", 
