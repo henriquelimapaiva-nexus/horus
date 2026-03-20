@@ -32,7 +32,6 @@ export default function DashboardFinanceiro() {
     setCarregando(true);
     
     try {
-      // ✅ CORRIGIDO: /empresas → /companies
       const empresasRes = await api.get("/companies");
       const empresaId = parseInt(clienteAtual);
       const empresaAtual = empresasRes.data.find(e => e.id === empresaId);
@@ -46,7 +45,6 @@ export default function DashboardFinanceiro() {
 
       setEmpresa(empresaAtual);
 
-      // ✅ CORRIGIDO: /linhas/${empresaAtual.id} → /lines/${empresaAtual.id}
       const linhasRes = await api.get(`/lines/${empresaAtual.id}`);
       const linhasData = linhasRes.data;
       setLinhas(linhasData);
@@ -71,22 +69,18 @@ export default function DashboardFinanceiro() {
 
       for (const linha of linhasData) {
         try {
-          // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
           const postosRes = await api.get(`/work-stations/${linha.id}`);
           const postos = postosRes.data;
 
-          // ✅ CORRIGIDO: /linha-produto/${linha.id} → /line-products/${linha.id}
           const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
           const produtos = produtosRes.data.dados || produtosRes.data || [];
 
-          // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
           const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
 
           let custoLinha = 0;
           for (const posto of postos) {
             if (posto.cargo_id) {
-              // ✅ CORRIGIDO: /cargos/${empresaAtual.id} → /roles/${empresaAtual.id}
               const cargosRes = await api.get(`/roles/${empresaAtual.id}`).catch(() => ({ data: [] }));
               const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
               if (cargo) {
@@ -111,26 +105,25 @@ export default function DashboardFinanceiro() {
             if (perda) {
               perdasMicro += (perda.microparadas_minutos || 0) * custoMinuto * 22;
               
-              const valorPeca = prod.valor_unitario || 50;
+              const valorPeca = parseFloat(prod.valor_unitario) || 50;
               perdasRefugo += (perda.refugo_pecas || 0) * valorPeca * 22;
             }
           });
 
-          // ✅ CORRIGIDO: /analise-linha mantido (já corrigido anteriormente)
           const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
           if (analiseRes.data.capacidade_estimada_dia) {
             producaoTotal += analiseRes.data.capacidade_estimada_dia * 22;
             
             if (produtos.length > 0) {
-              const valorPeca = produtos[0].valor_unitario || 50;
+              const valorPeca = produtos.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 0), 0) / produtos.length;
               faturamentoTotal += analiseRes.data.capacidade_estimada_dia * valorPeca * 22;
             }
           }
 
           const perdaTotalLinha = 
             postos.reduce((acc, p) => acc + (p.tempo_setup_minutos || 0), 0) * custoMinuto * 22 +
-            (perdasMicro / linhasData.length) + 
-            (perdasRefugo / linhasData.length);
+            (perdasMicro / (linhasData.length || 1)) + 
+            (perdasRefugo / (linhasData.length || 1));
           
           perdasPorLinha.push(perdaTotalLinha);
           nomesLinhas.push(linha.nome);
@@ -147,10 +140,11 @@ export default function DashboardFinanceiro() {
         return base * (0.7 + (i * 0.05));
       });
 
+      // ✅ CORREÇÃO: Oportunidades agora usam os valores corretos de perdas
       const oportunidades = [
-        { nome: "Redução de setup", ganho: perdasSetup * 0.3, tipo: "setup" },
-        { nome: "Eliminação de refugo", ganho: perdasRefugo * 0.2, tipo: "refugo" },
-        { nome: "Redução de microparadas", ganho: perdasMicro * 0.25, tipo: "micro" }
+        { nome: "Redução de Setup", ganho: perdasSetup * 0.3, tipo: "setup" },
+        { nome: "Eliminação de Refugo", ganho: perdasRefugo * 0.2, tipo: "refugo" },
+        { nome: "Redução de Microparadas", ganho: perdasMicro * 0.25, tipo: "micro" }
       ].sort((a, b) => b.ganho - a.ganho);
 
       setDadosFinanceiros({
@@ -292,7 +286,7 @@ export default function DashboardFinanceiro() {
             margin: 0,
             wordBreak: "break-word"
           }}>
-            {truncarTexto(dadosFinanceiros.empresa, 30)} • Visão consolidada
+            {dadosFinanceiros.empresa} • Visão consolidada
           </p>
         </div>
 
@@ -350,7 +344,7 @@ export default function DashboardFinanceiro() {
         gap: "clamp(15px, 2vw, 20px)", 
         marginBottom: "clamp(20px, 4vw, 30px)" 
       }}>
-        {/* Perdas por Tipo */}
+        {/* Perdas por Tipo - CORRIGIDO: agora usa os valores corretos */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
@@ -372,7 +366,7 @@ export default function DashboardFinanceiro() {
           />
         </div>
 
-        {/* Perdas por Linha */}
+        {/* Perdas por Linha - SEM TRUNCATE */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
@@ -383,7 +377,7 @@ export default function DashboardFinanceiro() {
           overflow: "hidden"
         }}>
           <GraficoBarras 
-            labels={dadosFinanceiros.perdasPorLinha.labels.map(l => truncarTexto(l, 15))}
+            labels={dadosFinanceiros.perdasPorLinha.labels}
             valores={dadosFinanceiros.perdasPorLinha.valores}
             titulo="Perdas por Linha"
             cor={coresNexus.primary}
@@ -437,7 +431,9 @@ export default function DashboardFinanceiro() {
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "clamp(10px, 1.5vw, 15px)" }}>
             {dadosFinanceiros.oportunidades.map((opp, index) => {
-              const porcentagem = Math.min((opp.ganho / dadosFinanceiros.oportunidades[0].ganho) * 100, 100);
+              const porcentagem = dadosFinanceiros.oportunidades[0].ganho > 0 
+                ? Math.min((opp.ganho / dadosFinanceiros.oportunidades[0].ganho) * 100, 100) 
+                : 0;
               
               return (
                 <div key={index} style={{
@@ -462,7 +458,7 @@ export default function DashboardFinanceiro() {
                       overflow: "hidden"
                     }}>
                       <span style={{ fontWeight: "bold", fontSize: "clamp(13px, 1.8vw, 14px)" }}>
-                        {index + 1}. {truncarTexto(opp.nome, 25)}
+                        {index + 1}. {opp.nome}
                       </span>
                       <span style={{ 
                         color: "#666", 
@@ -564,14 +560,16 @@ export default function DashboardFinanceiro() {
                 <th style={thStyle}>Mensal</th>
                 <th style={thStyle}>%</th>
                 <th style={thStyle}>Anual</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                 <td style={tdStyle}>Setup</td>
                 <td style={tdStyle}>{formatarMoeda(dadosFinanceiros.perdas.setup)}</td>
                 <td style={tdStyle}>
-                  {((dadosFinanceiros.perdas.setup / dadosFinanceiros.perdas.total) * 100).toFixed(1)}%
+                  {dadosFinanceiros.perdas.total > 0 
+                    ? ((dadosFinanceiros.perdas.setup / dadosFinanceiros.perdas.total) * 100).toFixed(1) 
+                    : 0}%
                 </td>
                 <td style={tdStyle}>{formatarMoeda(dadosFinanceiros.perdas.setup * 12)}</td>
               </tr>
@@ -579,7 +577,9 @@ export default function DashboardFinanceiro() {
                 <td style={tdStyle}>Microparadas</td>
                 <td style={tdStyle}>{formatarMoeda(dadosFinanceiros.perdas.micro)}</td>
                 <td style={tdStyle}>
-                  {((dadosFinanceiros.perdas.micro / dadosFinanceiros.perdas.total) * 100).toFixed(1)}%
+                  {dadosFinanceiros.perdas.total > 0 
+                    ? ((dadosFinanceiros.perdas.micro / dadosFinanceiros.perdas.total) * 100).toFixed(1) 
+                    : 0}%
                 </td>
                 <td style={tdStyle}>{formatarMoeda(dadosFinanceiros.perdas.micro * 12)}</td>
               </tr>
@@ -587,7 +587,9 @@ export default function DashboardFinanceiro() {
                 <td style={tdStyle}>Refugo</td>
                 <td style={tdStyle}>{formatarMoeda(dadosFinanceiros.perdas.refugo)}</td>
                 <td style={tdStyle}>
-                  {((dadosFinanceiros.perdas.refugo / dadosFinanceiros.perdas.total) * 100).toFixed(1)}%
+                  {dadosFinanceiros.perdas.total > 0 
+                    ? ((dadosFinanceiros.perdas.refugo / dadosFinanceiros.perdas.total) * 100).toFixed(1) 
+                    : 0}%
                 </td>
                 <td style={tdStyle}>{formatarMoeda(dadosFinanceiros.perdas.refugo * 12)}</td>
               </tr>
@@ -610,7 +612,7 @@ export default function DashboardFinanceiro() {
       }}>
         <MetricaCard 
           titulo="Produtividade" 
-          valor={`${(dadosFinanceiros.faturamento / dadosFinanceiros.custoMaoObra).toFixed(2)}x`}
+          valor={`${(dadosFinanceiros.faturamento / (dadosFinanceiros.custoMaoObra || 1)).toFixed(2)}x`}
           descricao="R$ faturado / R$ custo"
         />
         <MetricaCard 
