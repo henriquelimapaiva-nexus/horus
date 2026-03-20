@@ -23,8 +23,11 @@ import PostoForm from "./pages/PostoForm";
 // Coleta de Dados
 import ColetaDados from "./pages/ColetaDados";
 
-// 🟢 NOVO IMPORT - OEE
+// 🟢 OEE em Tempo Real
 import OEE from "./pages/OEE";
+
+// 🟢 SPC - Controle de Qualidade
+import SPC from "./pages/SPC";
 
 // Relatório Profissional (único)
 import RelatorioProfissional from "./pages/RelatorioProfissional";
@@ -144,8 +147,11 @@ function App() {
               <Route path="/coleta/:linhaId" element={<ColetaDados />} />
               <Route path="/coleta-dados" element={<ColetaDados />} />
               
-              {/* 🟢 NOVA ROTA - OEE em Tempo Real */}
+              {/* 🟢 OEE em Tempo Real */}
               <Route path="/oee" element={<OEE />} />
+              
+              {/* 🟢 SPC - Controle de Qualidade */}
+              <Route path="/spc" element={<SPC />} />
               
               <Route path="/relatorios" element={<RelatorioProfissional />} />
               <Route path="/produtos" element={<Produtos />} />

@@ -1,0 +1,1013 @@
+// src/pages/SPC.jsx
+import { useState, useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
+import api from "../api/api";
+import Botao from "../components/ui/Botao";
+import toast from 'react-hot-toast';
+
+// Componentes de gráficos
+import GraficoLinha from "../components/graficos/GraficoLinha";
+import GraficoBarras from "../components/graficos/GraficoBarras";
+import { coresNexus } from "../components/graficos/GraficoBase";
+
+// Tipos de defeito padronizados
+const tiposDefeito = [
+  { codigo: "D01", nome: "Defeito Dimensional", categoria: "dimensional" },
+  { codigo: "D02", nome: "Defeito de Aparência", categoria: "visual" },
+  { codigo: "D03", nome: "Defeito Funcional", categoria: "funcional" },
+  { codigo: "D04", nome: "Defeito de Montagem", categoria: "montagem" },
+  { codigo: "D05", nome: "Defeito de Material", categoria: "material" },
+  { codigo: "D06", nome: "Defeito de Superfície", categoria: "superficie" },
+  { codigo: "D07", nome: "Defeito de Embalagem", categoria: "embalagem" }
+];
+
+export default function SPC() {
+  const { clienteAtual } = useOutletContext();
+
+  // Estados
+  const [empresas, setEmpresas] = useState([]);
+  const [linhas, setLinhas] = useState([]);
+  const [postos, setPostos] = useState([]);
+  const [produtos, setProdutos] = useState([]);
+  const [defeitos, setDefeitos] = useState([]);
+  const [medicoesDimensionais, setMedicoesDimensionais] = useState([]);
+  const [historicoDefeitos, setHistoricoDefeitos] = useState([]);
+  
+  const [filtros, setFiltros] = useState({
+    empresaId: clienteAtual || "",
+    linhaId: "",
+    postoId: "",
+    produtoId: "",
+    dataInicio: new Date().toISOString().split('T')[0],
+    dataFim: new Date().toISOString().split('T')[0]
+  });
+
+  const [novoDefeito, setNovoDefeito] = useState({
+    posto_id: "",
+    produto_id: "",
+    tipo_defeito: "",
+    quantidade: "",
+    turno: "1",
+    descricao: "",
+    acao_imediata: ""
+  });
+
+  const [novaMedicao, setNovaMedicao] = useState({
+    posto_id: "",
+    produto_id: "",
+    caracteristica: "",
+    valor_medido: "",
+    limite_inferior: "",
+    limite_superior: "",
+    unidade: "mm",
+    turno: "1"
+  });
+
+  const [carregando, setCarregando] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [abaAtiva, setAbaAtiva] = useState("defeitos"); // defeitos | dimensional
+
+  // Carregar empresas
+  useEffect(() => {
+    api.get("/companies")
+      .then(res => setEmpresas(res.data))
+      .catch(err => console.error("Erro ao carregar empresas:", err));
+  }, []);
+
+  // Carregar linhas
+  useEffect(() => {
+    if (filtros.empresaId) {
+      api.get(`/lines/${filtros.empresaId}`)
+        .then(res => setLinhas(res.data))
+        .catch(err => console.error("Erro ao carregar linhas:", err));
+    }
+  }, [filtros.empresaId]);
+
+  // Carregar postos
+  useEffect(() => {
+    if (filtros.linhaId) {
+      api.get(`/work-stations/${filtros.linhaId}`)
+        .then(res => setPostos(res.data))
+        .catch(err => console.error("Erro ao carregar postos:", err));
+    }
+  }, [filtros.linhaId]);
+
+  // Carregar produtos
+  useEffect(() => {
+    if (filtros.empresaId) {
+      api.get(`/products/company/${filtros.empresaId}`)
+        .then(res => setProdutos(res.data))
+        .catch(err => console.error("Erro ao carregar produtos:", err));
+    }
+  }, [filtros.empresaId]);
+
+  // Carregar defeitos e medições
+  useEffect(() => {
+    if (filtros.linhaId && filtros.dataInicio && filtros.dataFim) {
+      carregarDefeitos();
+      carregarMedicoesDimensionais();
+    }
+  }, [filtros.linhaId, filtros.dataInicio, filtros.dataFim, filtros.postoId, filtros.produtoId]);
+
+  async function carregarDefeitos() {
+    setCarregando(true);
+    try {
+      const params = new URLSearchParams();
+      if (filtros.dataInicio) params.append('data_inicio', filtros.dataInicio);
+      if (filtros.dataFim) params.append('data_fim', filtros.dataFim);
+      if (filtros.postoId) params.append('posto_id', filtros.postoId);
+      if (filtros.produtoId) params.append('produto_id', filtros.produtoId);
+      
+      const res = await api.get(`/qualidade/defeitos/linha/${filtros.linhaId}?${params}`);
+      setDefeitos(res.data);
+      calcularEstatisticasDefeitos(res.data);
+    } catch (error) {
+      console.error("Erro ao carregar defeitos:", error);
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function carregarMedicoesDimensionais() {
+    try {
+      const params = new URLSearchParams();
+      if (filtros.dataInicio) params.append('data_inicio', filtros.dataInicio);
+      if (filtros.dataFim) params.append('data_fim', filtros.dataFim);
+      if (filtros.postoId) params.append('posto_id', filtros.postoId);
+      if (filtros.produtoId) params.append('produto_id', filtros.produtoId);
+      
+      const res = await api.get(`/qualidade/medicoes/linha/${filtros.linhaId}?${params}`);
+      setMedicoesDimensionais(res.data);
+      calcularEstatisticasMedicoes(res.data);
+    } catch (error) {
+      console.error("Erro ao carregar medições:", error);
+    }
+  }
+
+  const [estatisticasDefeitos, setEstatisticasDefeitos] = useState(null);
+  const [estatisticasMedicoes, setEstatisticasMedicoes] = useState(null);
+
+  function calcularEstatisticasDefeitos(dados) {
+    if (dados.length === 0) {
+      setEstatisticasDefeitos(null);
+      return;
+    }
+
+    const totalDefeitos = dados.reduce((sum, d) => sum + (d.quantidade || 0), 0);
+    const defeitosPorTipo = {};
+    
+    dados.forEach(d => {
+      const tipo = d.tipo_defeito;
+      defeitosPorTipo[tipo] = (defeitosPorTipo[tipo] || 0) + (d.quantidade || 0);
+    });
+
+    const principaisDefeitos = Object.entries(defeitosPorTipo)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    setEstatisticasDefeitos({
+      total: totalDefeitos,
+      porTipo: defeitosPorTipo,
+      principais: principaisDefeitos
+    });
+  }
+
+  function calcularEstatisticasMedicoes(dados) {
+    if (dados.length === 0) {
+      setEstatisticasMedicoes(null);
+      return;
+    }
+
+    const valores = dados.map(m => parseFloat(m.valor_medido)).filter(v => !isNaN(v));
+    const media = valores.reduce((a, b) => a + b, 0) / valores.length;
+    const minimo = Math.min(...valores);
+    const maximo = Math.max(...valores);
+    
+    const variancia = valores.reduce((acc, val) => acc + Math.pow(val - media, 2), 0) / valores.length;
+    const desvio = Math.sqrt(variancia);
+    const cpk = calcularCPK(valores, dados[0]?.limite_inferior, dados[0]?.limite_superior);
+
+    setEstatisticasMedicoes({
+      total: dados.length,
+      media: media.toFixed(3),
+      minimo: minimo.toFixed(3),
+      maximo: maximo.toFixed(3),
+      desvio: desvio.toFixed(3),
+      cpk: cpk
+    });
+  }
+
+  function calcularCPK(valores, LIE, LSE) {
+    if (!LIE && !LSE) return null;
+    const media = valores.reduce((a, b) => a + b, 0) / valores.length;
+    const desvio = Math.sqrt(valores.reduce((acc, val) => acc + Math.pow(val - media, 2), 0) / valores.length);
+    
+    const cpkL = LIE ? (media - LIE) / (3 * desvio) : Infinity;
+    const cpkU = LSE ? (LSE - media) / (3 * desvio) : Infinity;
+    return Math.min(cpkL, cpkU).toFixed(2);
+  }
+
+  const handleFiltroChange = (e) => {
+    setFiltros({
+      ...filtros,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleDefeitoChange = (e) => {
+    setNovoDefeito({
+      ...novoDefeito,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleMedicaoChange = (e) => {
+    setNovaMedicao({
+      ...novaMedicao,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  async function salvarDefeito() {
+    if (!novoDefeito.posto_id || !novoDefeito.produto_id || !novoDefeito.tipo_defeito || !novoDefeito.quantidade) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    setSalvando(true);
+    try {
+      await api.post("/qualidade/defeitos", {
+        ...novoDefeito,
+        quantidade: parseInt(novoDefeito.quantidade),
+        turno: parseInt(novoDefeito.turno),
+        data: new Date().toISOString().split('T')[0]
+      });
+      
+      toast.success("Defeito registrado com sucesso! ✅");
+      
+      setNovoDefeito({
+        posto_id: "",
+        produto_id: "",
+        tipo_defeito: "",
+        quantidade: "",
+        turno: "1",
+        descricao: "",
+        acao_imediata: ""
+      });
+      
+      carregarDefeitos();
+      
+    } catch (error) {
+      console.error("Erro ao salvar defeito:", error);
+      toast.error("Erro ao salvar defeito ❌");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarMedicao() {
+    if (!novaMedicao.posto_id || !novaMedicao.produto_id || !novaMedicao.caracteristica || !novaMedicao.valor_medido) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    setSalvando(true);
+    try {
+      await api.post("/qualidade/medicoes", {
+        ...novaMedicao,
+        valor_medido: parseFloat(novaMedicao.valor_medido),
+        limite_inferior: novaMedicao.limite_inferior ? parseFloat(novaMedicao.limite_inferior) : null,
+        limite_superior: novaMedicao.limite_superior ? parseFloat(novaMedicao.limite_superior) : null,
+        turno: parseInt(novaMedicao.turno),
+        data: new Date().toISOString().split('T')[0]
+      });
+      
+      toast.success("Medição registrada com sucesso! ✅");
+      
+      setNovaMedicao({
+        posto_id: "",
+        produto_id: "",
+        caracteristica: "",
+        valor_medido: "",
+        limite_inferior: "",
+        limite_superior: "",
+        unidade: "mm",
+        turno: "1"
+      });
+      
+      carregarMedicoesDimensionais();
+      
+    } catch (error) {
+      console.error("Erro ao salvar medição:", error);
+      toast.error("Erro ao salvar medição ❌");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  const getTipoDefeitoNome = (codigo) => {
+    const tipo = tiposDefeito.find(t => t.codigo === codigo);
+    return tipo ? tipo.nome : codigo;
+  };
+
+  const getPostoNome = (id) => {
+    const posto = postos.find(p => p.id === id);
+    return posto ? posto.nome : `Posto ${id}`;
+  };
+
+  const getProdutoNome = (id) => {
+    const produto = produtos.find(p => p.id === id);
+    return produto ? produto.nome : `Produto ${id}`;
+  };
+
+  // Se não houver empresa selecionada
+  if (!filtros.empresaId) {
+    return (
+      <div style={{ padding: "clamp(20px, 5vw, 60px)", textAlign: "center" }}>
+        <div style={{ backgroundColor: "white", padding: "40px", borderRadius: "8px", maxWidth: "500px", margin: "0 auto" }}>
+          <h2 style={{ color: "#1E3A8A" }}>Selecione uma empresa</h2>
+          <p style={{ color: "#666", marginBottom: "20px" }}>Escolha uma empresa para iniciar o controle de qualidade.</p>
+          <select
+            value={filtros.empresaId}
+            onChange={(e) => setFiltros({ ...filtros, empresaId: e.target.value })}
+            style={{ padding: "10px", borderRadius: "4px", border: "1px solid #d1d5db", width: "100%" }}
+          >
+            <option value="">Selecione uma empresa...</option>
+            {empresas.map(emp => (
+              <option key={emp.id} value={emp.id}>{emp.nome}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ 
+      padding: "clamp(15px, 3vw, 30px)", 
+      width: "100%",
+      maxWidth: "1400px",
+      margin: "0 auto",
+      boxSizing: "border-box"
+    }}>
+      
+      {/* Cabeçalho */}
+      <div style={{ 
+        backgroundColor: "white", 
+        padding: "clamp(15px, 2vw, 25px)", 
+        borderRadius: "8px", 
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        marginBottom: "clamp(20px, 3vw, 30px)"
+      }}>
+        <h1 style={{ color: "#1E3A8A", marginBottom: "5px", fontSize: "clamp(20px, 4vw, 28px)" }}>
+          SPC - Controle Estatístico de Processo
+        </h1>
+        <p style={{ color: "#666", fontSize: "clamp(12px, 2vw, 14px)" }}>
+          Registre defeitos e medições dimensionais para controle de qualidade
+        </p>
+      </div>
+
+      {/* Filtros */}
+      <div style={{ 
+        backgroundColor: "white", 
+        padding: "clamp(15px, 2vw, 20px)", 
+        borderRadius: "8px", 
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        marginBottom: "clamp(20px, 3vw, 30px)"
+      }}>
+        <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>Filtros</h3>
+        
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+          gap: "15px" 
+        }}>
+          <div>
+            <label style={labelStyle}>Empresa</label>
+            <select
+              name="empresaId"
+              value={filtros.empresaId}
+              onChange={handleFiltroChange}
+              style={inputStyle}
+            >
+              {empresas.map(emp => (
+                <option key={emp.id} value={emp.id}>{emp.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Linha</label>
+            <select
+              name="linhaId"
+              value={filtros.linhaId}
+              onChange={handleFiltroChange}
+              style={inputStyle}
+              disabled={!filtros.empresaId}
+            >
+              <option value="">Todas</option>
+              {linhas.map(linha => (
+                <option key={linha.id} value={linha.id}>{linha.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Posto</label>
+            <select
+              name="postoId"
+              value={filtros.postoId}
+              onChange={handleFiltroChange}
+              style={inputStyle}
+              disabled={!filtros.linhaId}
+            >
+              <option value="">Todos</option>
+              {postos.map(posto => (
+                <option key={posto.id} value={posto.id}>{posto.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Produto</label>
+            <select
+              name="produtoId"
+              value={filtros.produtoId}
+              onChange={handleFiltroChange}
+              style={inputStyle}
+            >
+              <option value="">Todos</option>
+              {produtos.map(prod => (
+                <option key={prod.id} value={prod.id}>{prod.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>Data Início</label>
+            <input
+              type="date"
+              name="dataInicio"
+              value={filtros.dataInicio}
+              onChange={handleFiltroChange}
+              style={inputStyle}
+            />
+          </div>
+
+          <div>
+            <label style={labelStyle}>Data Fim</label>
+            <input
+              type="date"
+              name="dataFim"
+              value={filtros.dataFim}
+              onChange={handleFiltroChange}
+              style={inputStyle}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Abas */}
+      <div style={{ 
+        display: "flex", 
+        gap: "10px", 
+        marginBottom: "20px",
+        borderBottom: "1px solid #e5e7eb"
+      }}>
+        <button
+          onClick={() => setAbaAtiva("defeitos")}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: abaAtiva === "defeitos" ? "#1E3A8A" : "transparent",
+            color: abaAtiva === "defeitos" ? "white" : "#1E3A8A",
+            border: "none",
+            borderRadius: "8px 8px 0 0",
+            cursor: "pointer",
+            fontWeight: "500"
+          }}
+        >
+          📊 Registro de Defeitos
+        </button>
+        <button
+          onClick={() => setAbaAtiva("dimensional")}
+          style={{
+            padding: "10px 20px",
+            backgroundColor: abaAtiva === "dimensional" ? "#1E3A8A" : "transparent",
+            color: abaAtiva === "dimensional" ? "white" : "#1E3A8A",
+            border: "none",
+            borderRadius: "8px 8px 0 0",
+            cursor: "pointer",
+            fontWeight: "500"
+          }}
+        >
+          📏 Medições Dimensionais
+        </button>
+      </div>
+
+      {/* ABA: DEFEITOS */}
+      {abaAtiva === "defeitos" && (
+        <>
+          {/* Formulário de Defeitos */}
+          <div style={{ 
+            backgroundColor: "white", 
+            padding: "20px", 
+            borderRadius: "8px", 
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            marginBottom: "30px"
+          }}>
+            <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📊 Registrar Defeito</h3>
+            
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+              gap: "15px",
+              marginBottom: "15px"
+            }}>
+              <div>
+                <label style={labelStyle}>Posto *</label>
+                <select
+                  name="posto_id"
+                  value={novoDefeito.posto_id}
+                  onChange={handleDefeitoChange}
+                  style={inputStyle}
+                >
+                  <option value="">Selecione...</option>
+                  {postos.map(posto => (
+                    <option key={posto.id} value={posto.id}>{posto.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Produto *</label>
+                <select
+                  name="produto_id"
+                  value={novoDefeito.produto_id}
+                  onChange={handleDefeitoChange}
+                  style={inputStyle}
+                >
+                  <option value="">Selecione...</option>
+                  {produtos.map(prod => (
+                    <option key={prod.id} value={prod.id}>{prod.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Tipo de Defeito *</label>
+                <select
+                  name="tipo_defeito"
+                  value={novoDefeito.tipo_defeito}
+                  onChange={handleDefeitoChange}
+                  style={inputStyle}
+                >
+                  <option value="">Selecione...</option>
+                  {tiposDefeito.map(tipo => (
+                    <option key={tipo.codigo} value={tipo.codigo}>{tipo.codigo} - {tipo.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Quantidade *</label>
+                <input
+                  type="number"
+                  name="quantidade"
+                  value={novoDefeito.quantidade}
+                  onChange={handleDefeitoChange}
+                  style={inputStyle}
+                  placeholder="Número de peças"
+                  min="1"
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Turno</label>
+                <select
+                  name="turno"
+                  value={novoDefeito.turno}
+                  onChange={handleDefeitoChange}
+                  style={inputStyle}
+                >
+                  <option value="1">1º Turno</option>
+                  <option value="2">2º Turno</option>
+                  <option value="3">3º Turno</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={labelStyle}>Descrição</label>
+              <input
+                type="text"
+                name="descricao"
+                value={novoDefeito.descricao}
+                onChange={handleDefeitoChange}
+                style={inputStyle}
+                placeholder="Descreva o defeito..."
+              />
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={labelStyle}>Ação Imediata</label>
+              <input
+                type="text"
+                name="acao_imediata"
+                value={novoDefeito.acao_imediata}
+                onChange={handleDefeitoChange}
+                style={inputStyle}
+                placeholder="O que foi feito imediatamente?"
+              />
+            </div>
+
+            <Botao
+              variant="success"
+              size="md"
+              fullWidth
+              onClick={salvarDefeito}
+              loading={salvando}
+              disabled={salvando}
+            >
+              Registrar Defeito
+            </Botao>
+          </div>
+
+          {/* Estatísticas de Defeitos */}
+          {estatisticasDefeitos && estatisticasDefeitos.total > 0 && (
+            <div style={{ 
+              backgroundColor: "white", 
+              padding: "20px", 
+              borderRadius: "8px", 
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              marginBottom: "30px"
+            }}>
+              <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📈 Análise de Defeitos</h3>
+              
+              <div style={{ 
+                display: "grid", 
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", 
+                gap: "15px",
+                marginBottom: "20px"
+              }}>
+                <div style={{ backgroundColor: "#f9fafb", padding: "15px", borderRadius: "8px", textAlign: "center" }}>
+                  <div style={{ fontSize: "12px", color: "#666" }}>TOTAL DE DEFEITOS</div>
+                  <div style={{ fontSize: "28px", fontWeight: "bold", color: "#dc2626" }}>{estatisticasDefeitos.total}</div>
+                </div>
+              </div>
+
+              <h4 style={{ marginBottom: "10px" }}>Top 5 Defeitos Mais Comuns</h4>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#f3f4f6" }}>
+                      <th style={{ padding: "10px", textAlign: "left" }}>Tipo</th>
+                      <th style={{ padding: "10px", textAlign: "right" }}>Quantidade</th>
+                      <th style={{ padding: "10px", textAlign: "right" }}>Percentual</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {estatisticasDefeitos.principais.map(([tipo, qtd]) => (
+                      <tr key={tipo} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={{ padding: "10px" }}>{getTipoDefeitoNome(tipo)}</td>
+                        <td style={{ padding: "10px", textAlign: "right" }}>{qtd}</td>
+                        <td style={{ padding: "10px", textAlign: "right" }}>
+                          {((qtd / estatisticasDefeitos.total) * 100).toFixed(1)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Lista de Defeitos */}
+          <div style={{ 
+            backgroundColor: "white", 
+            padding: "20px", 
+            borderRadius: "8px", 
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+          }}>
+            <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📋 Histórico de Defeitos</h3>
+            
+            {carregando ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Carregando...</div>
+            ) : defeitos.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Nenhum defeito registrado no período.</div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+                      <th style={thStyle}>Data</th>
+                      <th style={thStyle}>Posto</th>
+                      <th style={thStyle}>Produto</th>
+                      <th style={thStyle}>Tipo</th>
+                      <th style={thStyle}>Qtd</th>
+                      <th style={thStyle}>Turno</th>
+                      <th style={thStyle}>Ação Imediata</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {defeitos.map((d, idx) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={tdStyle}>{new Date(d.data).toLocaleDateString('pt-BR')}</td>
+                        <td style={tdStyle}>{getPostoNome(d.posto_id)}</td>
+                        <td style={tdStyle}>{getProdutoNome(d.produto_id)}</td>
+                        <td style={tdStyle}>{getTipoDefeitoNome(d.tipo_defeito)}</td>
+                        <td style={tdStyle}>{d.quantidade}</td>
+                        <td style={tdStyle}>{d.turno}º</td>
+                        <td style={tdStyle}>{d.acao_imediata || "-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* ABA: MEDIÇÕES DIMENSIONAIS */}
+      {abaAtiva === "dimensional" && (
+        <>
+          {/* Formulário de Medições */}
+          <div style={{ 
+            backgroundColor: "white", 
+            padding: "20px", 
+            borderRadius: "8px", 
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            marginBottom: "30px"
+          }}>
+            <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📏 Registrar Medição Dimensional</h3>
+            
+            <div style={{ 
+              display: "grid", 
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+              gap: "15px",
+              marginBottom: "15px"
+            }}>
+              <div>
+                <label style={labelStyle}>Posto *</label>
+                <select
+                  name="posto_id"
+                  value={novaMedicao.posto_id}
+                  onChange={handleMedicaoChange}
+                  style={inputStyle}
+                >
+                  <option value="">Selecione...</option>
+                  {postos.map(posto => (
+                    <option key={posto.id} value={posto.id}>{posto.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Produto *</label>
+                <select
+                  name="produto_id"
+                  value={novaMedicao.produto_id}
+                  onChange={handleMedicaoChange}
+                  style={inputStyle}
+                >
+                  <option value="">Selecione...</option>
+                  {produtos.map(prod => (
+                    <option key={prod.id} value={prod.id}>{prod.nome}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Característica *</label>
+                <input
+                  type="text"
+                  name="caracteristica"
+                  value={novaMedicao.caracteristica}
+                  onChange={handleMedicaoChange}
+                  style={inputStyle}
+                  placeholder="Ex: Diâmetro externo, Comprimento..."
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Valor Medido *</label>
+                <input
+                  type="number"
+                  name="valor_medido"
+                  value={novaMedicao.valor_medido}
+                  onChange={handleMedicaoChange}
+                  step="0.001"
+                  style={inputStyle}
+                  placeholder="Valor medido"
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Limite Inferior (LIE)</label>
+                <input
+                  type="number"
+                  name="limite_inferior"
+                  value={novaMedicao.limite_inferior}
+                  onChange={handleMedicaoChange}
+                  step="0.001"
+                  style={inputStyle}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Limite Superior (LSE)</label>
+                <input
+                  type="number"
+                  name="limite_superior"
+                  value={novaMedicao.limite_superior}
+                  onChange={handleMedicaoChange}
+                  step="0.001"
+                  style={inputStyle}
+                  placeholder="Opcional"
+                />
+              </div>
+
+              <div>
+                <label style={labelStyle}>Unidade</label>
+                <select
+                  name="unidade"
+                  value={novaMedicao.unidade}
+                  onChange={handleMedicaoChange}
+                  style={inputStyle}
+                >
+                  <option value="mm">mm</option>
+                  <option value="cm">cm</option>
+                  <option value="pol">pol</option>
+                  <option value="kg">kg</option>
+                  <option value="g">g</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={labelStyle}>Turno</label>
+                <select
+                  name="turno"
+                  value={novaMedicao.turno}
+                  onChange={handleMedicaoChange}
+                  style={inputStyle}
+                >
+                  <option value="1">1º Turno</option>
+                  <option value="2">2º Turno</option>
+                  <option value="3">3º Turno</option>
+                </select>
+              </div>
+            </div>
+
+            <Botao
+              variant="success"
+              size="md"
+              fullWidth
+              onClick={salvarMedicao}
+              loading={salvando}
+              disabled={salvando}
+            >
+              Registrar Medição
+            </Botao>
+          </div>
+
+          {/* Estatísticas de Medições */}
+          {estatisticasMedicoes && estatisticasMedicoes.total > 0 && (
+            <div style={{ 
+              backgroundColor: "white", 
+              padding: "20px", 
+              borderRadius: "8px", 
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              marginBottom: "30px"
+            }}>
+              <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📊 Análise Estatística</h3>
+              
+              <div style={{ 
+                display: "grid", 
+                gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", 
+                gap: "15px"
+              }}>
+                <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+                  <div style={{ fontSize: "11px", color: "#666" }}>AMOSTRAS</div>
+                  <div style={{ fontSize: "20px", fontWeight: "bold", color: "#1E3A8A" }}>{estatisticasMedicoes.total}</div>
+                </div>
+                <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+                  <div style={{ fontSize: "11px", color: "#666" }}>MÉDIA</div>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", color: "#16a34a" }}>{estatisticasMedicoes.media}</div>
+                </div>
+                <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+                  <div style={{ fontSize: "11px", color: "#666" }}>MIN / MAX</div>
+                  <div style={{ fontSize: "14px", fontWeight: "bold" }}>{estatisticasMedicoes.minimo} / {estatisticasMedicoes.maximo}</div>
+                </div>
+                <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+                  <div style={{ fontSize: "11px", color: "#666" }}>DESVIO PADRÃO</div>
+                  <div style={{ fontSize: "16px", fontWeight: "bold", color: "#f59e0b" }}>{estatisticasMedicoes.desvio}</div>
+                </div>
+                {estatisticasMedicoes.cpk && (
+                  <div style={{ backgroundColor: "#f9fafb", padding: "12px", borderRadius: "8px", textAlign: "center" }}>
+                    <div style={{ fontSize: "11px", color: "#666" }}>Cpk</div>
+                    <div style={{ 
+                      fontSize: "20px", 
+                      fontWeight: "bold", 
+                      color: parseFloat(estatisticasMedicoes.cpk) >= 1.33 ? "#16a34a" : "#dc2626" 
+                    }}>
+                      {estatisticasMedicoes.cpk}
+                    </div>
+                    <div style={{ fontSize: "10px", color: "#666" }}>
+                      {parseFloat(estatisticasMedicoes.cpk) >= 1.33 ? "Processo capaz" : "Processo precisa melhorar"}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Lista de Medições */}
+          <div style={{ 
+            backgroundColor: "white", 
+            padding: "20px", 
+            borderRadius: "8px", 
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+          }}>
+            <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📋 Histórico de Medições</h3>
+            
+            {medicoesDimensionais.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Nenhuma medição registrada no período.</div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+                      <th style={thStyle}>Data</th>
+                      <th style={thStyle}>Posto</th>
+                      <th style={thStyle}>Produto</th>
+                      <th style={thStyle}>Característica</th>
+                      <th style={thStyle}>Valor</th>
+                      <th style={thStyle}>LIE</th>
+                      <th style={thStyle}>LSE</th>
+                      <th style={thStyle}>Turno</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                    {medicoesDimensionais.map((m, idx) => (
+                      <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={tdStyle}>{new Date(m.data).toLocaleDateString('pt-BR')}</td>
+                        <td style={tdStyle}>{getPostoNome(m.posto_id)}</td>
+                        <td style={tdStyle}>{getProdutoNome(m.produto_id)}</td>
+                        <td style={tdStyle}>{m.caracteristica}</td>
+                        <td style={tdStyle}>
+                          <span style={{
+                            fontWeight: "bold",
+                            color: (m.limite_inferior && m.valor_medido < m.limite_inferior) || (m.limite_superior && m.valor_medido > m.limite_superior) 
+                              ? "#dc2626" : "#16a34a"
+                          }}>
+                            {m.valor_medido} {m.unidade}
+                          </span>
+                        </td>
+                        <td style={tdStyle}>{m.limite_inferior || "-"} {m.limite_inferior && m.unidade}</td>
+                        <td style={tdStyle}>{m.limite_superior || "-"} {m.limite_superior && m.unidade}</td>
+                        <td style={tdStyle}>{m.turno}º</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// Estilos
+const labelStyle = {
+  display: "block",
+  marginBottom: "6px",
+  color: "#374151",
+  fontSize: "13px",
+  fontWeight: "500"
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "8px 12px",
+  borderRadius: "4px",
+  border: "1px solid #d1d5db",
+  fontSize: "14px",
+  outline: "none",
+  boxSizing: "border-box"
+};
+
+const thStyle = {
+  padding: "12px 8px",
+  textAlign: "center",
+  fontSize: "13px",
+  fontWeight: "500"
+};
+
+const tdStyle = {
+  padding: "10px 8px",
+  textAlign: "center",
+  fontSize: "13px"
+};

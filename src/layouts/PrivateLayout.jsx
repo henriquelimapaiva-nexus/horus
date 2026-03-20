@@ -69,7 +69,7 @@ function PrivateLayout() {
       isMounted = false;
       window.removeEventListener('empresasAtualizadas', handleEmpresasAtualizadas);
     };
-  }, [isAuthenticated]); // ✅ APENAS isAuthenticated
+  }, [isAuthenticated]);
 
   // Recuperar cliente do localStorage
   useEffect(() => {
@@ -140,7 +140,6 @@ function PrivateLayout() {
     setClienteAtual(valor);
     localStorage.setItem("clienteAtual", valor);
     
-    // Atualiza o nome e sincroniza com AuthContext
     const cliente = clientes.find(c => c.id === parseInt(valor));
     if (cliente) {
       setNomeCliente(cliente.nome);
@@ -254,7 +253,7 @@ function PrivateLayout() {
               )}
             </div>
 
-            {/* ✅ Menu Operação COM OEE em Tempo Real */}
+            {/* ✅ Menu Operação COM SPC */}
             <div style={{ position: "relative" }}>
               <div style={menuItemStyle} onClick={(e) => toggleMenu('operacao', e)}>
                 Operação {menuAberto === 'operacao' ? '▼' : '▶'}
@@ -265,6 +264,7 @@ function PrivateLayout() {
                   <Link to="/postos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Postos</Link>
                   <Link to="/coleta-dados" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Coleta de Dados</Link>
                   <Link to="/oee" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>OEE em Tempo Real</Link>
+                  <Link to="/spc" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>SPC - Controle de Qualidade</Link>
                 </div>
               )}
             </div>
