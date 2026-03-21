@@ -137,6 +137,7 @@ function App() {
                 <Route path="relatorios" element={<ConsultorRelatorios />} />
                 <Route path="configuracoes" element={<ConsultorConfiguracoes />} />
                 <Route path="ias/precificacao" element={<IAPrecificacao />} />
+                <Route path="ias/precificacao-pre-contrato" element={<IAPrecificacaoPreContrato />} />
                 <Route path="ias/sugestoes" element={<IASugestoes />} />
                 <Route path="checklist" element={<Checklist />} />
               </Route>
@@ -177,9 +178,6 @@ function App() {
               <Route path="/painel" element={<PainelExecutivo />} />
               <Route path="/proposta" element={<PropostaComercial />} />
               <Route path="/postos" element={<Postos />} />
-              
-              {/* 🟢 NOVA ROTA - IA de Precificação Pré-Contrato */}
-              <Route path="/ia/precificar-pre-contrato" element={<IAPrecificacaoPreContrato />} />
             </Route>
           </Routes>
         </Router>

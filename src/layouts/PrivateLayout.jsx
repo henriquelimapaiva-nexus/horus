@@ -175,7 +175,7 @@ function PrivateLayout() {
     top: "100%",
     left: 0,
     backgroundColor: "#1E3A8A",
-    minWidth: "220px",
+    minWidth: "200px",
     borderRadius: "4px",
     boxShadow: "0 4px 6px rgba(0,0,0,0.1)",
     zIndex: 1000,
@@ -289,23 +289,6 @@ function PrivateLayout() {
             <Link to="/perdas" style={linkStyle}>Perdas</Link>
             <Link to="/proposta" style={linkStyle}>Proposta</Link>
             <Link to="/conhecimento" style={linkStyle}>Conhecimento</Link>
-
-            {/* 🆕 Menu IA Precificação */}
-            <div style={{ position: "relative" }}>
-              <div style={menuItemStyle} onClick={(e) => toggleMenu('ia', e)}>
-                🤖 IA Precificação {menuAberto === 'ia' ? '▼' : '▶'}
-              </div>
-              {menuAberto === 'ia' && (
-                <div style={submenuStyle}>
-                  <Link to="/ia/precificar-pre-contrato" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>
-                    🆕 Novo Cliente (Estimativas)
-                  </Link>
-                  <Link to="/ia/precificar" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>
-                    📊 Cliente Cadastrado (Dados Reais)
-                  </Link>
-                </div>
-              )}
-            </div>
           </nav>
         )}
 

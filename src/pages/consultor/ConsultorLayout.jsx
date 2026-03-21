@@ -35,8 +35,9 @@ export default function ConsultorLayout() {
     { path: "/consultor/relatorios", icon: "📈", label: "Relatórios" },
     { path: "/consultor/configuracoes", icon: "⚙️", label: "Configurações" },
     { path: "/consultor/ias/precificacao", icon: "🤖", label: "IA de Precificação" },
+    { path: "/consultor/ias/precificacao-pre-contrato", icon: "🆕", label: "IA Precificação (Novo Cliente)" },
     { path: "/consultor/ias/sugestoes", icon: "💡", label: "IA de Sugestões" },
-    { path: "/consultor/checklist", icon: "📋", label: "Checklist" } // 🟢 NOVO ITEM
+    { path: "/consultor/checklist", icon: "📋", label: "Checklist" }
   ];
 
   return (
