@@ -191,6 +191,36 @@ export default function RelatorioProfissional() {
     return resultados;
   };
 
+  // ✅ NOVA FUNÇÃO: CALCULAR VPL E TIR
+  const calcularVPL_TIR = (investimento, ganhoMensal, anos = 3, taxaDesconto = 0.12) => {
+    const ganhoAnual = ganhoMensal * 12;
+    
+    let vpl = -investimento;
+    for (let ano = 1; ano <= anos; ano++) {
+      vpl += ganhoAnual / Math.pow(1 + taxaDesconto, ano);
+    }
+    
+    let tir = 0;
+    let step = 0.01;
+    let vplTir = -investimento;
+    
+    while (vplTir < 0 && tir < 2) {
+      tir += step;
+      vplTir = -investimento;
+      for (let ano = 1; ano <= anos; ano++) {
+        vplTir += ganhoAnual / Math.pow(1 + tir, ano);
+      }
+    }
+    
+    return {
+      vpl: vpl,
+      tir: tir * 100,
+      ganhoAnual: ganhoAnual,
+      anos: anos,
+      taxaDesconto: taxaDesconto * 100
+    };
+  };
+
   // ✅ FUNÇÃO: Gerar análise técnica detalhada (com texto corrido)
   const gerarAnaliseTecnicaDetalhada = (dados) => {
     let analise = "";
@@ -209,6 +239,10 @@ export default function RelatorioProfissional() {
     const perdas = dados.resumoFinanceiro.perdas;
     const perdasTotal = dados.resumoFinanceiro.perdasTotais;
     const linhas = dados.linhas;
+    const roi = dados.resumoFinanceiro.roi;
+    
+    // ✅ CALCULAR VPL E TIR
+    const vplTir = calcularVPL_TIR(roi.investimento, roi.ganhoMensal, 3, 0.12);
     
     let analise = `
       ==========================================
@@ -335,8 +369,10 @@ export default function RelatorioProfissional() {
       Com a implementação das ações recomendadas, projeta-se:
       
       • Ganho mensal estimado: ${formatarMoeda(perdasTotal * 0.3)}
-      • Payback do investimento: ${((dados.resumoFinanceiro.roi.investimento || 50000) / (perdasTotal * 0.3)).toFixed(1)} meses
-      • ROI anual projetado: ${(((perdasTotal * 0.3 * 12) / (dados.resumoFinanceiro.roi.investimento || 50000)) * 100).toFixed(0)}%
+      • Payback do investimento: ${roi.payback} meses
+      • ROI anual projetado: ${roi.roiAnual}%
+      • VPL (${vplTir.anos} anos, taxa ${vplTir.taxaDesconto.toFixed(0)}%): ${formatarMoeda(vplTir.vpl)}
+      • TIR: ${vplTir.tir.toFixed(1)}% ao ano
       • Novo OEE médio projetado: ${Math.min(85, oeeMedio * 1.2).toFixed(1)}%
       
       ==========================================
@@ -350,6 +386,10 @@ export default function RelatorioProfissional() {
     const gargalo = dados.analise?.gargalo || "Não identificado";
     const perdas = dados.perdasFinanceiras;
     const perdasTotal = perdas.total;
+    const roi = dados.roi;
+    
+    // ✅ CALCULAR VPL E TIR
+    const vplTir = calcularVPL_TIR(roi.investimento, roi.ganhoMensal, 3, 0.12);
     
     let analise = `
       ==========================================
@@ -460,8 +500,10 @@ export default function RelatorioProfissional() {
       6.6 PROJEÇÃO DE RESULTADOS
       ------------------------------------------------------------------------------
       • Ganho mensal estimado: ${formatarMoeda(perdasTotal * 0.3)}
-      • Payback do investimento: ${((dados.roi.investimento || 50000) / (perdasTotal * 0.3)).toFixed(1)} meses
-      • ROI anual projetado: ${(((perdasTotal * 0.3 * 12) / (dados.roi.investimento || 50000)) * 100).toFixed(0)}%
+      • Payback do investimento: ${roi.payback} meses
+      • ROI anual projetado: ${roi.roiAnual}%
+      • VPL (${vplTir.anos} anos, taxa ${vplTir.taxaDesconto.toFixed(0)}%): ${formatarMoeda(vplTir.vpl)}
+      • TIR: ${vplTir.tir.toFixed(1)}% ao ano
       • Novo OEE projetado: ${Math.min(85, oee * 1.2).toFixed(1)}%
       
       ==========================================
@@ -1203,7 +1245,7 @@ export default function RelatorioProfissional() {
                       <th style={thStyle}>Gargalo</th>
                       <th style={thStyle}>Custo Mensal</th>
                       <th style={thStyle}>Perdas Estimadas</th>
-                      </tr>
+                    </tr>
                   </thead>
                   <tbody>
                     {dadosRelatorio.linhas.map((linha, idx) => {
