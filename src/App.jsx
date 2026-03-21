@@ -74,6 +74,9 @@ import ConsultorConfiguracoes from "./pages/consultor/ConsultorConfiguracoes";
 // 🟢 IMPORT - IA DE PRECIFICAÇÃO
 import IAPrecificacao from "./pages/consultor/ias/IAPrecificacao";
 
+// 🟢 IMPORT - IA DE PRECIFICAÇÃO PRÉ-CONTRATO (NOVO)
+import IAPrecificacaoPreContrato from "./pages/consultor/ias/IAPrecificacaoPreContrato";
+
 // 🟢 IMPORT - IA DE SUGESTÕES
 import IASugestoes from "./pages/consultor/IASugestoes";
 
@@ -174,6 +177,9 @@ function App() {
               <Route path="/painel" element={<PainelExecutivo />} />
               <Route path="/proposta" element={<PropostaComercial />} />
               <Route path="/postos" element={<Postos />} />
+              
+              {/* 🟢 NOVA ROTA - IA de Precificação Pré-Contrato */}
+              <Route path="/ia/precificar-pre-contrato" element={<IAPrecificacaoPreContrato />} />
             </Route>
           </Routes>
         </Router>
