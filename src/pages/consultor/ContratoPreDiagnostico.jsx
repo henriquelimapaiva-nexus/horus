@@ -20,8 +20,17 @@ export default function ContratoPreDiagnostico() {
   }, [location, navigate]);
 
   const handleImprimir = () => {
-    const win = window.open();
-    win.document.write(`
+    // Criar um iframe invisível para imprimir
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+    
+    const doc = iframe.contentWindow.document;
+    doc.open();
+    doc.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -68,11 +77,19 @@ export default function ContratoPreDiagnostico() {
           <div class="linha"></div>
         </div>
         <pre>${contrato}</pre>
-        <script>window.print();</script>
       </body>
       </html>
     `);
-    win.document.close();
+    doc.close();
+    
+    // Aguardar carregar e imprimir
+    iframe.contentWindow.onload = () => {
+      iframe.contentWindow.print();
+      // Remover o iframe após a impressão (ou quando fechar)
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    };
   };
 
   if (!contrato) return null;
