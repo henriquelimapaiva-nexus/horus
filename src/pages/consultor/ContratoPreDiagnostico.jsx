@@ -40,28 +40,10 @@ export default function ContratoPreDiagnostico() {
     );
   }
 
-  // Função para formatar o texto com quebras de linha e preservar espaços
-  const formatarTexto = (texto) => {
-    return texto
-      .split('\n')
-      .map((line, i) => {
-        if (line.trim().startsWith('CLÁUSULA') || line.trim().startsWith('ANEXO')) {
-          return `<h3 style="margin: 20px 0 10px 0; color: #1E3A8A; font-weight: bold;">${line}</h3>`;
-        } else if (line.trim() === '_________________________________') {
-          return `<div style="margin: 10px 0;">${line}</div>`;
-        } else if (line.trim() === '') {
-          return '<br/>';
-        } else {
-          return `<p style="margin: 5px 0; line-height: 1.5;">${line}</p>`;
-        }
-      })
-      .join('');
-  };
-
   return (
     <div style={{ padding: "20px", maxWidth: "1100px", margin: "0 auto" }}>
       
-      {/* Botões de ação (não aparecem na impressão) */}
+      {/* Botões de ação */}
       <div className="no-print" style={{ 
         display: "flex", 
         gap: "15px", 
@@ -79,15 +61,15 @@ export default function ContratoPreDiagnostico() {
         </Botao>
       </div>
 
-      {/* Conteúdo do contrato com cabeçalho e formatação */}
+      {/* Conteúdo do contrato */}
       <div className="contrato-content" style={{
         backgroundColor: "white",
         padding: "40px",
         borderRadius: "8px",
         boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-        fontFamily: "'Times New Roman', Times, serif",
-        fontSize: "12pt",
-        lineHeight: "1.5"
+        fontFamily: "'Courier New', 'Times New Roman', monospace",
+        fontSize: "11pt",
+        lineHeight: "1.4"
       }}>
         
         {/* CABEÇALHO COM LOGO */}
@@ -98,7 +80,7 @@ export default function ContratoPreDiagnostico() {
             style={{ width: "100px", marginBottom: "10px" }}
           />
           <h1 style={{ 
-            fontSize: "18pt", 
+            fontSize: "16pt", 
             fontWeight: "bold", 
             margin: "5px 0",
             color: "#1E3A8A"
@@ -106,18 +88,28 @@ export default function ContratoPreDiagnostico() {
             NEXUS ENGENHARIA APLICADA
           </h1>
           <div style={{ 
-            borderBottom: "2px solid #1E3A8A", 
+            borderBottom: "1px solid #1E3A8A", 
             width: "80%", 
             margin: "10px auto" 
           }}></div>
         </div>
 
-        {/* CORPO DO CONTRATO FORMATADO */}
-        <div dangerouslySetInnerHTML={{ __html: formatarTexto(contrato) }} />
-        
+        {/* TEXTO DO CONTRATO - PRESERVA FORMATO ORIGINAL */}
+        <pre style={{
+          fontFamily: "'Courier New', 'Times New Roman', monospace",
+          fontSize: "11pt",
+          lineHeight: "1.4",
+          whiteSpace: "pre-wrap",
+          wordWrap: "break-word",
+          margin: 0,
+          background: "transparent",
+          border: "none",
+          padding: 0
+        }}>
+          {contrato}
+        </pre>
       </div>
 
-      {/* Estilos para impressão */}
       <style>{`
         @media print {
           .no-print {
@@ -131,16 +123,9 @@ export default function ContratoPreDiagnostico() {
             margin: 0;
             padding: 0;
           }
-          img {
-            max-width: 80px !important;
-          }
-          h3 {
-            margin-top: 15px !important;
-            margin-bottom: 8px !important;
-          }
-          p {
-            margin: 3px 0 !important;
-            line-height: 1.4 !important;
+          pre {
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
           }
         }
       `}</style>
