@@ -16,6 +16,12 @@ export default function IAPrecificacao() {
   const [resultado, setResultado] = useState(null);
   const [empresas, setEmpresas] = useState([]);
   
+  // Estado para o modal de negociação
+  const [mostrarModalNegociacao, setMostrarModalNegociacao] = useState(false);
+  const [opcaoNegociacao, setOpcaoNegociacao] = useState('aceitar');
+  const [valorNegociado, setValorNegociado] = useState('');
+  const [motivoNegociacao, setMotivoNegociacao] = useState('');
+  
   const [dadosCliente, setDadosCliente] = useState({
     empresaId: '',
     empresaNome: '',
@@ -26,8 +32,7 @@ export default function IAPrecificacao() {
     linhas: 1
   });
 
-  // Dados para o contrato (podem ser preenchidos depois)
-  const [mostrarModalContrato, setMostrarModalContrato] = useState(false);
+  // Dados para o contrato
   const [dadosContrato, setDadosContrato] = useState({
     representante_nome: '',
     representante_nacionalidade: '',
@@ -220,27 +225,43 @@ export default function IAPrecificacao() {
     setTimeout(() => {
       const resultado = calcularPreco(dadosCliente);
       setResultado(resultado);
+      setValorNegociado(resultado.preco.toString());
       setCarregando(false);
       toast.success('Precificação calculada!');
     }, 500);
   };
 
-  const handleAbrirModalContrato = () => {
+  const handleAbrirModalNegociacao = () => {
     if (!dadosCliente.empresaId) {
       toast.error('Selecione uma empresa primeiro');
       return;
     }
-    setMostrarModalContrato(true);
+    if (!resultado) {
+      toast.error('Calcule o preço primeiro');
+      return;
+    }
+    setMostrarModalNegociacao(true);
   };
 
   const handleGerarContrato = async () => {
+    let valorFinal = resultado.preco;
+    
+    if (opcaoNegociacao === 'negociar') {
+      const novoValor = parseFloat(valorNegociado);
+      if (isNaN(novoValor) || novoValor <= 0) {
+        toast.error('Informe um valor válido para negociação');
+        return;
+      }
+      valorFinal = novoValor;
+    }
+
     setCarregandoContrato(true);
     toast.loading('Gerando contrato de implementação...', { id: 'contrato' });
 
     try {
       const payload = {
         empresa_id: parseInt(dadosCliente.empresaId),
-        valor_total: resultado?.preco,
+        valor_total: valorFinal,
         prazo_implementacao_semanas: dadosContrato.prazo_implementacao_semanas,
         prazo_acompanhamento_meses: dadosContrato.prazo_acompanhamento_meses,
         representante: {
@@ -263,7 +284,7 @@ export default function IAPrecificacao() {
       
       toast.dismiss('contrato');
       toast.success('Contrato gerado com sucesso!');
-      setMostrarModalContrato(false);
+      setMostrarModalNegociacao(false);
       
       navigate('/consultor/contrato-implementacao', {
         state: { contratoData: response.data }
@@ -286,9 +307,9 @@ export default function IAPrecificacao() {
     }).format(valor || 0);
   };
 
-  // Modal de dados do contrato
-  const ModalContrato = () => {
-    if (!mostrarModalContrato) return null;
+  // Modal de negociação
+  const ModalNegociacao = () => {
+    if (!mostrarModalNegociacao) return null;
 
     return (
       <div style={{
@@ -313,17 +334,64 @@ export default function IAPrecificacao() {
           overflow: "auto"
         }}>
           <h2 style={{ color: "#1E3A8A", marginBottom: "20px" }}>
-            📋 Dados para o Contrato
+            💰 Negociação do Contrato
           </h2>
 
-          <p style={{ marginBottom: "15px", fontSize: "14px", color: "#666" }}>
-            <strong>Empresa:</strong> {dadosCliente.empresaNome}
+          <p style={{ marginBottom: "15px" }}>
+            <strong>Preço sugerido pela IA:</strong> {formatarMoeda(resultado?.preco)}
           </p>
           <p style={{ marginBottom: "20px", fontSize: "14px", color: "#666" }}>
-            <strong>Valor do projeto:</strong> {formatarMoeda(resultado?.preco)}
+            Faixa de negociação: {formatarMoeda(resultado?.precoMinimo)} - {formatarMoeda(resultado?.precoPremium)}
           </p>
 
           <div style={{ marginBottom: "20px" }}>
+            <label style={{ display: "block", marginBottom: "10px" }}>
+              <input
+                type="radio"
+                value="aceitar"
+                checked={opcaoNegociacao === 'aceitar'}
+                onChange={(e) => setOpcaoNegociacao(e.target.value)}
+                style={{ marginRight: "8px" }}
+              />
+              Aceitar preço sugerido: {formatarMoeda(resultado?.preco)}
+            </label>
+
+            <label style={{ display: "block", marginBottom: "10px" }}>
+              <input
+                type="radio"
+                value="negociar"
+                checked={opcaoNegociacao === 'negociar'}
+                onChange={(e) => setOpcaoNegociacao(e.target.value)}
+                style={{ marginRight: "8px" }}
+              />
+              Negociar novo valor
+            </label>
+
+            {opcaoNegociacao === 'negociar' && (
+              <div style={{ marginTop: "15px", marginLeft: "25px" }}>
+                <Input
+                  label="Novo valor (R$)"
+                  type="number"
+                  value={valorNegociado}
+                  onChange={(e) => setValorNegociado(e.target.value)}
+                  placeholder="Ex: 45000"
+                  required
+                />
+                <Input
+                  label="Motivo da negociação (opcional)"
+                  value={motivoNegociacao}
+                  onChange={(e) => setMotivoNegociacao(e.target.value)}
+                  placeholder="Ex: Cliente solicitou desconto, projeto piloto, etc"
+                />
+              </div>
+            )}
+          </div>
+
+          <hr style={{ margin: "20px 0" }} />
+
+          <h3 style={{ fontSize: "16px", marginBottom: "15px" }}>📋 Dados para o Contrato</h3>
+
+          <div style={{ maxHeight: "400px", overflow: "auto", marginBottom: "20px" }}>
             <Input
               label="Nome do Representante"
               value={dadosContrato.representante_nome}
@@ -369,7 +437,7 @@ export default function IAPrecificacao() {
           </div>
 
           <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-            <Botao variant="secondary" onClick={() => setMostrarModalContrato(false)}>
+            <Botao variant="secondary" onClick={() => setMostrarModalNegociacao(false)}>
               Cancelar
             </Botao>
             <Botao variant="primary" onClick={handleGerarContrato} loading={carregandoContrato}>
@@ -384,7 +452,7 @@ export default function IAPrecificacao() {
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
       
-      <ModalContrato />
+      <ModalNegociacao />
 
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ color: '#1E3A8A', marginBottom: '10px' }}>
@@ -544,10 +612,10 @@ export default function IAPrecificacao() {
               <Botao
                 variant="success"
                 size="lg"
-                onClick={handleAbrirModalContrato}
+                onClick={handleAbrirModalNegociacao}
                 fullWidth
               >
-                📄 Gerar Contrato de Implementação
+                📄 Gerar Contrato de Implementação (com negociação)
               </Botao>
             </div>
           )}
