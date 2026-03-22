@@ -38,8 +38,8 @@ export default function ContratoPreDiagnostico() {
         <style>
           body { margin: 2cm; font-family: 'Times New Roman'; font-size: 12pt; line-height: 1.4; }
           .header { text-align: center; margin-bottom: 30px; }
-          .logo { width: 100px; margin-bottom: 10px; }
-          .empresa-nome { font-size: 18pt; font-weight: bold; color: #1E3A8A; margin: 5px 0; }
+          .logo { width: 120px; margin-bottom: 10px; }
+          .empresa-nome { font-size: 20pt; font-weight: bold; color: #1E3A8A; margin: 5px 0; }
           .linha { border-bottom: 2px solid #1E3A8A; width: 80%; margin: 10px auto; }
           pre { white-space: pre-wrap; font-family: 'Times New Roman'; font-size: 12pt; margin: 0; }
         </style>
@@ -65,25 +65,43 @@ export default function ContratoPreDiagnostico() {
   if (!contrato) return null;
 
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ 
+      padding: 20, 
+      backgroundColor: '#f0f2f5', 
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center'
+    }}>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
         <Botao onClick={handleImprimir}>🖨️ Imprimir Contrato</Botao>
         <Botao onClick={() => navigate(-1)}>↩️ Voltar</Botao>
       </div>
+      
+      {/* Contrato no formato A4 */}
       <div style={{
+        width: '210mm',
+        minHeight: '297mm',
         background: 'white',
-        padding: 40,
-        borderRadius: 8,
-        fontFamily: 'Times New Roman',
-        fontSize: 12,
-        whiteSpace: 'pre-wrap'
+        padding: '2cm',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+        borderRadius: '4px',
+        fontFamily: "'Times New Roman', Times, serif",
+        fontSize: '12pt',
+        lineHeight: 1.4,
+        margin: '0 auto',
+        boxSizing: 'border-box'
       }}>
         <div style={{ textAlign: 'center', marginBottom: 30 }}>
-          <img src={logo} style={{ width: 100, marginBottom: 10 }} />
-          <div style={{ fontSize: 18, fontWeight: 'bold', color: '#1E3A8A' }}>NEXUS ENGENHARIA APLICADA</div>
+          <img src={logo} style={{ width: 120, marginBottom: 10 }} />
+          <div style={{ fontSize: 20, fontWeight: 'bold', color: '#1E3A8A', margin: '5px 0' }}>
+            NEXUS ENGENHARIA APLICADA
+          </div>
           <div style={{ borderBottom: '2px solid #1E3A8A', width: '80%', margin: '10px auto' }}></div>
         </div>
-        {contrato}
+        <div style={{ whiteSpace: 'pre-wrap' }}>
+          {contrato}
+        </div>
       </div>
     </div>
   );
