@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Botao from "../../components/ui/Botao";
-import logo from "../../assets/logo.png";
+import logo from "../../assets/logo.png"; // Certifique-se que o caminho está correto
 import api from "../../api/api";
 import toast from 'react-hot-toast';
 
@@ -21,45 +21,66 @@ export default function ContratoPreDiagnostico() {
     }
   }, [location, navigate]);
 
+  // Função para converter imagem em Base64 para garantir que o PDF a renderize
+  const getBase64Logo = async (url) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.readAsDataURL(blob);
+      });
+    } catch (e) {
+      return url; // Fallback para a URL original
+    }
+  };
+
   const handleImprimir = async () => {
     if (!contrato) return;
     setCarregando(true);
-    toast.loading("Preparando para impressão...", { id: "pdf" });
+    const toastId = toast.loading("Gerando PDF oficial...");
 
     try {
+      const logoBase64 = await getBase64Logo(logo);
+
       const html = `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="UTF-8">
           <style>
-            body { margin: 2cm; font-family: 'Times New Roman'; font-size: 12pt; line-height: 1.4; }
-            .header { text-align: center; margin-bottom: 30px; }
-            .logo { width: 100px; margin-bottom: 10px; }
-            .nome { font-size: 18pt; font-weight: bold; color: #1E3A8A; margin: 5px 0; }
-            .linha { border-bottom: 2px solid #1E3A8A; width: 80%; margin: 10px auto; }
-            pre { white-space: pre-wrap; font-family: 'Times New Roman'; font-size: 12pt; margin: 0; }
+            @page { size: A4; margin: 2cm; }
+            body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; }
+            .header { text-align: center; margin-bottom: 40px; }
+            .logo { width: 120px; height: auto; margin-bottom: 10px; }
+            .empresa-nome { font-size: 20pt; font-weight: bold; color: #1E3A8A; text-transform: uppercase; margin: 0; }
+            .divisor { border-top: 2px solid #1E3A8A; width: 100%; margin: 15px auto; }
+            .conteudo { white-space: pre-wrap; text-align: justify; }
           </style>
         </head>
         <body>
           <div class="header">
-            <img src="${logo}" class="logo" />
-            <div class="nome">NEXUS ENGENHARIA APLICADA</div>
-            <div class="linha"></div>
+            <img src="${logoBase64}" class="logo" />
+            <h1 class="empresa-nome">NEXUS ENGENHARIA APLICADA</h1>
+            <div class="divisor"></div>
           </div>
-          <pre>${contrato}</pre>
+          <div class="conteudo">${contrato}</div>
         </body>
         </html>
       `;
 
+      // Chamada para o seu backend que já está "perfeito"
       const res = await api.post('/ia/gerar-contrato-pdf', { contratoHtml: html }, { responseType: 'blob' });
-      const url = URL.createObjectURL(res.data);
-      const win = window.open(url);
-      win.print();
-      URL.revokeObjectURL(url);
-      toast.success("Documento pronto para impressão!", { id: "pdf" });
+      
+      const file = new Blob([res.data], { type: 'application/pdf' });
+      const fileURL = URL.createObjectURL(file);
+      window.open(fileURL);
+      
+      toast.success("PDF Gerado!", { id: toastId });
     } catch (err) {
-      toast.error("Erro ao preparar documento", { id: "pdf" });
+      console.error(err);
+      toast.error("Erro na geração do documento", { id: toastId });
     } finally {
       setCarregando(false);
     }
@@ -68,20 +89,37 @@ export default function ContratoPreDiagnostico() {
   if (!contrato) return null;
 
   return (
-    <div style={{ padding: 20 }}>
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
-        <Botao onClick={handleImprimir} loading={carregando}>🖨️ Imprimir Contrato</Botao>
-        <Botao onClick={() => navigate(-1)}>↩️ Voltar</Botao>
+    <div style={{ padding: "40px 20px", backgroundColor: "#f4f4f4", minHeight: "100vh" }}>
+      <div style={{ display: 'flex', gap: 15, justifyContent: 'center', marginBottom: 30 }}>
+        <Botao onClick={handleImprimir} loading={carregando}>🖨️ Gerar PDF Profissional</Botao>
+        <Botao onClick={() => navigate(-1)} variant="secundario">↩️ Voltar</Botao>
       </div>
+
+      {/* Preview do Contrato - O que você vê aqui é o que vai para o papel */}
       <div style={{
-        background: 'white',
-        padding: 40,
-        borderRadius: 8,
-        fontFamily: 'Times New Roman',
-        fontSize: 12,
-        whiteSpace: 'pre-wrap'
+        maxWidth: "800px",
+        margin: "0 auto",
+        background: "white",
+        padding: "2cm",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+        borderRadius: "4px",
+        fontFamily: "'Times New Roman', serif"
       }}>
-        {contrato}
+        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+          <img src={logo} alt="Logo Nexus" style={{ width: 100, marginBottom: 10 }} />
+          <h2 style={{ margin: 0, color: "#1E3A8A", fontSize: "24pt", fontWeight: "bold" }}>NEXUS ENGENHARIA APLICADA</h2>
+          <hr style={{ border: "none", borderTop: "2px solid #1E3A8A", marginTop: 15 }} />
+        </div>
+        
+        <div style={{ 
+          fontSize: "12pt", 
+          lineHeight: 1.5, 
+          whiteSpace: "pre-wrap", 
+          textAlign: "justify",
+          color: "#333" 
+        }}>
+          {contrato}
+        </div>
       </div>
     </div>
   );
