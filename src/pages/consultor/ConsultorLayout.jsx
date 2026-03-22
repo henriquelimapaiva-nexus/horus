@@ -30,14 +30,14 @@ export default function ConsultorLayout() {
   };
 
   const menuItems = [
-    { path: "/consultor", icon: "📊", label: "Dashboard" },
-    { path: "/consultor/clientes", icon: "👥", label: "Clientes" },
-    { path: "/consultor/relatorios", icon: "📈", label: "Relatórios" },
-    { path: "/consultor/configuracoes", icon: "⚙️", label: "Configurações" },
-    { path: "/consultor/ias/precificacao", icon: "🤖", label: "IA de Precificação" },
-    { path: "/consultor/ias/precificacao-pre-contrato", icon: "🆕", label: "IA Precificação (Novo Cliente)" },
-    { path: "/consultor/ias/sugestoes", icon: "💡", label: "IA de Sugestões" },
-    { path: "/consultor/checklist", icon: "📋", label: "Checklist" }
+    { path: "/consultor", icon: "", label: "Dashboard" },
+    { path: "/consultor/clientes", icon: "", label: "Clientes" },
+    { path: "/consultor/relatorios", icon: "", label: "Relatórios" },
+    { path: "/consultor/configuracoes", icon: "", label: "Configurações" },
+    { path: "/consultor/ias/precificacao", icon: "", label: "Proposta de Implementação" },
+    { path: "/consultor/ias/precificacao-pre-contrato", icon: "", label: "Proposta Diagnóstico Inicial" },
+    { path: "/consultor/ias/sugestoes", icon: "", label: "IA de Sugestões" },
+    { path: "/consultor/checklist", icon: "", label: "Checklist" }
   ];
 
   return (
