@@ -521,13 +521,27 @@ export default function IAPrecificacaoPreContrato() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
+              {/* Preço sugerido (projeto total) */}
               <div style={{ background: '#1E3A8A', color: 'white', padding: '30px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', opacity: 0.9 }}>PREÇO SUGERIDO</div>
+                <div style={{ fontSize: '14px', opacity: 0.9 }}>PREÇO SUGERIDO (PROJETO TOTAL)</div>
                 <div style={{ fontSize: '48px', fontWeight: 'bold' }}>{formatarMoeda(resultado.precos.ideal)}</div>
                 <div style={{ fontSize: '14px', opacity: 0.9 }}>
                   Faixa: {formatarMoeda(resultado.precos.minimo)} - {formatarMoeda(resultado.precos.maximo)}
                 </div>
               </div>
+
+              {/* 🆕 Preço da Fase 1 (Diagnóstico) */}
+              {resultado.precos.fase1 && (
+                <div style={{ background: '#e6f7ff', padding: '15px', borderRadius: '8px', textAlign: 'center', marginTop: '5px' }}>
+                  <div style={{ fontSize: '12px', color: '#1E3A8A' }}>📋 FASE 1 - DIAGNÓSTICO</div>
+                  <div style={{ fontSize: '20px', fontWeight: 'bold', color: '#1E3A8A' }}>
+                    {formatarMoeda(resultado.precos.fase1)}
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#666' }}>
+                    Valor para iniciar o diagnóstico (pago na assinatura)
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
