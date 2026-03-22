@@ -287,7 +287,6 @@ function PrivateLayout() {
             </div>
 
             <Link to="/perdas" style={linkStyle}>Perdas</Link>
-            <Link to="/proposta" style={linkStyle}>Proposta</Link>
             <Link to="/conhecimento" style={linkStyle}>Conhecimento</Link>
           </nav>
         )}
