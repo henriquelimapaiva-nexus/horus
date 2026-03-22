@@ -53,9 +53,29 @@ export default function ContratoPreDiagnostico() {
             @page { size: A4; margin: 2cm; }
             body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; }
             .header { text-align: center; margin-bottom: 40px; }
-            .logo { width: 120px; height: auto; margin-bottom: 10px; }
-            .empresa-nome { font-size: 20pt; font-weight: bold; color: #1E3A8A; text-transform: uppercase; margin: 0; }
-            .divisor { border-top: 2px solid #1E3A8A; width: 100%; margin: 15px auto; }
+            
+            /* AJUSTE: Logo maior */
+            .logo { 
+              width: 180px; /* Aumentado de 120px para 180px */
+              height: auto; 
+              margin-bottom: 12px; 
+            }
+            
+            /* AJUSTE: Nome menor e mais equilibrado */
+            .empresa-nome { 
+              font-size: 16pt; /* Reduzido de 20pt para 16pt */
+              font-weight: bold; 
+              color: #1E3A8A; 
+              text-transform: uppercase; 
+              margin: 0; 
+              letter-spacing: 1px; /* Espaçamento sutil para elegância */
+            }
+            
+            .divisor { 
+              border-top: 2px solid #1E3A8A; 
+              width: 100%; 
+              margin: 15px auto; 
+            }
             .conteudo { white-space: pre-wrap; text-align: justify; }
           </style>
         </head>
@@ -95,7 +115,7 @@ export default function ContratoPreDiagnostico() {
         <Botao onClick={() => navigate(-1)} variant="secundario">↩️ Voltar</Botao>
       </div>
 
-      {/* Preview do Contrato - O que você vê aqui é o que vai para o papel */}
+      {/* Preview do Contrato - Sincronizado com os ajustes do PDF */}
       <div style={{
         maxWidth: "800px",
         margin: "0 auto",
@@ -106,8 +126,20 @@ export default function ContratoPreDiagnostico() {
         fontFamily: "'Times New Roman', serif"
       }}>
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          <img src={logo} alt="Logo Nexus" style={{ width: 100, marginBottom: 10 }} />
-          <h2 style={{ margin: 0, color: "#1E3A8A", fontSize: "24pt", fontWeight: "bold" }}>NEXUS ENGENHARIA APLICADA</h2>
+          {/* AJUSTE: Logo maior no preview */}
+          <img src={logo} alt="Logo Nexus" style={{ width: 160, height: 'auto', marginBottom: 12 }} />
+          
+          {/* AJUSTE: Nome menor no preview */}
+          <h2 style={{ 
+            margin: 0, 
+            color: "#1E3A8A", 
+            fontSize: "20pt", /* Ajustado proporcionalmente para a tela */
+            fontWeight: "bold",
+            textTransform: "uppercase",
+            letterSpacing: "1px"
+          }}>
+            NEXUS ENGENHARIA APLICADA
+          </h2>
           <hr style={{ border: "none", borderTop: "2px solid #1E3A8A", marginTop: 15 }} />
         </div>
         
