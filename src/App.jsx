@@ -74,8 +74,11 @@ import ConsultorConfiguracoes from "./pages/consultor/ConsultorConfiguracoes";
 // 🟢 IMPORT - IA DE PRECIFICAÇÃO
 import IAPrecificacao from "./pages/consultor/ias/IAPrecificacao";
 
-// 🟢 IMPORT - IA DE PRECIFICAÇÃO PRÉ-CONTRATO (NOVO)
+// 🟢 IMPORT - IA DE PRECIFICAÇÃO PRÉ-CONTRATO
 import IAPrecificacaoPreContrato from "./pages/consultor/ias/IAPrecificacaoPreContrato";
+
+// 🟢 IMPORT - PROPOSTA COMERCIAL PRÉ-CONTRATO
+import PropostaComercialPreContrato from "./pages/consultor/PropostaComercialPreContrato";
 
 // 🟢 IMPORT - IA DE SUGESTÕES
 import IASugestoes from "./pages/consultor/IASugestoes";
@@ -140,6 +143,7 @@ function App() {
                 <Route path="ias/precificacao-pre-contrato" element={<IAPrecificacaoPreContrato />} />
                 <Route path="ias/sugestoes" element={<IASugestoes />} />
                 <Route path="checklist" element={<Checklist />} />
+                <Route path="proposta-pre-contrato" element={<PropostaComercialPreContrato />} />
               </Route>
             </Route>
             

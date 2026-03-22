@@ -94,14 +94,9 @@ export default function IAPrecificacaoPreContrato() {
 
   const handleGerarProposta = () => {
     if (resultado) {
-      // Salvar no localStorage para a proposta
-      localStorage.setItem('precoJustoProposta', JSON.stringify(resultado.dados_para_proposta));
-      navigate('/proposta', { 
-        state: { 
-          empresaId: null,
-          dadosProposta: resultado.dados_para_proposta,
-          modoEstimativa: true
-        } 
+      // Navegar para a nova tela de proposta pré-contrato
+      navigate("/consultor/proposta-pre-contrato", { 
+        state: { dadosProposta: resultado.dados_para_proposta }
       });
     }
   };
