@@ -22,7 +22,7 @@ export default function ConsultorLayout() {
 
   const handleLogout = () => {
     logout();
-    navigate("/consultor/login");
+    navigate("/");
   };
 
   const handleVoltar = () => {
