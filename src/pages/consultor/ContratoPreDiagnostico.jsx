@@ -38,7 +38,7 @@ export default function ContratoPreDiagnostico() {
         <style>
           body { margin: 2cm; font-family: 'Times New Roman'; font-size: 12pt; line-height: 1.4; }
           .header { text-align: center; margin-bottom: 30px; }
-          .logo { width: 120px; margin-bottom: 10px; }
+          .logo { width: 150px; margin-bottom: 10px; }
           .empresa-nome { font-size: 20pt; font-weight: bold; color: #1E3A8A; margin: 5px 0; }
           .linha { border-bottom: 2px solid #1E3A8A; width: 80%; margin: 10px auto; }
           pre { white-space: pre-wrap; font-family: 'Times New Roman'; font-size: 12pt; margin: 0; }
@@ -78,7 +78,6 @@ export default function ContratoPreDiagnostico() {
         <Botao onClick={() => navigate(-1)}>↩️ Voltar</Botao>
       </div>
       
-      {/* Contrato no formato A4 */}
       <div style={{
         width: '210mm',
         minHeight: '297mm',
@@ -93,7 +92,7 @@ export default function ContratoPreDiagnostico() {
         boxSizing: 'border-box'
       }}>
         <div style={{ textAlign: 'center', marginBottom: 30 }}>
-          <img src={logo} style={{ width: 120, marginBottom: 10 }} />
+          <img src={logo} style={{ width: 150, marginBottom: 10 }} />
           <div style={{ fontSize: 20, fontWeight: 'bold', color: '#1E3A8A', margin: '5px 0' }}>
             NEXUS ENGENHARIA APLICADA
           </div>
