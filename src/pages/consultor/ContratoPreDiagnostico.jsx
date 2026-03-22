@@ -31,27 +31,6 @@ export default function ContratoPreDiagnostico() {
     navigate("/consultor/ias/precificacao-pre-contrato");
   };
 
-  // Função para formatar o contrato em HTML
-  const formatarContratoHTML = (texto) => {
-    if (!texto) return "";
-    
-    // Quebrar em parágrafos e preservar formatação
-    return texto
-      .split('\n')
-      .map(line => {
-        if (line.trim().startsWith('CLÁUSULA') || line.trim().startsWith('ANEXO')) {
-          return `<h3 style="margin-top: 20px; margin-bottom: 10px; color: #1E3A8A;">${line}</h3>`;
-        } else if (line.trim().startsWith('CONTRATANTE:') || line.trim().startsWith('CONTRATADA:')) {
-          return `<p style="margin-bottom: 15px;"><strong>${line.split(':')[0]}:</strong> ${line.split(':').slice(1).join(':')}</p>`;
-        } else if (line.trim() === '') {
-          return '<br/>';
-        } else {
-          return `<p style="margin: 5px 0; line-height: 1.5;">${line}</p>`;
-        }
-      })
-      .join('');
-  };
-
   if (!contrato) {
     return (
       <div style={{ padding: "40px", textAlign: "center" }}>
@@ -116,8 +95,19 @@ export default function ContratoPreDiagnostico() {
           }}></div>
         </div>
 
-        {/* CORPO DO CONTRATO */}
-        <div dangerouslySetInnerHTML={{ __html: formatarContratoHTML(contrato) }} />
+        {/* CORPO DO CONTRATO - Texto puro com quebra de linha */}
+        <pre style={{
+          fontFamily: "'Times New Roman', Times, serif",
+          fontSize: "12pt",
+          lineHeight: "1.5",
+          whiteSpace: "pre-wrap",
+          wordWrap: "break-word",
+          margin: 0,
+          background: "transparent",
+          border: "none"
+        }}>
+          {contrato}
+        </pre>
         
       </div>
 
@@ -128,7 +118,7 @@ export default function ContratoPreDiagnostico() {
             display: none !important;
           }
           .contrato-content {
-            padding: 0 !important;
+            padding: 20px !important;
             box-shadow: none !important;
           }
           body {
@@ -137,6 +127,10 @@ export default function ContratoPreDiagnostico() {
           }
           img {
             max-width: 100px !important;
+          }
+          pre {
+            white-space: pre-wrap !important;
+            word-wrap: break-word !important;
           }
         }
       `}</style>
