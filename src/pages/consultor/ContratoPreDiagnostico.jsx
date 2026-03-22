@@ -10,12 +10,11 @@ export default function ContratoPreDiagnostico() {
   const location = useLocation();
   const navigate = useNavigate();
   const [contrato, setContrato] = useState(null);
-  const [carregando, setCarregando] = useState(false);
 
   useEffect(() => {
     const dados = location.state?.contratoData;
     
-    if (dados) {
+    if (dados && dados.contrato) {
       setContrato(dados.contrato);
     } else {
       toast.error("Nenhum contrato encontrado. Gere um contrato primeiro.");
@@ -41,6 +40,24 @@ export default function ContratoPreDiagnostico() {
     );
   }
 
+  // Função para formatar o texto com quebras de linha e preservar espaços
+  const formatarTexto = (texto) => {
+    return texto
+      .split('\n')
+      .map((line, i) => {
+        if (line.trim().startsWith('CLÁUSULA') || line.trim().startsWith('ANEXO')) {
+          return `<h3 style="margin: 20px 0 10px 0; color: #1E3A8A; font-weight: bold;">${line}</h3>`;
+        } else if (line.trim() === '_________________________________') {
+          return `<div style="margin: 10px 0;">${line}</div>`;
+        } else if (line.trim() === '') {
+          return '<br/>';
+        } else {
+          return `<p style="margin: 5px 0; line-height: 1.5;">${line}</p>`;
+        }
+      })
+      .join('');
+  };
+
   return (
     <div style={{ padding: "20px", maxWidth: "1100px", margin: "0 auto" }}>
       
@@ -62,7 +79,7 @@ export default function ContratoPreDiagnostico() {
         </Botao>
       </div>
 
-      {/* Conteúdo do contrato com cabeçalho estilizado */}
+      {/* Conteúdo do contrato com cabeçalho e formatação */}
       <div className="contrato-content" style={{
         backgroundColor: "white",
         padding: "40px",
@@ -78,7 +95,7 @@ export default function ContratoPreDiagnostico() {
           <img 
             src={logo} 
             alt="Nexus Engenharia Aplicada" 
-            style={{ width: "120px", marginBottom: "10px" }}
+            style={{ width: "100px", marginBottom: "10px" }}
           />
           <h1 style={{ 
             fontSize: "18pt", 
@@ -95,19 +112,8 @@ export default function ContratoPreDiagnostico() {
           }}></div>
         </div>
 
-        {/* CORPO DO CONTRATO - Texto puro com quebra de linha */}
-        <pre style={{
-          fontFamily: "'Times New Roman', Times, serif",
-          fontSize: "12pt",
-          lineHeight: "1.5",
-          whiteSpace: "pre-wrap",
-          wordWrap: "break-word",
-          margin: 0,
-          background: "transparent",
-          border: "none"
-        }}>
-          {contrato}
-        </pre>
+        {/* CORPO DO CONTRATO FORMATADO */}
+        <div dangerouslySetInnerHTML={{ __html: formatarTexto(contrato) }} />
         
       </div>
 
@@ -126,11 +132,15 @@ export default function ContratoPreDiagnostico() {
             padding: 0;
           }
           img {
-            max-width: 100px !important;
+            max-width: 80px !important;
           }
-          pre {
-            white-space: pre-wrap !important;
-            word-wrap: break-word !important;
+          h3 {
+            margin-top: 15px !important;
+            margin-bottom: 8px !important;
+          }
+          p {
+            margin: 3px 0 !important;
+            line-height: 1.4 !important;
           }
         }
       `}</style>
