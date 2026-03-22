@@ -1,9 +1,9 @@
 // src/pages/PropostaComercial.jsx
 import { useState, useEffect, useRef } from "react";
 import { useOutletContext, Link, useLocation } from "react-router-dom";
-import api from "../api/api";
-import logo from "../assets/logo.png";
-import Botao from "../components/ui/Botao";
+import api from "../../api/api";
+import logo from "../../assets/logo.png";
+import Botao from "../../components/ui/Botao";
 import toast from 'react-hot-toast';
 
 // Função auxiliar para truncar texto

@@ -56,9 +56,6 @@ import Perdas from "./pages/Perdas";
 // Painel Executivo
 import PainelExecutivo from "./pages/PainelExecutivo";
 
-// Proposta Comercial
-import PropostaComercial from "./pages/PropostaComercial";
-
 // Página de Listagem de Postos
 import Postos from "./pages/Postos";
 
@@ -80,8 +77,11 @@ import IAPrecificacaoPreContrato from "./pages/consultor/ias/IAPrecificacaoPreCo
 // 🟢 IMPORT - PROPOSTA COMERCIAL PRÉ-CONTRATO
 import PropostaComercialPreContrato from "./pages/consultor/PropostaComercialPreContrato";
 
-// 🟢 IMPORT - CONTRATO PRÉ-DIAGNÓSTICO (NOVO)
+// 🟢 IMPORT - CONTRATO PRÉ-DIAGNÓSTICO
 import ContratoPreDiagnostico from "./pages/consultor/ContratoPreDiagnostico";
+
+// 🟢 IMPORT - PROPOSTA COMERCIAL (CLIENTES CADASTRADOS)
+import PropostaComercial from "./pages/consultor/PropostaComercial";
 
 // 🟢 IMPORT - IA DE SUGESTÕES
 import IASugestoes from "./pages/consultor/IASugestoes";
@@ -148,6 +148,7 @@ function App() {
                 <Route path="checklist" element={<Checklist />} />
                 <Route path="proposta-pre-contrato" element={<PropostaComercialPreContrato />} />
                 <Route path="contrato-pre-diagnostico" element={<ContratoPreDiagnostico />} />
+                <Route path="proposta" element={<PropostaComercial />} />
               </Route>
             </Route>
             
@@ -184,7 +185,6 @@ function App() {
               <Route path="/financeiro" element={<DashboardFinanceiro />} />
               <Route path="/perdas" element={<Perdas />} />
               <Route path="/painel" element={<PainelExecutivo />} />
-              <Route path="/proposta" element={<PropostaComercial />} />
               <Route path="/postos" element={<Postos />} />
             </Route>
           </Routes>
