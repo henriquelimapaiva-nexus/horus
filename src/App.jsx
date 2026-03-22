@@ -80,6 +80,9 @@ import PropostaComercialPreContrato from "./pages/consultor/PropostaComercialPre
 // 🟢 IMPORT - CONTRATO PRÉ-DIAGNÓSTICO
 import ContratoPreDiagnostico from "./pages/consultor/ContratoPreDiagnostico";
 
+// 🟢 IMPORT - CONTRATO IMPLEMENTAÇÃO (FASE 2+3)
+import ContratoImplementacao from "./pages/consultor/ContratoImplementacao";
+
 // 🟢 IMPORT - PROPOSTA COMERCIAL (CLIENTES CADASTRADOS)
 import PropostaComercial from "./pages/consultor/PropostaComercial";
 
@@ -148,6 +151,7 @@ function App() {
                 <Route path="checklist" element={<Checklist />} />
                 <Route path="proposta-pre-contrato" element={<PropostaComercialPreContrato />} />
                 <Route path="contrato-pre-diagnostico" element={<ContratoPreDiagnostico />} />
+                <Route path="contrato-implementacao" element={<ContratoImplementacao />} />
                 <Route path="proposta" element={<PropostaComercial />} />
               </Route>
             </Route>

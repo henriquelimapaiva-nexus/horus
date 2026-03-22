@@ -12,6 +12,7 @@ export default function IAPrecificacao() {
   const navigate = useNavigate();
   const [carregando, setCarregando] = useState(false);
   const [carregandoDados, setCarregandoDados] = useState(false);
+  const [carregandoContrato, setCarregandoContrato] = useState(false);
   const [resultado, setResultado] = useState(null);
   const [empresas, setEmpresas] = useState([]);
   
@@ -25,9 +26,23 @@ export default function IAPrecificacao() {
     linhas: 1
   });
 
+  // Dados para o contrato (podem ser preenchidos depois)
+  const [mostrarModalContrato, setMostrarModalContrato] = useState(false);
+  const [dadosContrato, setDadosContrato] = useState({
+    representante_nome: '',
+    representante_nacionalidade: '',
+    representante_estado_civil: '',
+    representante_profissao: '',
+    representante_rg: '',
+    representante_cpf: '',
+    representante_endereco: '',
+    email_contratante: '',
+    prazo_implementacao_semanas: 6,
+    prazo_acompanhamento_meses: 3
+  });
+
   // Buscar empresas ao carregar
   useEffect(() => {
-    // ✅ CORRIGIDO: /empresas → /companies
     api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => {
@@ -52,42 +67,35 @@ export default function IAPrecificacao() {
     toast.loading('Buscando dados da empresa...', { id: 'busca' });
 
     try {
-      // ✅ CORRIGIDO: /linhas/${empresaId} → /lines/${empresaId}
       const linhasRes = await api.get(`/lines/${empresaId}`);
       const linhas = linhasRes.data;
       
-      // Calcular perdas totais
       let perdasTotais = 0;
       
       for (const linha of linhas) {
         try {
-          // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
           const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
           const postos = postosRes.data;
           
-          // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
           const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
           
-          // Calcular custo dos postos (para estimativa de perdas)
           for (const posto of postos) {
             if (posto.cargo_id) {
-              // ✅ CORRIGIDO: /cargos/${empresaId} → /roles/${empresaId}
               const cargosRes = await api.get(`/roles/${empresaId}`).catch(() => ({ data: [] }));
               const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
               if (cargo) {
                 const salario = parseFloat(cargo.salario_base) || 0;
                 const encargos = parseFloat(cargo.encargos_percentual) || 70;
                 const custoMensal = salario * (1 + encargos / 100);
-                perdasTotais += custoMensal * 0.2; // Estimativa de 20% de perdas
+                perdasTotais += custoMensal * 0.2;
               }
             }
           }
           
-          // Adicionar perdas registradas
           perdas.forEach(perda => {
-            perdasTotais += (perda.microparadas_minutos || 0) * 10; // Estimativa de R$10/minuto
-            perdasTotais += (perda.refugo_pecas || 0) * 50; // Estimativa de R$50/peça
+            perdasTotais += (perda.microparadas_minutos || 0) * 10;
+            perdasTotais += (perda.refugo_pecas || 0) * 50;
           });
           
         } catch (err) {
@@ -95,7 +103,6 @@ export default function IAPrecificacao() {
         }
       }
 
-      // Definir porte baseado no número de linhas
       const porte = linhas.length > 5 ? 'grande' : linhas.length > 2 ? 'medio' : 'pequeno';
 
       setDadosCliente(prev => ({
@@ -115,20 +122,12 @@ export default function IAPrecificacao() {
     }
   };
 
-  // ========================================
-  // FUNÇÃO DE PRECIFICAÇÃO HÓRUS
-  // ========================================
   const calcularPreco = (dados) => {
     const perdaMensal = Number(dados.perdaMensal);
-    
-    // 1. Benefício real para o cliente (redução de 30%)
     const beneficioMensal = perdaMensal * 0.3;
     const beneficioAnual = beneficioMensal * 12;
-    
-    // 2. Preço base = 30% do benefício anual
     let precoBase = beneficioAnual * 0.3;
     
-    // 3. Ajustes mínimos (max 15% de variação)
     const multiplicadores = {
       urgencia: { baixa: 0.95, normal: 1.0, alta: 1.05 },
       complexidade: { baixa: 0.95, media: 1.0, alta: 1.05 },
@@ -143,18 +142,15 @@ export default function IAPrecificacao() {
     
     let precoFinal = precoBase * multUrgencia * multComplexidade * multPorte * multLinhas;
     
-    // 4. VALIDAÇÃO ÉTICA: cliente nunca paga mais de 30% do benefício
     const percentualCobrado = (precoFinal / beneficioAnual) * 100;
     if (percentualCobrado > 30) {
       precoFinal = beneficioAnual * 0.3;
     }
     
-    // 5. ROI e Payback
     const ganhoLiquidoCliente = beneficioAnual - precoFinal;
     const roiCliente = (ganhoLiquidoCliente / precoFinal) * 100;
     const paybackMeses = precoFinal / beneficioMensal;
     
-    // 6. Salvar no localStorage para usar na proposta
     const dadosParaProposta = {
       empresa: dados.empresaNome,
       honorarios: Math.round(precoFinal),
@@ -225,8 +221,61 @@ export default function IAPrecificacao() {
       const resultado = calcularPreco(dadosCliente);
       setResultado(resultado);
       setCarregando(false);
-      toast.success('Precificação calculada e salva para a proposta!');
+      toast.success('Precificação calculada!');
     }, 500);
+  };
+
+  const handleAbrirModalContrato = () => {
+    if (!dadosCliente.empresaId) {
+      toast.error('Selecione uma empresa primeiro');
+      return;
+    }
+    setMostrarModalContrato(true);
+  };
+
+  const handleGerarContrato = async () => {
+    setCarregandoContrato(true);
+    toast.loading('Gerando contrato de implementação...', { id: 'contrato' });
+
+    try {
+      const payload = {
+        empresa_id: parseInt(dadosCliente.empresaId),
+        valor_total: resultado?.preco,
+        prazo_implementacao_semanas: dadosContrato.prazo_implementacao_semanas,
+        prazo_acompanhamento_meses: dadosContrato.prazo_acompanhamento_meses,
+        representante: {
+          nome: dadosContrato.representante_nome || '[NOME DO REPRESENTANTE]',
+          nacionalidade: dadosContrato.representante_nacionalidade || '[NACIONALIDADE]',
+          estado_civil: dadosContrato.representante_estado_civil || '[ESTADO CIVIL]',
+          profissao: dadosContrato.representante_profissao || '[PROFISSÃO]',
+          rg: dadosContrato.representante_rg || '[RG]',
+          cpf: dadosContrato.representante_cpf || '[CPF]',
+          endereco: dadosContrato.representante_endereco || '[ENDEREÇO]'
+        },
+        contato: {
+          email_contratante: dadosContrato.email_contratante || '[E-MAIL DA CONTRATANTE]',
+          email_contratada: 'seu-email@nexus.com.br'
+        },
+        data_assinatura: new Date().toLocaleDateString('pt-BR')
+      };
+
+      const response = await api.post('/ia/gerar-contrato-implementacao', payload);
+      
+      toast.dismiss('contrato');
+      toast.success('Contrato gerado com sucesso!');
+      setMostrarModalContrato(false);
+      
+      navigate('/consultor/contrato-implementacao', {
+        state: { contratoData: response.data }
+      });
+
+    } catch (error) {
+      console.error('Erro ao gerar contrato:', error);
+      toast.dismiss('contrato');
+      toast.error(error.response?.data?.erro || 'Erro ao gerar contrato');
+    } finally {
+      setCarregandoContrato(false);
+    }
   };
 
   const formatarMoeda = (valor) => {
@@ -237,10 +286,106 @@ export default function IAPrecificacao() {
     }).format(valor || 0);
   };
 
+  // Modal de dados do contrato
+  const ModalContrato = () => {
+    if (!mostrarModalContrato) return null;
+
+    return (
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0,0,0,0.5)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        zIndex: 1000
+      }}>
+        <div style={{
+          backgroundColor: "white",
+          borderRadius: "8px",
+          padding: "30px",
+          maxWidth: "500px",
+          width: "90%",
+          maxHeight: "90vh",
+          overflow: "auto"
+        }}>
+          <h2 style={{ color: "#1E3A8A", marginBottom: "20px" }}>
+            📋 Dados para o Contrato
+          </h2>
+
+          <p style={{ marginBottom: "15px", fontSize: "14px", color: "#666" }}>
+            <strong>Empresa:</strong> {dadosCliente.empresaNome}
+          </p>
+          <p style={{ marginBottom: "20px", fontSize: "14px", color: "#666" }}>
+            <strong>Valor do projeto:</strong> {formatarMoeda(resultado?.preco)}
+          </p>
+
+          <div style={{ marginBottom: "20px" }}>
+            <Input
+              label="Nome do Representante"
+              value={dadosContrato.representante_nome}
+              onChange={(e) => setDadosContrato({...dadosContrato, representante_nome: e.target.value})}
+              placeholder="Nome completo"
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
+              <Input
+                label="RG"
+                value={dadosContrato.representante_rg}
+                onChange={(e) => setDadosContrato({...dadosContrato, representante_rg: e.target.value})}
+                placeholder="RG"
+              />
+              <Input
+                label="CPF"
+                value={dadosContrato.representante_cpf}
+                onChange={(e) => setDadosContrato({...dadosContrato, representante_cpf: e.target.value})}
+                placeholder="CPF"
+              />
+            </div>
+            <Input
+              label="E-mail da CONTRATANTE"
+              type="email"
+              value={dadosContrato.email_contratante}
+              onChange={(e) => setDadosContrato({...dadosContrato, email_contratante: e.target.value})}
+              placeholder="contato@empresa.com.br"
+              style={{ marginTop: "10px" }}
+            />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
+              <Input
+                label="Prazo Implementação (semanas)"
+                type="number"
+                value={dadosContrato.prazo_implementacao_semanas}
+                onChange={(e) => setDadosContrato({...dadosContrato, prazo_implementacao_semanas: parseInt(e.target.value) || 6})}
+              />
+              <Input
+                label="Prazo Acompanhamento (meses)"
+                type="number"
+                value={dadosContrato.prazo_acompanhamento_meses}
+                onChange={(e) => setDadosContrato({...dadosContrato, prazo_acompanhamento_meses: parseInt(e.target.value) || 3})}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+            <Botao variant="secondary" onClick={() => setMostrarModalContrato(false)}>
+              Cancelar
+            </Botao>
+            <Botao variant="primary" onClick={handleGerarContrato} loading={carregandoContrato}>
+              {carregandoContrato ? 'Gerando...' : '✅ Gerar Contrato'}
+            </Botao>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
       
-      {/* Cabeçalho */}
+      <ModalContrato />
+
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ color: '#1E3A8A', marginBottom: '10px' }}>
           🤖 IA de Precificação
@@ -250,10 +395,8 @@ export default function IAPrecificacao() {
         </p>
       </div>
 
-      {/* Grid */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
         
-        {/* FORMULÁRIO */}
         <Card titulo="📋 Dados do Cliente">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
@@ -347,7 +490,6 @@ export default function IAPrecificacao() {
           </div>
         </Card>
 
-        {/* RESULTADO */}
         <Card titulo="💰 Resultado">
           {!resultado ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999', background: '#f9fafb', borderRadius: '8px' }}>
@@ -357,14 +499,12 @@ export default function IAPrecificacao() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* Preço principal */}
               <div style={{ background: '#1E3A8A', color: 'white', padding: '30px', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '14px', opacity: 0.9 }}>PREÇO SUGERIDO</div>
                 <div style={{ fontSize: '48px', fontWeight: 'bold' }}>{formatarMoeda(resultado.preco)}</div>
                 <div style={{ fontSize: '14px', opacity: 0.9 }}>ou 12x {formatarMoeda(resultado.pagamento.parcelado12x)}</div>
               </div>
 
-              {/* Validação ética */}
               <div style={{ background: resultado.etica.justo ? '#16a34a20' : '#dc262620', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
                 <span style={{ color: resultado.etica.justo ? '#16a34a' : '#dc2626', fontWeight: 'bold' }}>
                   {resultado.etica.justo ? '✅ Proposta justa' : '⚠️ Alerta'}
@@ -374,7 +514,6 @@ export default function IAPrecificacao() {
                 </div>
               </div>
 
-              {/* Métricas */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
                   <div style={{ fontSize: '12px', color: '#166534' }}>Ganho Mensal</div>
@@ -390,7 +529,6 @@ export default function IAPrecificacao() {
                 </div>
               </div>
 
-              {/* Faixa de negociação */}
               <div style={{ background: '#f3f4f6', padding: '15px', borderRadius: '8px' }}>
                 <div style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>Negociação:</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -399,32 +537,18 @@ export default function IAPrecificacao() {
                 </div>
               </div>
 
-              {/* Resumo */}
               <div style={{ background: '#f9fafb', padding: '15px', borderRadius: '8px', whiteSpace: 'pre-line', fontSize: '13px' }}>
                 {resultado.resumo}
               </div>
 
-              {/* Mensagem de integração */}
-              <div style={{ background: '#1E3A8A20', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '13px' }}>
-                ✅ Preço salvo! Ao acessar a Proposta Comercial, os honorários já estarão preenchidos.
-              </div>
-
-              {/* 🟢 BOTÃO PARA IR À PROPOSTA (COM STATE) */}
-              <div style={{ marginTop: '10px' }}>
-                <Botao
-                  variant="success"
-                  size="lg"
-                  onClick={() => navigate('/proposta', { 
-                    state: { empresaId: dadosCliente.empresaId } 
-                  })}
-                  fullWidth
-                >
-                  ➡️ Ir para Proposta Comercial
-                </Botao>
-                <small style={{ color: '#666', display: 'block', textAlign: 'center', marginTop: '8px' }}>
-                  O preço calculado será carregado automaticamente na proposta
-                </small>
-              </div>
+              <Botao
+                variant="success"
+                size="lg"
+                onClick={handleAbrirModalContrato}
+                fullWidth
+              >
+                📄 Gerar Contrato de Implementação
+              </Botao>
             </div>
           )}
         </Card>
