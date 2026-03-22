@@ -20,7 +20,6 @@ export default function ContratoPreDiagnostico() {
   }, [location, navigate]);
 
   const handleImprimir = () => {
-    // Criar um iframe invisível para imprimir
     const iframe = document.createElement('iframe');
     iframe.style.position = 'absolute';
     iframe.style.width = '0';
@@ -37,37 +36,12 @@ export default function ContratoPreDiagnostico() {
         <meta charset="UTF-8">
         <title>Contrato Nexus</title>
         <style>
-          body {
-            margin: 2cm;
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            line-height: 1.4;
-          }
-          .header {
-            text-align: center;
-            margin-bottom: 30px;
-          }
-          .logo {
-            width: 100px;
-            margin-bottom: 10px;
-          }
-          .empresa-nome {
-            font-size: 18pt;
-            font-weight: bold;
-            margin: 5px 0;
-            color: #1E3A8A;
-          }
-          .linha {
-            border-bottom: 2px solid #1E3A8A;
-            width: 80%;
-            margin: 10px auto;
-          }
-          pre {
-            white-space: pre-wrap;
-            font-family: 'Times New Roman', Times, serif;
-            font-size: 12pt;
-            margin: 0;
-          }
+          body { margin: 2cm; font-family: 'Times New Roman'; font-size: 12pt; line-height: 1.4; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .logo { width: 100px; margin-bottom: 10px; }
+          .empresa-nome { font-size: 18pt; font-weight: bold; color: #1E3A8A; margin: 5px 0; }
+          .linha { border-bottom: 2px solid #1E3A8A; width: 80%; margin: 10px auto; }
+          pre { white-space: pre-wrap; font-family: 'Times New Roman'; font-size: 12pt; margin: 0; }
         </style>
       </head>
       <body>
@@ -82,13 +56,9 @@ export default function ContratoPreDiagnostico() {
     `);
     doc.close();
     
-    // Aguardar carregar e imprimir
     iframe.contentWindow.onload = () => {
       iframe.contentWindow.print();
-      // Remover o iframe após a impressão (ou quando fechar)
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
+      setTimeout(() => document.body.removeChild(iframe), 1000);
     };
   };
 
@@ -108,6 +78,11 @@ export default function ContratoPreDiagnostico() {
         fontSize: 12,
         whiteSpace: 'pre-wrap'
       }}>
+        <div style={{ textAlign: 'center', marginBottom: 30 }}>
+          <img src={logo} style={{ width: 100, marginBottom: 10 }} />
+          <div style={{ fontSize: 18, fontWeight: 'bold', color: '#1E3A8A' }}>NEXUS ENGENHARIA APLICADA</div>
+          <div style={{ borderBottom: '2px solid #1E3A8A', width: '80%', margin: '10px auto' }}></div>
+        </div>
         {contrato}
       </div>
     </div>
