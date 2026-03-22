@@ -21,10 +21,10 @@ export default function ContratoPreDiagnostico() {
     }
   }, [location, navigate]);
 
-  const handleDownload = async () => {
+  const handleImprimir = async () => {
     if (!contrato) return;
     setCarregando(true);
-    toast.loading("Gerando PDF...", { id: "pdf" });
+    toast.loading("Preparando para impressão...", { id: "pdf" });
 
     try {
       const html = `
@@ -32,44 +32,19 @@ export default function ContratoPreDiagnostico() {
         <html>
         <head>
           <meta charset="UTF-8">
-          <title>Contrato Nexus</title>
           <style>
-            body {
-              margin: 2cm;
-              font-family: 'Times New Roman', Times, serif;
-              font-size: 12pt;
-              line-height: 1.4;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-            }
-            .logo {
-              width: 100px;
-              margin-bottom: 10px;
-            }
-            .empresa-nome {
-              font-size: 18pt;
-              font-weight: bold;
-              margin: 5px 0;
-              color: #1E3A8A;
-            }
-            .linha {
-              border-bottom: 2px solid #1E3A8A;
-              width: 80%;
-              margin: 10px auto;
-            }
-            pre {
-              white-space: pre-wrap;
-              font-family: 'Times New Roman', Times, serif;
-              font-size: 12pt;
-            }
+            body { margin: 2cm; font-family: 'Times New Roman'; font-size: 12pt; line-height: 1.4; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .logo { width: 100px; margin-bottom: 10px; }
+            .nome { font-size: 18pt; font-weight: bold; color: #1E3A8A; margin: 5px 0; }
+            .linha { border-bottom: 2px solid #1E3A8A; width: 80%; margin: 10px auto; }
+            pre { white-space: pre-wrap; font-family: 'Times New Roman'; font-size: 12pt; margin: 0; }
           </style>
         </head>
         <body>
           <div class="header">
             <img src="${logo}" class="logo" />
-            <div class="empresa-nome">NEXUS ENGENHARIA APLICADA</div>
+            <div class="nome">NEXUS ENGENHARIA APLICADA</div>
             <div class="linha"></div>
           </div>
           <pre>${contrato}</pre>
@@ -79,14 +54,12 @@ export default function ContratoPreDiagnostico() {
 
       const res = await api.post('/ia/gerar-contrato-pdf', { contratoHtml: html }, { responseType: 'blob' });
       const url = URL.createObjectURL(res.data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'contrato.pdf';
-      a.click();
+      const win = window.open(url);
+      win.print();
       URL.revokeObjectURL(url);
-      toast.success("PDF gerado!", { id: "pdf" });
+      toast.success("Documento pronto para impressão!", { id: "pdf" });
     } catch (err) {
-      toast.error("Erro ao gerar PDF", { id: "pdf" });
+      toast.error("Erro ao preparar documento", { id: "pdf" });
     } finally {
       setCarregando(false);
     }
@@ -97,7 +70,7 @@ export default function ContratoPreDiagnostico() {
   return (
     <div style={{ padding: 20 }}>
       <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }}>
-        <Botao onClick={handleDownload} loading={carregando}>📄 Baixar PDF</Botao>
+        <Botao onClick={handleImprimir} loading={carregando}>🖨️ Imprimir Contrato</Botao>
         <Botao onClick={() => navigate(-1)}>↩️ Voltar</Botao>
       </div>
       <div style={{
