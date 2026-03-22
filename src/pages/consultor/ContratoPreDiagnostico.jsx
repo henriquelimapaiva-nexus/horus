@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Botao from "../../components/ui/Botao";
-import logo from "../../assets/logo.png"; // Certifique-se que o caminho está correto
+import logo from "../../assets/logo.png";
 import api from "../../api/api";
 import toast from 'react-hot-toast';
 
@@ -21,7 +21,6 @@ export default function ContratoPreDiagnostico() {
     }
   }, [location, navigate]);
 
-  // Função para converter imagem em Base64 para garantir que o PDF a renderize
   const getBase64Logo = async (url) => {
     try {
       const response = await fetch(url);
@@ -32,14 +31,14 @@ export default function ContratoPreDiagnostico() {
         reader.readAsDataURL(blob);
       });
     } catch (e) {
-      return url; // Fallback para a URL original
+      return url;
     }
   };
 
-  const handleImprimir = async () => {
+  const handleAbrirImpressao = async () => {
     if (!contrato) return;
     setCarregando(true);
-    const toastId = toast.loading("Gerando PDF oficial...");
+    const toastId = toast.loading("Preparando documento para impressão...");
 
     try {
       const logoBase64 = await getBase64Logo(logo);
@@ -51,31 +50,11 @@ export default function ContratoPreDiagnostico() {
           <meta charset="UTF-8">
           <style>
             @page { size: A4; margin: 2cm; }
-            body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; }
+            body { font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #000; margin: 0; }
             .header { text-align: center; margin-bottom: 40px; }
-            
-            /* AJUSTE: Logo maior */
-            .logo { 
-              width: 180px; /* Aumentado de 120px para 180px */
-              height: auto; 
-              margin-bottom: 12px; 
-            }
-            
-            /* AJUSTE: Nome menor e mais equilibrado */
-            .empresa-nome { 
-              font-size: 16pt; /* Reduzido de 20pt para 16pt */
-              font-weight: bold; 
-              color: #1E3A8A; 
-              text-transform: uppercase; 
-              margin: 0; 
-              letter-spacing: 1px; /* Espaçamento sutil para elegância */
-            }
-            
-            .divisor { 
-              border-top: 2px solid #1E3A8A; 
-              width: 100%; 
-              margin: 15px auto; 
-            }
+            .logo { width: 180px; height: auto; margin-bottom: 12px; }
+            .empresa-nome { font-size: 16pt; font-weight: bold; color: #1E3A8A; text-transform: uppercase; margin: 0; letter-spacing: 1px; }
+            .divisor { border-top: 2px solid #1E3A8A; width: 100%; margin: 15px auto; }
             .conteudo { white-space: pre-wrap; text-align: justify; }
           </style>
         </head>
@@ -90,17 +69,25 @@ export default function ContratoPreDiagnostico() {
         </html>
       `;
 
-      // Chamada para o seu backend que já está "perfeito"
+      // Requisição ao seu backend perfeito
       const res = await api.post('/ia/gerar-contrato-pdf', { contratoHtml: html }, { responseType: 'blob' });
       
       const file = new Blob([res.data], { type: 'application/pdf' });
       const fileURL = URL.createObjectURL(file);
-      window.open(fileURL);
-      
-      toast.success("PDF Gerado!", { id: toastId });
+
+      // Abre em uma nova aba e foca nela
+      const printWindow = window.open(fileURL, '_blank');
+      if (printWindow) {
+        printWindow.focus();
+        // O navegador geralmente oferece a opção de imprimir automaticamente se o PDF for o único conteúdo
+        toast.success("Documento aberto para impressão!", { id: toastId });
+      } else {
+        toast.error("Por favor, habilite pop-ups para imprimir.", { id: toastId });
+      }
+
     } catch (err) {
       console.error(err);
-      toast.error("Erro na geração do documento", { id: toastId });
+      toast.error("Erro ao processar impressão", { id: toastId });
     } finally {
       setCarregando(false);
     }
@@ -111,11 +98,15 @@ export default function ContratoPreDiagnostico() {
   return (
     <div style={{ padding: "40px 20px", backgroundColor: "#f4f4f4", minHeight: "100vh" }}>
       <div style={{ display: 'flex', gap: 15, justifyContent: 'center', marginBottom: 30 }}>
-        <Botao onClick={handleImprimir} loading={carregando}>🖨️ Gerar PDF Profissional</Botao>
-        <Botao onClick={() => navigate(-1)} variant="secundario">↩️ Voltar</Botao>
+        {/* BOTÃO ATUALIZADO */}
+        <Botao onClick={handleAbrirImpressao} loading={carregando}>
+          🖨️ Abrir para Impressão
+        </Botao>
+        <Botao onClick={() => navigate(-1)} variant="secundario">
+          ↩️ Voltar
+        </Botao>
       </div>
 
-      {/* Preview do Contrato - Sincronizado com os ajustes do PDF */}
       <div style={{
         maxWidth: "800px",
         margin: "0 auto",
@@ -126,30 +117,14 @@ export default function ContratoPreDiagnostico() {
         fontFamily: "'Times New Roman', serif"
       }}>
         <div style={{ textAlign: 'center', marginBottom: 40 }}>
-          {/* AJUSTE: Logo maior no preview */}
           <img src={logo} alt="Logo Nexus" style={{ width: 160, height: 'auto', marginBottom: 12 }} />
-          
-          {/* AJUSTE: Nome menor no preview */}
-          <h2 style={{ 
-            margin: 0, 
-            color: "#1E3A8A", 
-            fontSize: "20pt", /* Ajustado proporcionalmente para a tela */
-            fontWeight: "bold",
-            textTransform: "uppercase",
-            letterSpacing: "1px"
-          }}>
+          <h2 style={{ margin: 0, color: "#1E3A8A", fontSize: "20pt", fontWeight: "bold", textTransform: "uppercase" }}>
             NEXUS ENGENHARIA APLICADA
           </h2>
           <hr style={{ border: "none", borderTop: "2px solid #1E3A8A", marginTop: 15 }} />
         </div>
         
-        <div style={{ 
-          fontSize: "12pt", 
-          lineHeight: 1.5, 
-          whiteSpace: "pre-wrap", 
-          textAlign: "justify",
-          color: "#333" 
-        }}>
+        <div style={{ fontSize: "12pt", lineHeight: 1.5, whiteSpace: "pre-wrap", textAlign: "justify", color: "#333" }}>
           {contrato}
         </div>
       </div>
