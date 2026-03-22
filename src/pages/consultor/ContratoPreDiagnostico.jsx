@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import Botao from "../../components/ui/Botao";
+import logo from "../../assets/logo.png";
 import api from "../../api/api";
 import toast from 'react-hot-toast';
 
@@ -29,9 +30,49 @@ export default function ContratoPreDiagnostico() {
       const html = `
         <!DOCTYPE html>
         <html>
-        <head><meta charset="UTF-8"><title>Contrato</title></head>
-        <body style="margin:2cm; font-family:Times New Roman; font-size:12pt; line-height:1.4;">
-          <pre style="white-space:pre-wrap; font-family:Times New Roman;">${contrato}</pre>
+        <head>
+          <meta charset="UTF-8">
+          <title>Contrato Nexus</title>
+          <style>
+            body {
+              margin: 2cm;
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 12pt;
+              line-height: 1.4;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .logo {
+              width: 100px;
+              margin-bottom: 10px;
+            }
+            .empresa-nome {
+              font-size: 18pt;
+              font-weight: bold;
+              margin: 5px 0;
+              color: #1E3A8A;
+            }
+            .linha {
+              border-bottom: 2px solid #1E3A8A;
+              width: 80%;
+              margin: 10px auto;
+            }
+            pre {
+              white-space: pre-wrap;
+              font-family: 'Times New Roman', Times, serif;
+              font-size: 12pt;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <img src="${logo}" class="logo" />
+            <div class="empresa-nome">NEXUS ENGENHARIA APLICADA</div>
+            <div class="linha"></div>
+          </div>
+          <pre>${contrato}</pre>
         </body>
         </html>
       `;
