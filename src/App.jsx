@@ -80,6 +80,9 @@ import IAPrecificacaoPreContrato from "./pages/consultor/ias/IAPrecificacaoPreCo
 // 🟢 IMPORT - PROPOSTA COMERCIAL PRÉ-CONTRATO
 import PropostaComercialPreContrato from "./pages/consultor/PropostaComercialPreContrato";
 
+// 🟢 IMPORT - CONTRATO PRÉ-DIAGNÓSTICO (NOVO)
+import ContratoPreDiagnostico from "./pages/consultor/ContratoPreDiagnostico";
+
 // 🟢 IMPORT - IA DE SUGESTÕES
 import IASugestoes from "./pages/consultor/IASugestoes";
 
@@ -144,6 +147,7 @@ function App() {
                 <Route path="ias/sugestoes" element={<IASugestoes />} />
                 <Route path="checklist" element={<Checklist />} />
                 <Route path="proposta-pre-contrato" element={<PropostaComercialPreContrato />} />
+                <Route path="contrato-pre-diagnostico" element={<ContratoPreDiagnostico />} />
               </Route>
             </Route>
             
