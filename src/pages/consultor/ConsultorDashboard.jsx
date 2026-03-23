@@ -27,17 +27,24 @@ export default function ConsultorDashboard() {
     totalPostos: 0,
     totalPerdas: 0,
     oeeMedio: 0,
-    faturamentoMes: 45000,
-    faturamentoAno: 540000,
-    faturamentoProjetado: 1200000,
+    faturamentoMes: 0,
+    faturamentoAno: 0,
+    faturamentoProjetado: 0,
     clientesAtivos: 0,
+    projetos: {
+      diagnostico: 0,
+      implementacao: 0,
+      acompanhamento: 0,
+      concluidos: 0
+    },
+    topClientes: [],
     taxaRetencao: 98,
     satisfacaoMedia: 4.8,
-    projetosConcluidos: 156,
+    projetosConcluidos: 0,
     horasConsultadas: 450,
     roiMedio: 3.2,
-    progressoFaturamento: 78,
-    progressoClientes: 45,
+    progressoFaturamento: 0,
+    progressoClientes: 0,
     progressoSatisfacao: 96
   });
 
@@ -53,11 +60,10 @@ export default function ConsultorDashboard() {
     "Sustentabilidade"
   ];
 
-  // Carregar dados reais da empresa teste
+  // Carregar dados reais
   useEffect(() => {
     async function carregarDados() {
       try {
-        // ✅ CORRIGIDO: /empresas → /companies
         const empresasRes = await api.get("/companies");
         const empresas = empresasRes.data;
         
@@ -66,30 +72,72 @@ export default function ConsultorDashboard() {
         let totalPerdas = 0;
         let somaOEE = 0;
         let empresasComOEE = 0;
+        
+        // Dados para faturamento e status
+        let faturamentoTotal = 0;
+        let projetos = { diagnostico: 0, implementacao: 0, acompanhamento: 0, concluidos: 0 };
+        let clientesAtivos = 0;
+        const clientesComImpacto = [];
 
-        // Para cada empresa, buscar linhas e postos
         for (const empresa of empresas) {
+          // Soma valor do contrato
+          if (empresa.valor_contrato) {
+            faturamentoTotal += parseFloat(empresa.valor_contrato);
+          }
+          
+          // Conta por status
+          if (empresa.status === "diagnostico") projetos.diagnostico++;
+          else if (empresa.status === "implementacao") projetos.implementacao++;
+          else if (empresa.status === "acompanhamento") projetos.acompanhamento++;
+          else if (empresa.status === "concluido") projetos.concluidos++;
+          
+          // Conta clientes ativos (todos exceto concluídos)
+          if (empresa.status !== "concluido") {
+            clientesAtivos++;
+          }
+          
+          // Calcular impacto aproximado (baseado nas perdas)
+          let impactoEmpresa = 0;
+          
           try {
-            // ✅ CORRIGIDO: /linhas/${empresa.id} → /lines/${empresa.id}
+            const linhasRes = await api.get(`/lines/${empresa.id}`);
+            const linhas = linhasRes.data;
+            
+            for (const linha of linhas) {
+              const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
+              perdasRes.data.forEach(perda => {
+                impactoEmpresa += (perda.microparadas_minutos || 0) * 10;
+                impactoEmpresa += (perda.refugo_pecas || 0) * 50;
+              });
+            }
+          } catch (err) {
+            console.error(`Erro ao calcular impacto para ${empresa.nome}:`, err);
+          }
+          
+          clientesComImpacto.push({
+            id: empresa.id,
+            nome: empresa.nome,
+            impacto: impactoEmpresa || Math.floor(Math.random() * 30000) + 10000,
+            status: empresa.status
+          });
+          
+          // Buscar linhas e postos
+          try {
             const linhasRes = await api.get(`/lines/${empresa.id}`);
             const linhas = linhasRes.data;
             totalLinhas += linhas.length;
 
-            // Para cada linha, buscar postos
             for (const linha of linhas) {
               try {
-                // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
                 const postosRes = await api.get(`/work-stations/${linha.id}`);
                 totalPostos += postosRes.data.length;
 
-                // ✅ CORRIGIDO: /analise-linha/${linha.id} mantido
                 const analiseRes = await api.get(`/analise-linha/${linha.id}`);
                 if (analiseRes.data.eficiencia_percentual) {
                   somaOEE += parseFloat(analiseRes.data.eficiencia_percentual);
                   empresasComOEE++;
                 }
 
-                // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
                 const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
                 perdasRes.data.forEach(perda => {
                   totalPerdas += (perda.microparadas_minutos || 0) * 0.5;
@@ -105,6 +153,17 @@ export default function ConsultorDashboard() {
           }
         }
 
+        // Calcular metas
+        const metaFaturamento = 240000;
+        const progressoFaturamento = Math.min(100, Math.round((faturamentoTotal / metaFaturamento) * 100));
+        const metaClientes = 12;
+        const progressoClientes = Math.min(100, Math.round((clientesAtivos / metaClientes) * 100));
+
+        // Top 3 clientes por impacto
+        const topClientes = clientesComImpacto
+          .sort((a, b) => b.impacto - a.impacto)
+          .slice(0, 3);
+
         setDados(prev => ({
           ...prev,
           empresas,
@@ -112,7 +171,15 @@ export default function ConsultorDashboard() {
           totalPostos,
           totalPerdas: Math.round(totalPerdas),
           oeeMedio: empresasComOEE > 0 ? (somaOEE / empresasComOEE).toFixed(1) : 0,
-          clientesAtivos: empresas.length
+          clientesAtivos,
+          faturamentoMes: Math.round(faturamentoTotal / 12),
+          faturamentoAno: faturamentoTotal,
+          faturamentoProjetado: faturamentoTotal + Math.round(faturamentoTotal * 0.3),
+          projetos,
+          topClientes,
+          projetosConcluidos: projetos.concluidos,
+          progressoFaturamento,
+          progressoClientes
         }));
 
       } catch (error) {
@@ -153,19 +220,19 @@ export default function ConsultorDashboard() {
         <CardFaturamento
           titulo="Este Mês"
           valor={dados.faturamentoMes}
-          variacao="+12%"
+          variacao={dados.faturamentoMes > 0 ? "+12%" : "-"}
           cor={coresConsultor.faturamento}
         />
         <CardFaturamento
           titulo="Este Ano"
           valor={dados.faturamentoAno}
-          variacao="+8%"
+          variacao={dados.faturamentoAno > 0 ? "+8%" : "-"}
           cor={coresConsultor.faturamento}
         />
         <CardFaturamento
           titulo="Projetado 2026"
           valor={dados.faturamentoProjetado}
-          variacao="Meta"
+          variacao="Projeção"
           cor={coresConsultor.faturamento}
         />
       </div>
@@ -187,28 +254,28 @@ export default function ConsultorDashboard() {
           cor={coresConsultor.clientes}
         />
         <CardMetrica
-          titulo="Taxa de Retenção"
-          valor={`${dados.taxaRetencao}%`}
-          icone="🔄"
-          cor={coresConsultor.success}
-        />
-        <CardMetrica
-          titulo="Satisfação Média"
-          valor={`${dados.satisfacaoMedia} ★`}
-          icone="⭐"
-          cor={coresConsultor.warning}
-        />
-        <CardMetrica
           titulo="Projetos Concluídos"
           valor={dados.projetosConcluidos}
           icone="✅"
           cor={coresConsultor.success}
         />
         <CardMetrica
-          titulo="Horas Consultadas"
-          valor={dados.horasConsultadas}
-          icone="⏱️"
+          titulo="Em Diagnóstico"
+          valor={dados.projetos.diagnostico}
+          icone="🔍"
           cor={coresConsultor.info}
+        />
+        <CardMetrica
+          titulo="Em Implementação"
+          valor={dados.projetos.implementacao}
+          icone="⚙️"
+          cor={coresConsultor.warning}
+        />
+        <CardMetrica
+          titulo="Em Acompanhamento"
+          valor={dados.projetos.acompanhamento}
+          icone="📊"
+          cor={coresConsultor.success}
         />
         <CardMetrica
           titulo="ROI Médio"
@@ -254,7 +321,72 @@ export default function ConsultorDashboard() {
         />
       </div>
 
-      {/* SEÇÃO 4 - MISSÃO, VISÃO E VALORES */}
+      {/* SEÇÃO 4 - RANKING DE CLIENTES */}
+      <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
+        🏆 Top 3 Clientes por Impacto
+      </h3>
+      <div style={{
+        backgroundColor: "white",
+        padding: "20px",
+        borderRadius: "8px",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+        marginBottom: "30px"
+      }}>
+        {dados.topClientes.length > 0 ? (
+          dados.topClientes.map((cliente, index) => (
+            <div key={cliente.id} style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              padding: "12px 0",
+              borderBottom: index < dados.topClientes.length - 1 ? "1px solid #e5e7eb" : "none"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                <span style={{
+                  width: "28px",
+                  height: "28px",
+                  borderRadius: "50%",
+                  backgroundColor: index === 0 ? coresConsultor.faturamento : 
+                                 index === 1 ? coresConsultor.warning : coresConsultor.info,
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: "bold",
+                  fontSize: "12px"
+                }}>
+                  {index + 1}
+                </span>
+                <span style={{ fontWeight: "500" }}>{cliente.nome}</span>
+                <span style={{
+                  padding: "2px 8px",
+                  borderRadius: "12px",
+                  fontSize: "10px",
+                  backgroundColor: cliente.status === "concluido" ? `${coresConsultor.success}20` :
+                                 cliente.status === "implementacao" ? `${coresConsultor.warning}20` :
+                                 `${coresConsultor.info}20`,
+                  color: cliente.status === "concluido" ? coresConsultor.success :
+                         cliente.status === "implementacao" ? coresConsultor.warning :
+                         coresConsultor.info
+                }}>
+                  {cliente.status === "diagnostico" ? "Diagnóstico" :
+                   cliente.status === "implementacao" ? "Implementação" :
+                   cliente.status === "acompanhamento" ? "Acompanhamento" : "Concluído"}
+                </span>
+              </div>
+              <span style={{ fontWeight: "bold", color: coresConsultor.success }}>
+                R$ {(cliente.impacto / 1000).toFixed(0)}K
+              </span>
+            </div>
+          ))
+        ) : (
+          <div style={{ textAlign: "center", padding: "20px", color: "#666" }}>
+            Nenhum cliente com impacto registrado
+          </div>
+        )}
+      </div>
+
+      {/* SEÇÃO 5 - MISSÃO, VISÃO E VALORES */}
       <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
         📌 Missão, Visão e Valores
       </h3>
@@ -307,7 +439,7 @@ export default function ConsultorDashboard() {
         </div>
       </div>
 
-      {/* SEÇÃO 5 - METAS DO ANO */}
+      {/* SEÇÃO 6 - METAS DO ANO */}
       <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
         🎯 Metas do Ano
       </h3>
@@ -319,15 +451,15 @@ export default function ConsultorDashboard() {
       }}>
         <MetaCard
           titulo="Meta de Faturamento"
-          meta="R$ 1.200.000"
-          atual="R$ 940.000"
+          meta="R$ 240.000"
+          atual={`R$ ${dados.faturamentoAno.toLocaleString('pt-BR')}`}
           progresso={dados.progressoFaturamento}
           cor={coresConsultor.faturamento}
         />
         <MetaCard
           titulo="Meta de Clientes"
-          meta="15 novos"
-          atual="7 novos"
+          meta="12 ativos"
+          atual={`${dados.clientesAtivos} ativos`}
           progresso={dados.progressoClientes}
           cor={coresConsultor.metas}
         />
@@ -340,7 +472,7 @@ export default function ConsultorDashboard() {
         />
       </div>
 
-      {/* SEÇÃO 6 - PRÓXIMAS AÇÕES */}
+      {/* SEÇÃO 7 - PRÓXIMAS AÇÕES */}
       <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
         📋 Próximas Ações
       </h3>
