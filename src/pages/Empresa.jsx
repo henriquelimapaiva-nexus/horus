@@ -47,6 +47,19 @@ const CampoComOlho = ({ empresaId, valor, campo, visivel, onToggle }) => {
   );
 };
 
+// Opções para o campo status
+const statusOptions = [
+  { value: "diagnostico", label: "🔍 Diagnóstico" },
+  { value: "implementacao", label: "⚙️ Implementação" },
+  { value: "acompanhamento", label: "📊 Acompanhamento" },
+  { value: "concluido", label: "✅ Concluído" }
+];
+
+const getStatusLabel = (status) => {
+  const op = statusOptions.find(s => s.value === status);
+  return op ? op.label : status;
+};
+
 export default function Empresa() {
   // Pega o clienteAtual do contexto
   let clienteAtual = null;
@@ -64,7 +77,11 @@ export default function Empresa() {
     regime_tributario: "",
     turnos: "",
     dias_produtivos_mes: "",
-    meta_mensal: ""
+    meta_mensal: "",
+    status: "diagnostico",           // 👈 NOVO
+    valor_contrato: "",               // 👈 NOVO
+    data_inicio: "",                  // 👈 NOVO
+    data_previsao_fim: ""             // 👈 NOVO
   });
 
   const [empresas, setEmpresas] = useState([]);
@@ -93,7 +110,6 @@ export default function Empresa() {
 
   async function carregarEmpresas() {
     try {
-      // ✅ CORRIGIDO: /empresas → /companies
       const res = await api.get("/companies");
       setEmpresas(res.data);
     } catch (error) {
@@ -115,33 +131,17 @@ export default function Empresa() {
     
     try {
       if (editId) {
-        // ✅ CORRIGIDO: /empresas → /companies
         await api.put(`/companies/${editId}`, form);
-        
-        // Recarrega a lista
         await carregarEmpresas();
-        
-        // Limpa o cache do seletor
         localStorage.removeItem('ultimaBuscaClientes');
-        
-        // Dispara evento para atualizar o seletor do menu
         window.dispatchEvent(new CustomEvent('empresasAtualizadas'));
-        
         toast.success("Empresa atualizada com sucesso! ✅");
         setEditId(null);
       } else {
-        // ✅ CORRIGIDO: /empresas → /companies
         await api.post("/companies", form);
-        
-        // Recarrega a lista
         await carregarEmpresas();
-        
-        // Limpa o cache do seletor
         localStorage.removeItem('ultimaBuscaClientes');
-        
-        // Dispara evento para atualizar o seletor do menu
         window.dispatchEvent(new CustomEvent('empresasAtualizadas'));
-        
         toast.success("Empresa cadastrada com sucesso! ✅");
       }
 
@@ -152,13 +152,15 @@ export default function Empresa() {
         regime_tributario: "",
         turnos: "",
         dias_produtivos_mes: "",
-        meta_mensal: ""
+        meta_mensal: "",
+        status: "diagnostico",
+        valor_contrato: "",
+        data_inicio: "",
+        data_previsao_fim: ""
       });
 
     } catch (error) {
       console.error(error);
-      
-      // Tratamento de erro específico para CNPJ duplicado
       if (error.response?.data?.erro?.includes("CNPJ já está cadastrado")) {
         toast.error("CNPJ já cadastrado no sistema ❌");
       } else {
@@ -170,7 +172,19 @@ export default function Empresa() {
   };
 
   function handleEdit(empresa) {
-    setForm({ ...empresa });
+    setForm({
+      nome: empresa.nome || "",
+      cnpj: empresa.cnpj || "",
+      segmento: empresa.segmento || "",
+      regime_tributario: empresa.regime_tributario || "",
+      turnos: empresa.turnos || "",
+      dias_produtivos_mes: empresa.dias_produtivos_mes || "",
+      meta_mensal: empresa.meta_mensal || "",
+      status: empresa.status || "diagnostico",
+      valor_contrato: empresa.valor_contrato || "",
+      data_inicio: empresa.data_inicio ? empresa.data_inicio.split('T')[0] : "",
+      data_previsao_fim: empresa.data_previsao_fim ? empresa.data_previsao_fim.split('T')[0] : ""
+    });
     setEditId(empresa.id);
   }
 
@@ -178,23 +192,13 @@ export default function Empresa() {
     if (!window.confirm("Deseja realmente excluir esta empresa?")) return;
     
     try {
-      // ✅ CORRIGIDO: /empresas → /companies
       await api.delete(`/companies/${id}`);
-      
-      // Recarrega a lista
       await carregarEmpresas();
-      
-      // Limpa o cache do seletor
       localStorage.removeItem('ultimaBuscaClientes');
-      
-      // Dispara evento para atualizar o seletor do menu
       window.dispatchEvent(new CustomEvent('empresasAtualizadas'));
-      
       toast.success("Empresa excluída ✅");
     } catch (error) {
       console.error(error);
-      
-      // Tratamento de erro se a empresa tiver vínculos
       if (error.response?.status === 409) {
         toast.error("Empresa possui linhas vinculadas. Remova os vínculos primeiro ❌");
       } else {
@@ -234,7 +238,6 @@ export default function Empresa() {
           </p>
         </div>
 
-        {/* Informação do cliente selecionado em destaque (se houver) */}
         {clienteAtual && (
           <div style={{ 
             marginTop: "15px", 
@@ -330,6 +333,46 @@ export default function Empresa() {
             style={inputStyle} 
           />
 
+          {/* 👈 NOVOS CAMPOS */}
+          <select
+            name="status"
+            value={form.status}
+            onChange={handleChange}
+            style={inputStyle}
+          >
+            {statusOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+
+          <input
+            type="number"
+            step="0.01"
+            name="valor_contrato"
+            placeholder="Valor do Contrato (R$)"
+            value={form.valor_contrato}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+
+          <input
+            type="date"
+            name="data_inicio"
+            placeholder="Data de Início"
+            value={form.data_inicio}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+
+          <input
+            type="date"
+            name="data_previsao_fim"
+            placeholder="Data Prevista de Fim"
+            value={form.data_previsao_fim}
+            onChange={handleChange}
+            style={inputStyle}
+          />
+
           <div style={{ display: "flex", gap: "10px" }}>
             <Botao 
               type="submit"
@@ -356,7 +399,11 @@ export default function Empresa() {
                     regime_tributario: "",
                     turnos: "",
                     dias_produtivos_mes: "",
-                    meta_mensal: ""
+                    meta_mensal: "",
+                    status: "diagnostico",
+                    valor_contrato: "",
+                    data_inicio: "",
+                    data_previsao_fim: ""
                   });
                 }}
               >
@@ -408,19 +455,23 @@ export default function Empresa() {
               <th style={th}>Turnos</th>
               <th style={th}>Dias/Mês</th>
               <th style={th}>Meta Mensal</th>
+              <th style={th}>Status</th>
+              <th style={th}>Valor Contrato</th>
+              <th style={th}>Início</th>
+              <th style={th}>Previsão Fim</th>
               <th style={th}>Ações</th>
             </tr>
           </thead>
           <tbody>
             {empresasFiltradas.length === 0 ? (
               <tr>
-                <td colSpan="8" style={{ textAlign: "center", padding: "30px", color: "#666" }}>
+                <td colSpan="12" style={{ textAlign: "center", padding: "30px", color: "#666" }}>
                   Nenhuma empresa cadastrada
                 </td>
               </tr>
             ) : (
               empresasFiltradas.map((e) => (
-                <tr key={e.id} style={{ borderBottom: "1px solid #e5e7eb", hover: { backgroundColor: "#f9fafb" } }}>
+                <tr key={e.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
                   <td style={td}>{e.nome || e.name || "-"}</td>
                   <td style={td}>
                     <CampoComOlho 
@@ -468,6 +519,18 @@ export default function Empresa() {
                       onToggle={toggleVisivel}
                     />
                   </td>
+                  <td style={td}>{getStatusLabel(e.status)}</td>
+                  <td style={td}>
+                    <CampoComOlho 
+                      empresaId={e.id}
+                      valor={formatarMoeda(e.valor_contrato)} 
+                      campo="valor_contrato"
+                      visivel={camposVisiveis}
+                      onToggle={toggleVisivel}
+                    />
+                  </td>
+                  <td style={td}>{e.data_inicio ? new Date(e.data_inicio).toLocaleDateString('pt-BR') : "-"}</td>
+                  <td style={td}>{e.data_previsao_fim ? new Date(e.data_previsao_fim).toLocaleDateString('pt-BR') : "-"}</td>
                   <td style={td}>
                     <div style={{ display: "flex", gap: "5px", justifyContent: "center" }}>
                       <button
