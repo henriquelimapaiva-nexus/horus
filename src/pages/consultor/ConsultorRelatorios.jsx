@@ -380,7 +380,7 @@ export default function ConsultorRelatorios() {
                 src={logo} 
                 alt="Nexus Engenharia Aplicada" 
                 style={{
-                  height: "60px",
+                  height: "150px",
                   width: "auto",
                   objectFit: "contain"
                 }}
