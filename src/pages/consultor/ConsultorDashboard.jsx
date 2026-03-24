@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import api from "../../api/api";
 import { useConsultorAuth } from "../../context/ConsultorAuthContext";
+import TarefasWidget from "../../components/consultor/TarefasWidget";
 
 // Cores exclusivas do consultor
 const coresConsultor = {
@@ -21,6 +22,8 @@ const coresConsultor = {
 export default function ConsultorDashboard() {
   const { usuario } = useConsultorAuth();
   const [carregando, setCarregando] = useState(true);
+  const [tarefas, setTarefas] = useState([]);
+  const [resumoTarefas, setResumoTarefas] = useState(null);
   const [dados, setDados] = useState({
     empresas: [],
     totalLinhas: 0,
@@ -45,7 +48,9 @@ export default function ConsultorDashboard() {
     roiMedio: 3.2,
     progressoFaturamento: 0,
     progressoClientes: 0,
-    progressoSatisfacao: 96
+    progressoSatisfacao: 96,
+    horasTrabalhadas: 0,
+    horasFaturaveis: 0
   });
 
   // Missão, Visão e Valores
@@ -64,7 +69,12 @@ export default function ConsultorDashboard() {
   useEffect(() => {
     async function carregarDados() {
       try {
-        const empresasRes = await api.get("/companies");
+        const [empresasRes, resumoTarefasRes, horasRes] = await Promise.all([
+          api.get("/companies"),
+          api.get("/tarefas/resumo"),
+          api.get("/horas/resumo")
+        ]);
+        
         const empresas = empresasRes.data;
         
         let totalLinhas = 0;
@@ -164,6 +174,7 @@ export default function ConsultorDashboard() {
           .sort((a, b) => b.impacto - a.impacto)
           .slice(0, 3);
 
+        setResumoTarefas(resumoTarefasRes.data);
         setDados(prev => ({
           ...prev,
           empresas,
@@ -179,7 +190,9 @@ export default function ConsultorDashboard() {
           topClientes,
           projetosConcluidos: projetos.concluidos,
           progressoFaturamento,
-          progressoClientes
+          progressoClientes,
+          horasTrabalhadas: horasRes.data.total_horas || 0,
+          horasFaturaveis: horasRes.data.horas_faturaveis || 0
         }));
 
       } catch (error) {
@@ -191,6 +204,13 @@ export default function ConsultorDashboard() {
 
     carregarDados();
   }, []);
+
+  const formatarMoeda = (valor) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(valor || 0);
+  };
 
   if (carregando) {
     return (
@@ -234,6 +254,36 @@ export default function ConsultorDashboard() {
           valor={dados.faturamentoProjetado}
           variacao="Projeção"
           cor={coresConsultor.faturamento}
+        />
+      </div>
+
+      {/* SEÇÃO 1.5 - HORAS TRABALHADAS */}
+      <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
+        ⏱️ Horas Trabalhadas
+      </h3>
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        gap: "20px",
+        marginBottom: "30px"
+      }}>
+        <CardMetrica
+          titulo="Total Horas"
+          valor={`${dados.horasTrabalhadas}h`}
+          icone="⏱️"
+          cor={coresConsultor.info}
+        />
+        <CardMetrica
+          titulo="Horas Faturáveis"
+          valor={`${dados.horasFaturaveis}h`}
+          icone="💰"
+          cor={coresConsultor.faturamento}
+        />
+        <CardMetrica
+          titulo="Valor Faturável"
+          valor={formatarMoeda(dados.horasFaturaveis * 120)}
+          icone="📈"
+          cor={coresConsultor.success}
         />
       </div>
 
@@ -321,7 +371,15 @@ export default function ConsultorDashboard() {
         />
       </div>
 
-      {/* SEÇÃO 4 - RANKING DE CLIENTES */}
+      {/* SEÇÃO 4 - TAREFAS (WIDGET EDITÁVEL) */}
+      <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
+        📋 Minhas Tarefas
+      </h3>
+      <div style={{ marginBottom: "30px" }}>
+        <TarefasWidget onTarefasChange={setTarefas} />
+      </div>
+
+      {/* SEÇÃO 5 - RANKING DE CLIENTES */}
       <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
         🏆 Top 3 Clientes por Impacto
       </h3>
@@ -386,7 +444,49 @@ export default function ConsultorDashboard() {
         )}
       </div>
 
-      {/* SEÇÃO 5 - MISSÃO, VISÃO E VALORES */}
+      {/* SEÇÃO 6 - PRÓXIMAS TAREFAS (do resumo) */}
+      {resumoTarefas?.proximas_tarefas?.length > 0 && (
+        <>
+          <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
+            📅 Próximos Compromissos
+          </h3>
+          <div style={{
+            backgroundColor: "white",
+            padding: "20px",
+            borderRadius: "8px",
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            marginBottom: "30px"
+          }}>
+            {resumoTarefas.proximas_tarefas.map((tarefa, index) => (
+              <div key={tarefa.id} style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "12px 0",
+                borderBottom: index < resumoTarefas.proximas_tarefas.length - 1 ? "1px solid #e5e7eb" : "none"
+              }}>
+                <div>
+                  <div style={{ fontWeight: "500" }}>{tarefa.titulo}</div>
+                  <div style={{ fontSize: "12px", color: "#666" }}>
+                    📅 {new Date(tarefa.data_limite).toLocaleDateString('pt-BR')}
+                  </div>
+                </div>
+                <span style={{
+                  padding: "4px 12px",
+                  borderRadius: "20px",
+                  fontSize: "12px",
+                  backgroundColor: tarefa.prioridade === "alta" ? "#fee2e2" : "#fef3c7",
+                  color: tarefa.prioridade === "alta" ? "#ef4444" : "#f59e0b"
+                }}>
+                  {tarefa.prioridade === "alta" ? "🔴 Alta" : "🟡 Média"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* SEÇÃO 7 - MISSÃO, VISÃO E VALORES */}
       <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
         📌 Missão, Visão e Valores
       </h3>
@@ -439,7 +539,7 @@ export default function ConsultorDashboard() {
         </div>
       </div>
 
-      {/* SEÇÃO 6 - METAS DO ANO */}
+      {/* SEÇÃO 8 - METAS DO ANO */}
       <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
         🎯 Metas do Ano
       </h3>
@@ -470,34 +570,6 @@ export default function ConsultorDashboard() {
           progresso={dados.progressoSatisfacao}
           cor={coresConsultor.success}
         />
-      </div>
-
-      {/* SEÇÃO 7 - PRÓXIMAS AÇÕES */}
-      <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
-        📋 Próximas Ações
-      </h3>
-      <div style={{
-        backgroundColor: "white",
-        padding: "20px",
-        borderRadius: "8px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
-          <input type="checkbox" style={{ width: "18px", height: "18px" }} />
-          <span>Reunião com Plásticos SA - 15/06 10:00</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
-          <input type="checkbox" style={{ width: "18px", height: "18px" }} />
-          <span>Entregar relatório para Autopeças - 18/06</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 0", borderBottom: "1px solid #e5e7eb" }}>
-          <input type="checkbox" style={{ width: "18px", height: "18px" }} />
-          <span>Iniciar diagnóstico na Química Ltda - 20/06</span>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 0" }}>
-          <input type="checkbox" style={{ width: "18px", height: "18px" }} />
-          <span>Renovar contrato com Metalúrgica - 25/06</span>
-        </div>
       </div>
     </div>
   );
