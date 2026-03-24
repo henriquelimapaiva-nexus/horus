@@ -127,7 +127,7 @@ function PrivateLayout() {
 
   function handleLogout() {
     logout();
-    navigate("/login");
+    navigate("/");
   }
 
   const toggleMenu = (menu, event) => {
