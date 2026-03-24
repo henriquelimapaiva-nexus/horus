@@ -529,7 +529,9 @@ export default function ConsultorClientes() {
                   borderRadius: "6px",
                   background: "white",
                   cursor: "pointer",
-                  fontSize: "14px"
+                  fontSize: "14px",
+                  color: "#374151",
+                  fontweight: "500"
                 }}
               >
                 Cancelar
