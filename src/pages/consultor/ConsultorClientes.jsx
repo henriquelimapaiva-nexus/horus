@@ -525,7 +525,7 @@ export default function ConsultorClientes() {
                 onClick={() => setModalAgendamento(null)}
                 style={{
                   padding: "10px 20px",
-                  border: "1px solid #c90303",
+                  border: "1px solid #000000",
                   borderRadius: "6px",
                   background: "red",
                   cursor: "pointer",
