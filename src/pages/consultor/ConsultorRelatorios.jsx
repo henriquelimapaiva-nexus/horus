@@ -97,14 +97,25 @@ export default function ConsultorRelatorios() {
                 totalPerdas += (perda.refugo_pecas || 0) * 50;
               });
 
-              // ✅ CORRIGIDO: /linha-produto/${linha.id} → /line-products/${linha.id}
-              if (analiseRes.data.capacidade_estimada_dia) {
+              // 🔧 CORREÇÃO: Cálculo de faturamento com fallback para evitar NaN
+              try {
                 const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
                 const produtosData = produtosRes.data.dados || produtosRes.data || [];
-                if (produtosData.length > 0) {
-                  const valorMedio = produtosData.reduce((acc, p) => acc + (p.valor_unitario || 50), 0) / produtosData.length;
-                  faturamentoEstimado += analiseRes.data.capacidade_estimada_dia * valorMedio * 22;
+                
+                let capacidade = 0;
+                if (analiseRes.data.capacidade_estimada_dia) {
+                  capacidade = parseFloat(analiseRes.data.capacidade_estimada_dia);
                 }
+                
+                if (produtosData.length > 0 && capacidade > 0) {
+                  const valorMedio = produtosData.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 50), 0) / produtosData.length;
+                  faturamentoEstimado += capacidade * valorMedio * 22;
+                } else if (capacidade > 0) {
+                  // Fallback: valor médio de R$ 70 por peça
+                  faturamentoEstimado += capacidade * 70 * 22;
+                }
+              } catch (err) {
+                console.error(`Erro ao calcular faturamento da linha ${linha.id}:`, err);
               }
 
             } catch (err) {
@@ -113,12 +124,14 @@ export default function ConsultorRelatorios() {
           }
 
           const oeeMedio = qtdOEE > 0 ? (somaOEE / qtdOEE).toFixed(1) : 0;
+          // 🔧 CORREÇÃO: Garantir que faturamento não seja NaN
+          const faturamentoValido = isNaN(faturamentoEstimado) ? 0 : Math.round(faturamentoEstimado);
 
           totais.empresas++;
           totais.linhas += totalLinhas;
           totais.postos += totalPostos;
           totais.perdas += totalPerdas;
-          totais.faturamento += faturamentoEstimado;
+          totais.faturamento += faturamentoValido;
 
           dados.push({
             id: empresa.id,
@@ -127,8 +140,8 @@ export default function ConsultorRelatorios() {
             totalPostos,
             oeeMedio: parseFloat(oeeMedio),
             perdas: Math.round(totalPerdas),
-            faturamento: Math.round(faturamentoEstimado),
-            produtividade: faturamentoEstimado > 0 ? (faturamentoEstimado / (totalPostos || 1)).toFixed(0) : 0
+            faturamento: faturamentoValido,
+            produtividade: faturamentoValido > 0 ? Math.round(faturamentoValido / (totalPostos || 1)) : 0
           });
 
         } catch (err) {
@@ -140,9 +153,12 @@ export default function ConsultorRelatorios() {
         ? (dados.reduce((acc, e) => acc + e.oeeMedio, 0) / dados.length).toFixed(1)
         : 0;
 
+      // 🔧 CORREÇÃO: Garantir que faturamento total não seja NaN
+      const faturamentoTotalValido = isNaN(totais.faturamento) ? 0 : totais.faturamento;
+
       // Dados para gráficos
       const graficos = {
-        // Gráfico de barras - Perdas por empresa
+        // Gráfico de barras - Perdas por empresa (NOMES COMPLETOS)
         perdasPorEmpresa: {
           labels: dados.slice(0, 10).map(d => d.nome),
           valores: dados.slice(0, 10).map(d => d.perdas)
@@ -161,7 +177,10 @@ export default function ConsultorRelatorios() {
       };
 
       setDadosRelatorio({
-        totais,
+        totais: {
+          ...totais,
+          faturamento: faturamentoTotalValido
+        },
         dados,
         geradoEm: new Date().toLocaleString('pt-BR')
       });
@@ -552,7 +571,7 @@ export default function ConsultorRelatorios() {
                   <th style={thStyle}>Perdas</th>
                   <th style={thStyle}>Faturamento</th>
                   <th style={thStyle}>Produtividade</th>
-                </tr>
+                 </tr>
               </thead>
               <tbody>
                 {dadosRelatorio.dados.map((emp, index) => (
