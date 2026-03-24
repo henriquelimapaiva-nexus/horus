@@ -16,26 +16,22 @@ const coresConsultor = {
 
 export default function ConsultorRelatorios() {
   const [carregando, setCarregando] = useState(true);
-  const [periodo, setPeriodo] = useState("mes"); // mes, trimestre, ano, personalizado
-  const [tipoRelatorio, setTipoRelatorio] = useState("geral"); // geral, empresas, perdas, evolucao
+  const [periodo, setPeriodo] = useState("mes");
+  const [tipoRelatorio, setTipoRelatorio] = useState("geral");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [empresaSelecionada, setEmpresaSelecionada] = useState("todas");
   
-  // Dados
   const [empresas, setEmpresas] = useState([]);
   const [dadosRelatorio, setDadosRelatorio] = useState(null);
   const [dadosGraficos, setDadosGraficos] = useState({});
 
-  // Carregar empresas para o filtro
   useEffect(() => {
-    // ✅ CORRIGIDO: /empresas → /companies
     api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => console.error("Erro ao carregar empresas:", err));
   }, []);
 
-  // Gerar relatório quando mudar os filtros
   useEffect(() => {
     gerarRelatorio();
   }, [periodo, tipoRelatorio, empresaSelecionada, dataInicio, dataFim]);
@@ -44,11 +40,9 @@ export default function ConsultorRelatorios() {
     setCarregando(true);
     
     try {
-      // ✅ CORRIGIDO: /empresas → /companies
       const empresasRes = await api.get("/companies");
       const empresasData = empresasRes.data;
       
-      // Filtrar empresas se necessário
       const empresasFiltradas = empresaSelecionada === "todas" 
         ? empresasData 
         : empresasData.filter(e => e.id === parseInt(empresaSelecionada));
@@ -63,10 +57,8 @@ export default function ConsultorRelatorios() {
         oeeMedio: 0
       };
 
-      // Para cada empresa, buscar dados
       for (const empresa of empresasFiltradas) {
         try {
-          // ✅ CORRIGIDO: /linhas/${empresa.id} → /lines/${empresa.id}
           const linhasRes = await api.get(`/lines/${empresa.id}`);
           const linhas = linhasRes.data;
 
@@ -79,25 +71,21 @@ export default function ConsultorRelatorios() {
 
           for (const linha of linhas) {
             try {
-              // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
               const postosRes = await api.get(`/work-stations/${linha.id}`);
               totalPostos += postosRes.data.length;
 
-              // ✅ CORRIGIDO: /analise-linha/${linha.id} mantido
               const analiseRes = await api.get(`/analise-linha/${linha.id}`);
               if (analiseRes.data.eficiencia_percentual) {
                 somaOEE += parseFloat(analiseRes.data.eficiencia_percentual);
                 qtdOEE++;
               }
 
-              // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
               const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
               perdasRes.data.forEach(perda => {
                 totalPerdas += (perda.microparadas_minutos || 0) * 0.5;
                 totalPerdas += (perda.refugo_pecas || 0) * 50;
               });
 
-              // 🔧 CORREÇÃO: Cálculo de faturamento com fallback para evitar NaN
               try {
                 const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
                 const produtosData = produtosRes.data.dados || produtosRes.data || [];
@@ -111,7 +99,6 @@ export default function ConsultorRelatorios() {
                   const valorMedio = produtosData.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 50), 0) / produtosData.length;
                   faturamentoEstimado += capacidade * valorMedio * 22;
                 } else if (capacidade > 0) {
-                  // Fallback: valor médio de R$ 70 por peça
                   faturamentoEstimado += capacidade * 70 * 22;
                 }
               } catch (err) {
@@ -124,7 +111,6 @@ export default function ConsultorRelatorios() {
           }
 
           const oeeMedio = qtdOEE > 0 ? (somaOEE / qtdOEE).toFixed(1) : 0;
-          // 🔧 CORREÇÃO: Garantir que faturamento não seja NaN
           const faturamentoValido = isNaN(faturamentoEstimado) ? 0 : Math.round(faturamentoEstimado);
 
           totais.empresas++;
@@ -153,23 +139,18 @@ export default function ConsultorRelatorios() {
         ? (dados.reduce((acc, e) => acc + e.oeeMedio, 0) / dados.length).toFixed(1)
         : 0;
 
-      // 🔧 CORREÇÃO: Garantir que faturamento total não seja NaN
       const faturamentoTotalValido = isNaN(totais.faturamento) ? 0 : totais.faturamento;
 
-      // Dados para gráficos
       const graficos = {
-        // Gráfico de barras - Perdas por empresa (NOMES COMPLETOS)
         perdasPorEmpresa: {
           labels: dados.slice(0, 10).map(d => d.nome),
           valores: dados.slice(0, 10).map(d => d.perdas)
         },
-        // Gráfico de pizza - Distribuição de status
         statusDistribuicao: {
           critico: dados.filter(d => d.oeeMedio < 60).length,
           atencao: dados.filter(d => d.oeeMedio >= 60 && d.oeeMedio < 75).length,
           bom: dados.filter(d => d.oeeMedio >= 75).length
         },
-        // Top 5 empresas por faturamento
         topFaturamento: {
           labels: dados.sort((a, b) => b.faturamento - a.faturamento).slice(0, 5).map(d => d.nome),
           valores: dados.sort((a, b) => b.faturamento - a.faturamento).slice(0, 5).map(d => d.faturamento)
@@ -194,7 +175,6 @@ export default function ConsultorRelatorios() {
     }
   }
 
-  // Exportar para CSV
   const exportarCSV = () => {
     if (!dadosRelatorio) return;
 
@@ -212,9 +192,11 @@ export default function ConsultorRelatorios() {
     a.click();
   };
 
-  // Exportar para PDF (usando print)
+  // 🔧 CORREÇÃO: Delay para garantir que tudo renderizou
   const exportarPDF = () => {
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 300);
   };
 
   if (carregando && !dadosRelatorio) {
@@ -232,7 +214,48 @@ export default function ConsultorRelatorios() {
 
   return (
     <div>
-      {/* Cabeçalho */}
+      {/* 🔧 CSS de impressão - isola apenas a área do relatório */}
+      <style>{`
+        @media print {
+          /* Esconde tudo que está fora da área do relatório */
+          body * {
+            visibility: hidden;
+          }
+          
+          /* Mostra apenas a área do relatório */
+          #area-pdf, #area-pdf * {
+            visibility: visible;
+          }
+          
+          /* Força a área do relatório a ocupar a folha toda */
+          #area-pdf {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            margin: 0 !important;
+            padding: 10mm !important;
+          }
+          
+          /* Corrige grids que quebram no print */
+          div[style*="grid"] {
+            display: block !important;
+          }
+          
+          /* Evita quebras de página no meio de elementos */
+          table, div {
+            page-break-inside: avoid;
+          }
+          
+          /* Mantém as cores no PDF */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `}</style>
+
+      {/* Cabeçalho da página (NÃO aparece no PDF) */}
       <div style={{ marginBottom: "30px" }}>
         <h2 style={{ color: coresConsultor.primary, marginBottom: "5px" }}>
           📈 Relatórios Consolidados
@@ -242,7 +265,7 @@ export default function ConsultorRelatorios() {
         </p>
       </div>
 
-      {/* Filtros */}
+      {/* Filtros (NÃO aparecem no PDF) */}
       <div style={{
         backgroundColor: "white",
         padding: "25px",
@@ -260,7 +283,6 @@ export default function ConsultorRelatorios() {
           gap: "20px",
           marginBottom: "20px"
         }}>
-          {/* Tipo de relatório */}
           <div>
             <label style={labelStyle}>Tipo de Relatório</label>
             <select
@@ -275,7 +297,6 @@ export default function ConsultorRelatorios() {
             </select>
           </div>
 
-          {/* Empresa */}
           <div>
             <label style={labelStyle}>Empresa</label>
             <select
@@ -290,7 +311,6 @@ export default function ConsultorRelatorios() {
             </select>
           </div>
 
-          {/* Período */}
           <div>
             <label style={labelStyle}>Período</label>
             <select
@@ -305,7 +325,6 @@ export default function ConsultorRelatorios() {
             </select>
           </div>
 
-          {/* Datas personalizadas */}
           {periodo === "personalizado" && (
             <>
               <div>
@@ -330,7 +349,6 @@ export default function ConsultorRelatorios() {
           )}
         </div>
 
-        {/* Botões de ação */}
         <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
           <button
             onClick={exportarCSV}
@@ -347,13 +365,15 @@ export default function ConsultorRelatorios() {
         </div>
       </div>
 
-      {/* RESULTADO DO RELATÓRIO */}
+      {/* 🔧 ÁREA DO PDF - ISOLADA COM ID */}
       {dadosRelatorio && (
-        <div style={{
+        <div id="area-pdf" style={{
           backgroundColor: "white",
           padding: "25px",
           borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          maxWidth: "100%",
+          margin: "0 auto"
         }}>
           
           {/* Cabeçalho do relatório */}
@@ -432,7 +452,6 @@ export default function ConsultorRelatorios() {
             gap: "20px",
             marginBottom: "30px"
           }}>
-            {/* Gráfico de Perdas por Empresa */}
             <div style={graficoContainer}>
               <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
                 📊 Perdas por Empresa (Top 10)
@@ -462,7 +481,6 @@ export default function ConsultorRelatorios() {
               ))}
             </div>
 
-            {/* Distribuição de Status */}
             <div style={graficoContainer}>
               <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
                 🎯 Distribuição por Status
@@ -525,7 +543,6 @@ export default function ConsultorRelatorios() {
               </div>
             </div>
 
-            {/* Top 5 Faturamento */}
             <div style={graficoContainer}>
               <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
                 💰 Top 5 Faturamento
@@ -571,7 +588,7 @@ export default function ConsultorRelatorios() {
                   <th style={thStyle}>Perdas</th>
                   <th style={thStyle}>Faturamento</th>
                   <th style={thStyle}>Produtividade</th>
-                 </tr>
+                  </tr>
               </thead>
               <tbody>
                 {dadosRelatorio.dados.map((emp, index) => (
@@ -602,7 +619,7 @@ export default function ConsultorRelatorios() {
   );
 }
 
-// Estilos
+// Estilos (mantidos intactos)
 const labelStyle = {
   display: "block",
   marginBottom: "6px",
