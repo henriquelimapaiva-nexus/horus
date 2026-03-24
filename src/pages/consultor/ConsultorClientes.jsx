@@ -22,6 +22,14 @@ export default function ConsultorClientes() {
   const [busca, setBusca] = useState("");
   const [backups, setBackups] = useState({}); // Armazena backups por empresa
   const [mostrarModalBackups, setMostrarModalBackups] = useState(null); // empresaId do modal aberto
+  // 👇 NOVO: Estados para agendamento
+  const [modalAgendamento, setModalAgendamento] = useState(null);
+  const [carregandoAgendamento, setCarregandoAgendamento] = useState(false);
+  const [formAgendamento, setFormAgendamento] = useState({
+    data: "",
+    hora: "10:00",
+    descricao: ""
+  });
 
   // Carregar dados reais
   useEffect(() => {
@@ -206,6 +214,54 @@ export default function ConsultorClientes() {
     }
   };
 
+  // 👇 NOVAS FUNÇÕES: Agendamento de Reunião
+  const handleAbrirAgendamento = (empresa) => {
+    // Data padrão: amanhã
+    const amanha = new Date();
+    amanha.setDate(amanha.getDate() + 1);
+    const dataPadrao = amanha.toISOString().split('T')[0];
+    
+    setModalAgendamento(empresa);
+    setFormAgendamento({
+      data: dataPadrao,
+      hora: "10:00",
+      descricao: `Reunião de acompanhamento com ${empresa.nome}`
+    });
+  };
+
+  const handleSalvarAgendamento = async () => {
+    if (!formAgendamento.data) {
+      toast.error("Selecione uma data para a reunião");
+      return;
+    }
+    
+    setCarregandoAgendamento(true);
+    
+    try {
+      // Criar uma tarefa no sistema
+      await api.post("/tarefas", {
+        titulo: `📅 Reunião com ${modalAgendamento.nome}`,
+        descricao: formAgendamento.descricao,
+        prioridade: "alta",
+        status: "pendente",
+        data_limite: formAgendamento.data,
+        categoria: "cliente",
+        cliente_id: modalAgendamento.id
+      });
+      
+      toast.success(`✅ Reunião agendada para ${new Date(formAgendamento.data).toLocaleDateString('pt-BR')} às ${formAgendamento.hora}`);
+      
+      // Fechar modal
+      setModalAgendamento(null);
+      
+    } catch (error) {
+      console.error("Erro ao agendar reunião:", error);
+      toast.error("Erro ao agendar reunião. Tente novamente.");
+    } finally {
+      setCarregandoAgendamento(false);
+    }
+  };
+
   // Modal de backups
   const ModalBackups = ({ empresa, onClose }) => {
     const listaBackups = backups[empresa.id] || [];
@@ -343,6 +399,162 @@ export default function ConsultorClientes() {
         />
       )}
 
+      {/* 👇 NOVO: Modal de Agendamento */}
+      {modalAgendamento && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1001
+        }} onClick={() => setModalAgendamento(null)}>
+          <div style={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            padding: "24px",
+            maxWidth: "500px",
+            width: "90%",
+            boxShadow: "0 4px 20px rgba(0,0,0,0.15)"
+          }} onClick={(e) => e.stopPropagation()}>
+            
+            {/* Cabeçalho */}
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "20px"
+            }}>
+              <h3 style={{ margin: 0, color: coresConsultor.primary }}>
+                📅 Agendar Reunião
+              </h3>
+              <button
+                onClick={() => setModalAgendamento(null)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: "24px",
+                  cursor: "pointer",
+                  color: "#666"
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            {/* Informações do Cliente */}
+            <div style={{
+              backgroundColor: "#f3f4f6",
+              padding: "12px",
+              borderRadius: "8px",
+              marginBottom: "20px"
+            }}>
+              <div style={{ fontWeight: "bold", marginBottom: "4px" }}>
+                {modalAgendamento.nome}
+              </div>
+              <div style={{ fontSize: "12px", color: "#666" }}>
+                OEE: {modalAgendamento.oeeMedio}% • Perdas: R$ {(modalAgendamento.perdasTotais / 1000).toFixed(1)}K
+              </div>
+            </div>
+            
+            {/* Formulário */}
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                Data da Reunião *
+              </label>
+              <input
+                type="date"
+                value={formAgendamento.data}
+                onChange={(e) => setFormAgendamento({...formAgendamento, data: e.target.value})}
+                min={new Date().toISOString().split('T')[0]}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px",
+                  fontSize: "14px"
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                Horário
+              </label>
+              <input
+                type="time"
+                value={formAgendamento.hora}
+                onChange={(e) => setFormAgendamento({...formAgendamento, hora: e.target.value})}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px",
+                  fontSize: "14px"
+                }}
+              />
+            </div>
+            
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                Descrição / Pauta
+              </label>
+              <textarea
+                rows={3}
+                value={formAgendamento.descricao}
+                onChange={(e) => setFormAgendamento({...formAgendamento, descricao: e.target.value})}
+                placeholder="O que será discutido na reunião?"
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px",
+                  fontSize: "14px",
+                  resize: "vertical"
+                }}
+              />
+            </div>
+            
+            {/* Botões */}
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => setModalAgendamento(null)}
+                style={{
+                  padding: "10px 20px",
+                  border: "1px solid #ccc",
+                  borderRadius: "6px",
+                  background: "white",
+                  cursor: "pointer",
+                  fontSize: "14px"
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSalvarAgendamento}
+                disabled={carregandoAgendamento}
+                style={{
+                  padding: "10px 20px",
+                  border: "none",
+                  borderRadius: "6px",
+                  background: coresConsultor.primary,
+                  color: "white",
+                  cursor: carregandoAgendamento ? "not-allowed" : "pointer",
+                  fontSize: "14px",
+                  opacity: carregandoAgendamento ? 0.7 : 1
+                }}
+              >
+                {carregandoAgendamento ? "Agendando..." : "✅ Agendar Reunião"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Cabeçalho */}
       <div style={{ marginBottom: "30px" }}>
         <h2 style={{ color: coresConsultor.primary, marginBottom: "5px" }}>
@@ -353,7 +565,7 @@ export default function ConsultorClientes() {
         </p>
       </div>
 
-      {/* Cards de resumo (mantido igual) */}
+      {/* Cards de resumo */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
@@ -367,7 +579,7 @@ export default function ConsultorClientes() {
         <ResumoCard titulo="OEE Médio" valor={`${totais.oeeMedio}%`} icone="📊" cor={totais.oeeMedio >= 70 ? coresConsultor.success : coresConsultor.warning} />
       </div>
 
-      {/* Filtros e busca (mantido igual) */}
+      {/* Filtros e busca */}
       <div style={{
         display: "flex",
         justifyContent: "space-between",
@@ -462,7 +674,7 @@ export default function ConsultorClientes() {
                 </div>
               </div>
 
-              {/* BOTÕES DE GESTÃO DE DADOS */}
+              {/* Botões de gestão de dados */}
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 <button
                   onClick={() => handleExportar(empresa)}
@@ -504,7 +716,7 @@ export default function ConsultorClientes() {
         </div>
       </div>
 
-      {/* Clientes que precisam de atenção (mantido igual) */}
+      {/* Clientes que precisam de atenção */}
       <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
         ⚠️ Clientes que Precisam de Atenção
       </h3>
@@ -540,22 +752,26 @@ export default function ConsultorClientes() {
               <div style={{ fontSize: "13px", color: "#666", marginBottom: "15px" }}>
                 <div>OEE: {empresa.oeeMedio}% | Perdas: R$ {(empresa.perdasTotais / 1000).toFixed(1)}K</div>
               </div>
-              <button style={{
-                width: "100%",
-                padding: "8px",
-                backgroundColor: coresConsultor.primary,
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer"
-              }}>
+              {/* 👇 BOTÃO MODIFICADO COM onClick */}
+              <button 
+                onClick={() => handleAbrirAgendamento(empresa)}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  backgroundColor: coresConsultor.primary,
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer"
+                }}
+              >
                 Agendar Reunião
               </button>
             </div>
           ))}
       </div>
 
-      {/* Timeline de projetos (mantido igual) */}
+      {/* Timeline de projetos */}
       <h3 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
         📅 Timeline de Projetos
       </h3>
@@ -606,7 +822,7 @@ export default function ConsultorClientes() {
   );
 }
 
-// Componentes auxiliares (mantidos iguais)
+// Componentes auxiliares
 function ResumoCard({ titulo, valor, icone, cor }) {
   return (
     <div style={{

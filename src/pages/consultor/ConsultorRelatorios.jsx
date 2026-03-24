@@ -26,10 +26,10 @@ export default function ConsultorRelatorios() {
   const [empresas, setEmpresas] = useState([]);
   const [dadosRelatorio, setDadosRelatorio] = useState(null);
   const [dadosGraficos, setDadosGraficos] = useState({});
+  const [nomeCompletoHover, setNomeCompletoHover] = useState(null);
 
   // Carregar empresas para o filtro
   useEffect(() => {
-    // ✅ CORRIGIDO: /empresas → /companies
     api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => console.error("Erro ao carregar empresas:", err));
@@ -44,11 +44,9 @@ export default function ConsultorRelatorios() {
     setCarregando(true);
     
     try {
-      // ✅ CORRIGIDO: /empresas → /companies
       const empresasRes = await api.get("/companies");
       const empresasData = empresasRes.data;
       
-      // Filtrar empresas se necessário
       const empresasFiltradas = empresaSelecionada === "todas" 
         ? empresasData 
         : empresasData.filter(e => e.id === parseInt(empresaSelecionada));
@@ -63,10 +61,8 @@ export default function ConsultorRelatorios() {
         oeeMedio: 0
       };
 
-      // Para cada empresa, buscar dados
       for (const empresa of empresasFiltradas) {
         try {
-          // ✅ CORRIGIDO: /linhas/${empresa.id} → /lines/${empresa.id}
           const linhasRes = await api.get(`/lines/${empresa.id}`);
           const linhas = linhasRes.data;
 
@@ -79,25 +75,21 @@ export default function ConsultorRelatorios() {
 
           for (const linha of linhas) {
             try {
-              // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
               const postosRes = await api.get(`/work-stations/${linha.id}`);
               totalPostos += postosRes.data.length;
 
-              // ✅ CORRIGIDO: /analise-linha/${linha.id} mantido
               const analiseRes = await api.get(`/analise-linha/${linha.id}`);
               if (analiseRes.data.eficiencia_percentual) {
                 somaOEE += parseFloat(analiseRes.data.eficiencia_percentual);
                 qtdOEE++;
               }
 
-              // ✅ CORRIGIDO: /perdas/${linha.id} → /losses/${linha.id}
               const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
               perdasRes.data.forEach(perda => {
                 totalPerdas += (perda.microparadas_minutos || 0) * 0.5;
                 totalPerdas += (perda.refugo_pecas || 0) * 50;
               });
 
-              // ✅ CORRIGIDO: /linha-produto/${linha.id} → /line-products/${linha.id}
               if (analiseRes.data.capacidade_estimada_dia) {
                 const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
                 const produtosData = produtosRes.data.dados || produtosRes.data || [];
@@ -140,20 +132,26 @@ export default function ConsultorRelatorios() {
         ? (dados.reduce((acc, e) => acc + e.oeeMedio, 0) / dados.length).toFixed(1)
         : 0;
 
+      // 🔧 PROBLEMA 2 - CORRIGIDO: Nome truncado com tooltip
+      // Mantém o nome truncado para visualização, mas com título completo no hover
+      const perdasPorEmpresa = dados.slice(0, 10).map(d => ({
+        nome: d.nome,
+        nomeTruncado: d.nome.length > 15 ? d.nome.substring(0, 15) + '...' : d.nome,
+        perdas: d.perdas
+      }));
+
       // Dados para gráficos
       const graficos = {
-        // Gráfico de barras - Perdas por empresa
         perdasPorEmpresa: {
-          labels: dados.slice(0, 10).map(d => d.nome.length > 15 ? d.nome.substring(0, 12) + '...' : d.nome),
-          valores: dados.slice(0, 10).map(d => d.perdas)
+          dados: perdasPorEmpresa,
+          labels: perdasPorEmpresa.map(d => d.nomeTruncado),
+          valores: perdasPorEmpresa.map(d => d.perdas)
         },
-        // Gráfico de pizza - Distribuição de status
         statusDistribuicao: {
           critico: dados.filter(d => d.oeeMedio < 60).length,
           atencao: dados.filter(d => d.oeeMedio >= 60 && d.oeeMedio < 75).length,
           bom: dados.filter(d => d.oeeMedio >= 75).length
         },
-        // Top 5 empresas por faturamento
         topFaturamento: {
           labels: dados.sort((a, b) => b.faturamento - a.faturamento).slice(0, 5).map(d => d.nome),
           valores: dados.sort((a, b) => b.faturamento - a.faturamento).slice(0, 5).map(d => d.faturamento)
@@ -175,7 +173,6 @@ export default function ConsultorRelatorios() {
     }
   }
 
-  // Exportar para CSV
   const exportarCSV = () => {
     if (!dadosRelatorio) return;
 
@@ -193,9 +190,15 @@ export default function ConsultorRelatorios() {
     a.click();
   };
 
-  // Exportar para PDF (usando print)
+  // 🔧 PROBLEMA 2.1 e 2.2 - CORRIGIDO: PDF com estilo de impressão
   const exportarPDF = () => {
+    // Adiciona uma classe temporária para impressão
+    document.body.classList.add('printing-relatorio');
     window.print();
+    // Remove após impressão (o evento afterprint cuida disso)
+    window.onafterprint = () => {
+      document.body.classList.remove('printing-relatorio');
+    };
   };
 
   if (carregando && !dadosRelatorio) {
@@ -212,19 +215,47 @@ export default function ConsultorRelatorios() {
   }
 
   return (
-    <div>
+    <div className="relatorio-container">
       {/* Cabeçalho */}
-      <div style={{ marginBottom: "30px" }}>
-        <h2 style={{ color: coresConsultor.primary, marginBottom: "5px" }}>
-          📈 Relatórios Consolidados
-        </h2>
-        <p style={{ color: "#666" }}>
-          Visualize e exporte dados de todos os seus clientes
-        </p>
+      <div className="relatorio-header" style={{ marginBottom: "30px" }}>
+        {/* 🔧 PROBLEMA 2.2 - CORRIGIDO: Logo e nome da empresa */}
+        <div className="relatorio-logo-area" style={{ textAlign: "center", marginBottom: "20px" }}>
+          <div className="relatorio-logo" style={{
+            fontSize: "48px",
+            marginBottom: "5px"
+          }}>
+            🏭
+          </div>
+          <div className="relatorio-nome-empresa" style={{
+            fontSize: "20px",
+            fontWeight: "bold",
+            color: coresConsultor.primary,
+            letterSpacing: "1px"
+          }}>
+            NEXUS ENGENHARIA APLICADA
+          </div>
+          <div className="relatorio-divisoria" style={{
+            width: "80px",
+            height: "2px",
+            backgroundColor: coresConsultor.accent,
+            margin: "10px auto"
+          }} />
+          <h2 className="relatorio-titulo" style={{
+            color: coresConsultor.primary,
+            marginTop: "15px",
+            marginBottom: "5px",
+            fontSize: "24px"
+          }}>
+            📈 Relatórios Consolidados
+          </h2>
+          <p className="relatorio-data" style={{ color: "#666", fontSize: "13px" }}>
+            Gerado em: {dadosRelatorio?.geradoEm}
+          </p>
+        </div>
       </div>
 
-      {/* Filtros */}
-      <div style={{
+      {/* Filtros - visíveis apenas na tela, não na impressão */}
+      <div className="filtros-container" style={{
         backgroundColor: "white",
         padding: "25px",
         borderRadius: "8px",
@@ -241,7 +272,6 @@ export default function ConsultorRelatorios() {
           gap: "20px",
           marginBottom: "20px"
         }}>
-          {/* Tipo de relatório */}
           <div>
             <label style={labelStyle}>Tipo de Relatório</label>
             <select
@@ -256,7 +286,6 @@ export default function ConsultorRelatorios() {
             </select>
           </div>
 
-          {/* Empresa */}
           <div>
             <label style={labelStyle}>Empresa</label>
             <select
@@ -271,7 +300,6 @@ export default function ConsultorRelatorios() {
             </select>
           </div>
 
-          {/* Período */}
           <div>
             <label style={labelStyle}>Período</label>
             <select
@@ -286,7 +314,6 @@ export default function ConsultorRelatorios() {
             </select>
           </div>
 
-          {/* Datas personalizadas */}
           {periodo === "personalizado" && (
             <>
               <div>
@@ -311,7 +338,6 @@ export default function ConsultorRelatorios() {
           )}
         </div>
 
-        {/* Botões de ação */}
         <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
           <button
             onClick={exportarCSV}
@@ -330,45 +356,15 @@ export default function ConsultorRelatorios() {
 
       {/* RESULTADO DO RELATÓRIO */}
       {dadosRelatorio && (
-        <div style={{
+        <div className="relatorio-conteudo" style={{
           backgroundColor: "white",
           padding: "25px",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
         }}>
           
-          {/* Cabeçalho do relatório */}
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "25px",
-            paddingBottom: "15px",
-            borderBottom: "2px solid #e5e7eb"
-          }}>
-            <div>
-              <h3 style={{ color: coresConsultor.primary, marginBottom: "5px" }}>
-                Relatório {tipoRelatorio === "geral" ? "Geral" :
-                          tipoRelatorio === "empresas" ? "por Empresa" :
-                          tipoRelatorio === "perdas" ? "de Perdas" : "de Evolução"}
-              </h3>
-              <p style={{ color: "#666", fontSize: "13px" }}>
-                Gerado em: {dadosRelatorio.geradoEm}
-              </p>
-            </div>
-            <div style={{
-              backgroundColor: coresConsultor.primary,
-              color: "white",
-              padding: "6px 12px",
-              borderRadius: "4px",
-              fontSize: "12px"
-            }}>
-              {dadosRelatorio.totais.empresas} empresas
-            </div>
-          </div>
-
           {/* Cards de resumo */}
-          <div style={{
+          <div className="relatorio-cards" style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
             gap: "15px",
@@ -407,23 +403,50 @@ export default function ConsultorRelatorios() {
           </div>
 
           {/* Gráficos */}
-          <div style={{
+          <div className="relatorio-graficos" style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
             gap: "20px",
             marginBottom: "30px"
           }}>
-            {/* Gráfico de Perdas por Empresa */}
+            {/* 🔧 PROBLEMA 2 - CORRIGIDO: Gráfico com tooltip no hover */}
             <div style={graficoContainer}>
               <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
                 📊 Perdas por Empresa (Top 10)
               </h4>
-              {dadosGraficos.perdasPorEmpresa?.labels.map((label, index) => (
-                <div key={index} style={{ marginBottom: "10px" }}>
+              {dadosGraficos.perdasPorEmpresa?.dados?.map((item, index) => (
+                <div 
+                  key={index} 
+                  style={{ marginBottom: "10px", position: "relative" }}
+                  onMouseEnter={() => setNomeCompletoHover(index)}
+                  onMouseLeave={() => setNomeCompletoHover(null)}
+                >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
-                    <span style={{ fontSize: "13px" }}>{label}</span>
+                    <span 
+                      style={{ fontSize: "13px", cursor: "pointer" }}
+                      title={item.nome}
+                    >
+                      {item.nomeTruncado}
+                      {nomeCompletoHover === index && (
+                        <span style={{
+                          position: "absolute",
+                          bottom: "100%",
+                          left: 0,
+                          backgroundColor: "#1f2937",
+                          color: "white",
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          fontSize: "12px",
+                          whiteSpace: "nowrap",
+                          zIndex: 10,
+                          marginBottom: "5px"
+                        }}>
+                          {item.nome}
+                        </span>
+                      )}
+                    </span>
                     <span style={{ fontSize: "13px", fontWeight: "bold", color: coresConsultor.danger }}>
-                      R$ {(dadosGraficos.perdasPorEmpresa.valores[index] / 1000).toFixed(1)}K
+                      R$ {(item.perdas / 1000).toFixed(1)}K
                     </span>
                   </div>
                   <div style={{
@@ -433,7 +456,7 @@ export default function ConsultorRelatorios() {
                     overflow: "hidden"
                   }}>
                     <div style={{
-                      width: `${(dadosGraficos.perdasPorEmpresa.valores[index] / Math.max(...dadosGraficos.perdasPorEmpresa.valores)) * 100}%`,
+                      width: `${(item.perdas / Math.max(...dadosGraficos.perdasPorEmpresa.valores)) * 100}%`,
                       height: "100%",
                       backgroundColor: coresConsultor.danger,
                       borderRadius: "3px"
@@ -552,7 +575,7 @@ export default function ConsultorRelatorios() {
                   <th style={thStyle}>Perdas</th>
                   <th style={thStyle}>Faturamento</th>
                   <th style={thStyle}>Produtividade</th>
-                </tr>
+                 </tr>
               </thead>
               <tbody>
                 {dadosRelatorio.dados.map((emp, index) => (
@@ -579,6 +602,67 @@ export default function ConsultorRelatorios() {
           </div>
         </div>
       )}
+
+      {/* 🔧 PROBLEMA 2.1 - CORRIGIDO: Estilos de impressão */}
+      <style>{`
+        @media print {
+          /* Esconde o menu lateral e filtros na impressão */
+          .sidebar, 
+          .menu-lateral,
+          .filtros-container,
+          button,
+          .no-print {
+            display: none !important;
+          }
+          
+          /* Ajusta o conteúdo principal para ocupar 100% */
+          .relatorio-container,
+          .relatorio-conteudo {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+          }
+          
+          /* Remove sombras e backgrounds desnecessários */
+          .relatorio-conteudo {
+            box-shadow: none !important;
+            background-color: white !important;
+          }
+          
+          /* Garante que o cabeçalho apareça corretamente */
+          .relatorio-header {
+            margin-bottom: 20px !important;
+            page-break-after: avoid !important;
+          }
+          
+          .relatorio-logo-area {
+            margin-bottom: 30px !important;
+          }
+          
+          /* Garante que tabelas não quebrem de forma feia */
+          table {
+            page-break-inside: avoid !important;
+            width: 100% !important;
+          }
+          
+          tr {
+            page-break-inside: avoid !important;
+            page-break-after: auto !important;
+          }
+          
+          /* Ajusta cores para impressão em preto e branco */
+          .relatorio-cards div {
+            border: 1px solid #ddd !important;
+            background-color: white !important;
+          }
+          
+          /* Força a quebra de página antes do cabeçalho */
+          h2, h3, h4 {
+            page-break-after: avoid !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
