@@ -530,7 +530,7 @@ export default function ConsultorClientes() {
                   background: "red",
                   cursor: "pointer",
                   fontSize: "14px",
-                  color: "#374151",
+                  color: "#ccc",
                   fontweight: "500"
                 }}
               >
