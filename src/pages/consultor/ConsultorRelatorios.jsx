@@ -1,6 +1,7 @@
 // src/pages/consultor/ConsultorRelatorios.jsx
 import { useState, useEffect } from "react";
 import api from "../../api/api";
+import logo from "../../assets/logo.png";
 
 // Cores exclusivas do consultor
 const coresConsultor = {
@@ -376,7 +377,7 @@ export default function ConsultorRelatorios() {
             {/* Logo REAL */}
             <div style={{ marginBottom: "10px" }}>
               <img 
-                src="/src/assets/logo.png" 
+                src={logo} 
                 alt="Nexus Engenharia Aplicada" 
                 style={{
                   height: "60px",
