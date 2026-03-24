@@ -37,7 +37,8 @@ export default function ConsultorLayout() {
     { path: "/consultor/ias/precificacao", icon: "", label: "Proposta de Implementação" },
     { path: "/consultor/ias/precificacao-pre-contrato", icon: "", label: "Proposta Diagnóstico Inicial" },
     { path: "/consultor/ias/sugestoes", icon: "", label: "IA de Sugestões" },
-    { path: "/consultor/checklist", icon: "", label: "Checklist" }
+    { path: "/consultor/checklist", icon: "", label: "Checklist" },
+    { path: "/consultor/horas", icon: "", label: "Registro de Horas" }
   ];
 
   return (

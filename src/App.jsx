@@ -92,6 +92,9 @@ import IASugestoes from "./pages/consultor/IASugestoes";
 // 🟢 NOVO IMPORT - CHECKLIST
 import Checklist from "./pages/consultor/Checklist";
 
+// 🟢 NOVO IMPORT - REGISTRO DE HORAS
+import RegistroHoras from "./pages/consultor/RegistroHoras";
+
 // 👇 NOVOS CONTEXTS
 import { AuthProvider } from "./context/AuthContext";
 import { ConsultorAuthProvider } from "./context/ConsultorAuthContext";
@@ -153,6 +156,8 @@ function App() {
                 <Route path="contrato-pre-diagnostico" element={<ContratoPreDiagnostico />} />
                 <Route path="contrato-implementacao" element={<ContratoImplementacao />} />
                 <Route path="proposta" element={<PropostaComercial />} />
+                {/* 🟢 NOVA ROTA - REGISTRO DE HORAS */}
+                <Route path="horas" element={<RegistroHoras />} />
               </Route>
             </Route>
             
