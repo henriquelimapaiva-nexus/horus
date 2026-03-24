@@ -16,26 +16,21 @@ const coresConsultor = {
 
 export default function ConsultorRelatorios() {
   const [carregando, setCarregando] = useState(true);
-  const [periodo, setPeriodo] = useState("mes"); // mes, trimestre, ano, personalizado
-  const [tipoRelatorio, setTipoRelatorio] = useState("geral"); // geral, empresas, perdas, evolucao
+  const [periodo, setPeriodo] = useState("mes");
+  const [tipoRelatorio, setTipoRelatorio] = useState("geral");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [empresaSelecionada, setEmpresaSelecionada] = useState("todas");
-  
-  // Dados
   const [empresas, setEmpresas] = useState([]);
   const [dadosRelatorio, setDadosRelatorio] = useState(null);
   const [dadosGraficos, setDadosGraficos] = useState({});
-  const [nomeCompletoHover, setNomeCompletoHover] = useState(null);
 
-  // Carregar empresas para o filtro
   useEffect(() => {
     api.get("/companies")
       .then(res => setEmpresas(res.data))
       .catch(err => console.error("Erro ao carregar empresas:", err));
   }, []);
 
-  // Gerar relatório quando mudar os filtros
   useEffect(() => {
     gerarRelatorio();
   }, [periodo, tipoRelatorio, empresaSelecionada, dataInicio, dataFim]);
@@ -132,15 +127,12 @@ export default function ConsultorRelatorios() {
         ? (dados.reduce((acc, e) => acc + e.oeeMedio, 0) / dados.length).toFixed(1)
         : 0;
 
-      // 🔧 PROBLEMA 2 - CORRIGIDO: Nome truncado com tooltip
-      // Mantém o nome truncado para visualização, mas com título completo no hover
       const perdasPorEmpresa = dados.slice(0, 10).map(d => ({
         nome: d.nome,
         nomeTruncado: d.nome.length > 15 ? d.nome.substring(0, 15) + '...' : d.nome,
         perdas: d.perdas
       }));
 
-      // Dados para gráficos
       const graficos = {
         perdasPorEmpresa: {
           dados: perdasPorEmpresa,
@@ -190,15 +182,8 @@ export default function ConsultorRelatorios() {
     a.click();
   };
 
-  // 🔧 PROBLEMA 2.1 e 2.2 - CORRIGIDO: PDF com estilo de impressão
   const exportarPDF = () => {
-    // Adiciona uma classe temporária para impressão
-    document.body.classList.add('printing-relatorio');
     window.print();
-    // Remove após impressão (o evento afterprint cuida disso)
-    window.onafterprint = () => {
-      document.body.classList.remove('printing-relatorio');
-    };
   };
 
   if (carregando && !dadosRelatorio) {
@@ -216,45 +201,7 @@ export default function ConsultorRelatorios() {
 
   return (
     <div className="relatorio-container">
-      {/* Cabeçalho */}
-      <div className="relatorio-header" style={{ marginBottom: "30px" }}>
-        {/* 🔧 PROBLEMA 2.2 - CORRIGIDO: Logo e nome da empresa */}
-        <div className="relatorio-logo-area" style={{ textAlign: "center", marginBottom: "20px" }}>
-          <div className="relatorio-logo" style={{
-            fontSize: "48px",
-            marginBottom: "5px"
-          }}>
-            🏭
-          </div>
-          <div className="relatorio-nome-empresa" style={{
-            fontSize: "20px",
-            fontWeight: "bold",
-            color: coresConsultor.primary,
-            letterSpacing: "1px"
-          }}>
-            NEXUS ENGENHARIA APLICADA
-          </div>
-          <div className="relatorio-divisoria" style={{
-            width: "80px",
-            height: "2px",
-            backgroundColor: coresConsultor.accent,
-            margin: "10px auto"
-          }} />
-          <h2 className="relatorio-titulo" style={{
-            color: coresConsultor.primary,
-            marginTop: "15px",
-            marginBottom: "5px",
-            fontSize: "24px"
-          }}>
-            📈 Relatórios Consolidados
-          </h2>
-          <p className="relatorio-data" style={{ color: "#666", fontSize: "13px" }}>
-            Gerado em: {dadosRelatorio?.geradoEm}
-          </p>
-        </div>
-      </div>
-
-      {/* Filtros - visíveis apenas na tela, não na impressão */}
+      {/* Filtros - visíveis apenas na tela */}
       <div className="filtros-container" style={{
         backgroundColor: "white",
         padding: "25px",
@@ -354,15 +301,73 @@ export default function ConsultorRelatorios() {
         </div>
       </div>
 
-      {/* RESULTADO DO RELATÓRIO */}
+      {/* CONTEÚDO DO RELATÓRIO */}
       {dadosRelatorio && (
         <div className="relatorio-conteudo" style={{
           backgroundColor: "white",
-          padding: "25px",
+          padding: "30px",
           borderRadius: "8px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
         }}>
           
+          {/* CABEÇALHO DO RELATÓRIO - APENAS PARA IMPRESSÃO (VISÍVEL NA TELA TAMBÉM, MAS SEMPRE) */}
+          <div className="relatorio-header-print" style={{
+            marginBottom: "30px",
+            paddingBottom: "15px",
+            borderBottom: "2px solid #ccc"
+          }}>
+            {/* Logo - Lobo */}
+            <div style={{
+              fontSize: "48px",
+              marginBottom: "5px"
+            }}>
+              🐺
+            </div>
+            
+            {/* Nome da Empresa */}
+            <div style={{
+              fontSize: "18px",
+              fontWeight: "bold",
+              color: "#333",
+              letterSpacing: "1px",
+              marginBottom: "5px"
+            }}>
+              NEXUS ENGENHARIA APLICADA
+            </div>
+            
+            {/* Linha divisória */}
+            <div style={{
+              width: "100%",
+              height: "1px",
+              backgroundColor: "#ccc",
+              margin: "10px 0 15px 0"
+            }} />
+            
+            {/* Título e informações */}
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-end",
+              flexWrap: "wrap",
+              gap: "10px"
+            }}>
+              <h2 style={{
+                margin: 0,
+                color: coresConsultor.primary,
+                fontSize: "24px"
+              }}>
+                Relatórios Consolidados
+              </h2>
+              <div style={{
+                textAlign: "right",
+                fontSize: "12px",
+                color: "#666"
+              }}>
+                <div>Gerado em: {dadosRelatorio.geradoEm}</div>
+              </div>
+            </div>
+          </div>
+
           {/* Cards de resumo */}
           <div className="relatorio-cards" style={{
             display: "grid",
@@ -409,7 +414,7 @@ export default function ConsultorRelatorios() {
             gap: "20px",
             marginBottom: "30px"
           }}>
-            {/* 🔧 PROBLEMA 2 - CORRIGIDO: Gráfico com tooltip no hover */}
+            {/* Gráfico de Perdas por Empresa */}
             <div style={graficoContainer}>
               <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
                 📊 Perdas por Empresa (Top 10)
@@ -418,32 +423,11 @@ export default function ConsultorRelatorios() {
                 <div 
                   key={index} 
                   style={{ marginBottom: "10px", position: "relative" }}
-                  onMouseEnter={() => setNomeCompletoHover(index)}
-                  onMouseLeave={() => setNomeCompletoHover(null)}
+                  title={item.nome}
                 >
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
-                    <span 
-                      style={{ fontSize: "13px", cursor: "pointer" }}
-                      title={item.nome}
-                    >
+                    <span style={{ fontSize: "13px" }}>
                       {item.nomeTruncado}
-                      {nomeCompletoHover === index && (
-                        <span style={{
-                          position: "absolute",
-                          bottom: "100%",
-                          left: 0,
-                          backgroundColor: "#1f2937",
-                          color: "white",
-                          padding: "4px 8px",
-                          borderRadius: "4px",
-                          fontSize: "12px",
-                          whiteSpace: "nowrap",
-                          zIndex: 10,
-                          marginBottom: "5px"
-                        }}>
-                          {item.nome}
-                        </span>
-                      )}
                     </span>
                     <span style={{ fontSize: "13px", fontWeight: "bold", color: coresConsultor.danger }}>
                       R$ {(item.perdas / 1000).toFixed(1)}K
@@ -603,11 +587,11 @@ export default function ConsultorRelatorios() {
         </div>
       )}
 
-      {/* 🔧 PROBLEMA 2.1 - CORRIGIDO: Estilos de impressão */}
+      {/* ESTILOS DE IMPRESSÃO - CORRIGIDOS */}
       <style>{`
         @media print {
           /* Esconde o menu lateral e filtros na impressão */
-          .sidebar, 
+          .sidebar,
           .menu-lateral,
           .filtros-container,
           button,
@@ -615,11 +599,17 @@ export default function ConsultorRelatorios() {
             display: none !important;
           }
           
+          /* Remove margens e padding extras */
+          body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
           /* Ajusta o conteúdo principal para ocupar 100% */
           .relatorio-container,
           .relatorio-conteudo {
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 15px !important;
             width: 100% !important;
             max-width: 100% !important;
           }
@@ -631,13 +621,9 @@ export default function ConsultorRelatorios() {
           }
           
           /* Garante que o cabeçalho apareça corretamente */
-          .relatorio-header {
+          .relatorio-header-print {
             margin-bottom: 20px !important;
             page-break-after: avoid !important;
-          }
-          
-          .relatorio-logo-area {
-            margin-bottom: 30px !important;
           }
           
           /* Garante que tabelas não quebrem de forma feia */
@@ -651,15 +637,10 @@ export default function ConsultorRelatorios() {
             page-break-after: auto !important;
           }
           
-          /* Ajusta cores para impressão em preto e branco */
+          /* Ajusta cores para impressão */
           .relatorio-cards div {
             border: 1px solid #ddd !important;
             background-color: white !important;
-          }
-          
-          /* Força a quebra de página antes do cabeçalho */
-          h2, h3, h4 {
-            page-break-after: avoid !important;
           }
         }
       `}</style>
