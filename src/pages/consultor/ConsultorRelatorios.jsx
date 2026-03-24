@@ -14,60 +14,104 @@ const coresConsultor = {
   background: "#f8fafc"
 };
 
-// 🔧 CORREÇÃO: Estilos de impressão para corrigir layout espremido
+// 🔧 CORREÇÃO: CSS de impressão profissional
 const printStyles = `
 @media print {
-  /* Remove elementos de interface */
-  .no-print { 
-    display: none !important; 
+  /* Remove toda a interface - filtros, botões, menus */
+  .no-print {
+    display: none !important;
   }
 
-  /* Reset de Body e Containers superiores */
-  body, #root, main, .relatorio-container { 
-    margin: 0 !important; 
-    padding: 0 !important; 
-    width: 100% !important;
-    background-color: white !important;
-  }
-
-  /* Força o container do relatório a ocupar a folha toda */
-  .pdf-content {
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
+  /* Reset completo do body e main para eliminar bordas cinzas */
+  body, #root, main, .relatorio-container {
     margin: 0 !important;
-    padding: 10mm !important;
+    padding: 0 !important;
+    background: white !important;
+    width: 100% !important;
+  }
+
+  /* Força o container do relatório a ter largura exata de A4 */
+  .pdf-content {
+    width: 210mm !important;
+    margin: 0 auto !important;
+    padding: 8mm !important;
+    position: relative !important;
+    background: white !important;
     box-shadow: none !important;
     border: none !important;
-    background-color: white !important;
   }
 
-  /* Ajuste de Grid: impede que os cards fiquem minúsculos lado a lado */
-  .grid-adjust {
-    display: block !important; 
-  }
-  .grid-adjust > div {
-    width: 100% !important;
+  /* Cards de resumo - layout em linha para impressão */
+  .cards-wrapper {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
     margin-bottom: 20px !important;
-    page-break-inside: avoid !important;
-  }
-
-  /* Garante que tabelas não quebrem de forma feia */
-  table {
-    page-break-inside: avoid !important;
-    width: 100% !important;
   }
   
-  tr {
+  .card-print {
+    width: 32% !important;
+    display: inline-block !important;
+    margin-bottom: 10px !important;
     page-break-inside: avoid !important;
-    page-break-after: auto !important;
+    border-left: 4px solid !important;
+    background: #f9fafb !important;
+    padding: 10px !important;
+    box-sizing: border-box !important;
   }
 
-  /* Habilita cores de fundo no PDF */
-  * { 
-    -webkit-print-color-adjust: exact !important; 
-    print-color-adjust: exact !important; 
+  /* Gráficos - layout em linha para impressão */
+  .charts-wrapper {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    justify-content: space-between !important;
+    gap: 15px !important;
+    margin-bottom: 20px !important;
+  }
+  
+  .chart-print {
+    width: 48% !important;
+    display: inline-block !important;
+    page-break-inside: avoid !important;
+    background: #f9fafb !important;
+    padding: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Tabela ocupa 100% da largura */
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: avoid !important;
+    font-size: 11px !important;
+  }
+  
+  th, td {
+    border: 1px solid #ccc !important;
+    padding: 6px !important;
+    text-align: center !important;
+  }
+
+  /* Redução de fontes para impressão */
+  h2, h3, h4 {
+    font-size: 14px !important;
+    margin: 5px 0 !important;
+  }
+  
+  p, span, div {
+    font-size: 11px !important;
+  }
+
+  /* Garante cores de fundo no PDF sem precisar de opção extra */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Evita quebras de página indesejadas */
+  .no-break {
+    page-break-inside: avoid !important;
   }
 }
 `;
@@ -272,7 +316,7 @@ export default function ConsultorRelatorios() {
       {/* 🔧 CORREÇÃO: Injeção dos estilos de impressão */}
       <style>{printStyles}</style>
 
-      {/* 🔧 CORREÇÃO: Cabeçalho e Filtros com classe no-print (não aparecem no PDF) */}
+      {/* 🔧 Tudo que é interface recebe classe no-print */}
       <div className="no-print" style={{ marginBottom: "30px" }}>
         <h2 style={{ color: coresConsultor.primary, marginBottom: "5px" }}>
           📈 Relatórios Consolidados
@@ -282,7 +326,6 @@ export default function ConsultorRelatorios() {
         </p>
       </div>
 
-      {/* 🔧 CORREÇÃO: Filtros com classe no-print */}
       <div className="no-print" style={{
         backgroundColor: "white",
         padding: "25px",
@@ -382,115 +425,94 @@ export default function ConsultorRelatorios() {
         </div>
       </div>
 
-      {/* 🔧 CORREÇÃO: Conteúdo do relatório com classe pdf-content */}
+      {/* 🔧 CONTEÚDO DO RELATÓRIO PARA IMPRESSÃO */}
       {dadosRelatorio && (
-        <div className="pdf-content" style={{
-          backgroundColor: "white",
-          padding: "25px",
-          borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
-        }}>
+        <div className="pdf-content">
           
           {/* Cabeçalho do relatório */}
           <div style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "25px",
-            paddingBottom: "15px",
-            borderBottom: "2px solid #e5e7eb"
+            marginBottom: "20px",
+            paddingBottom: "10px",
+            borderBottom: "2px solid #ccc"
           }}>
             <div>
-              <h3 style={{ color: coresConsultor.primary, marginBottom: "5px" }}>
+              <h3 style={{ color: coresConsultor.primary, marginBottom: "5px", fontSize: "16px" }}>
                 Relatório {tipoRelatorio === "geral" ? "Geral" :
                           tipoRelatorio === "empresas" ? "por Empresa" :
                           tipoRelatorio === "perdas" ? "de Perdas" : "de Evolução"}
               </h3>
-              <p style={{ color: "#666", fontSize: "13px" }}>
+              <p style={{ color: "#666", fontSize: "11px" }}>
                 Gerado em: {dadosRelatorio.geradoEm}
               </p>
             </div>
             <div style={{
               backgroundColor: coresConsultor.primary,
               color: "white",
-              padding: "6px 12px",
+              padding: "4px 10px",
               borderRadius: "4px",
-              fontSize: "12px"
+              fontSize: "11px"
             }}>
               {dadosRelatorio.totais.empresas} empresas
             </div>
           </div>
 
-          {/* 🔧 CORREÇÃO: Cards com classe grid-adjust */}
-          <div className="grid-adjust" style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "15px",
-            marginBottom: "30px"
-          }}>
-            <ResumoCardRelatorio
-              titulo="Total de Empresas"
-              valor={dadosRelatorio.totais.empresas}
-              cor={coresConsultor.primary}
-            />
-            <ResumoCardRelatorio
-              titulo="Total de Linhas"
-              valor={dadosRelatorio.totais.linhas}
-              cor={coresConsultor.secondary}
-            />
-            <ResumoCardRelatorio
-              titulo="Total de Postos"
-              valor={dadosRelatorio.totais.postos}
-              cor={coresConsultor.info}
-            />
-            <ResumoCardRelatorio
-              titulo="Perdas Totais"
-              valor={`R$ ${(dadosRelatorio.totais.perdas / 1000).toFixed(1)}K`}
-              cor={coresConsultor.danger}
-            />
-            <ResumoCardRelatorio
-              titulo="Faturamento Total"
-              valor={`R$ ${(dadosRelatorio.totais.faturamento / 1000).toFixed(1)}K`}
-              cor={coresConsultor.success}
-            />
-            <ResumoCardRelatorio
-              titulo="OEE Médio"
-              valor={`${dadosRelatorio.totais.oeeMedio}%`}
-              cor={dadosRelatorio.totais.oeeMedio >= 70 ? coresConsultor.success : coresConsultor.warning}
-            />
+          {/* 🔧 Cards - wrapper com flex para impressão */}
+          <div className="cards-wrapper">
+            <div className="card-print" style={{ borderLeftColor: coresConsultor.primary }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>Total de Empresas</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: coresConsultor.primary }}>{dadosRelatorio.totais.empresas}</div>
+            </div>
+            <div className="card-print" style={{ borderLeftColor: coresConsultor.secondary }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>Total de Linhas</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: coresConsultor.secondary }}>{dadosRelatorio.totais.linhas}</div>
+            </div>
+            <div className="card-print" style={{ borderLeftColor: coresConsultor.info }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>Total de Postos</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: coresConsultor.info }}>{dadosRelatorio.totais.postos}</div>
+            </div>
+            <div className="card-print" style={{ borderLeftColor: coresConsultor.danger }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>Perdas Totais</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: coresConsultor.danger }}>R$ {(dadosRelatorio.totais.perdas / 1000).toFixed(1)}K</div>
+            </div>
+            <div className="card-print" style={{ borderLeftColor: coresConsultor.success }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>Faturamento Total</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: coresConsultor.success }}>R$ {(dadosRelatorio.totais.faturamento / 1000).toFixed(1)}K</div>
+            </div>
+            <div className="card-print" style={{ borderLeftColor: dadosRelatorio.totais.oeeMedio >= 70 ? coresConsultor.success : coresConsultor.warning }}>
+              <div style={{ fontSize: "11px", color: "#666" }}>OEE Médio</div>
+              <div style={{ fontSize: "18px", fontWeight: "bold", color: dadosRelatorio.totais.oeeMedio >= 70 ? coresConsultor.success : coresConsultor.warning }}>{dadosRelatorio.totais.oeeMedio}%</div>
+            </div>
           </div>
 
-          {/* 🔧 CORREÇÃO: Gráficos com classe grid-adjust */}
-          <div className="grid-adjust" style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))",
-            gap: "20px",
-            marginBottom: "30px"
-          }}>
+          {/* 🔧 Gráficos - wrapper com flex para impressão */}
+          <div className="charts-wrapper">
             {/* Gráfico de Perdas por Empresa */}
-            <div style={graficoContainer}>
-              <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
+            <div className="chart-print">
+              <h4 style={{ color: coresConsultor.primary, marginBottom: "10px", fontSize: "13px" }}>
                 📊 Perdas por Empresa (Top 10)
               </h4>
               {dadosGraficos.perdasPorEmpresa?.labels.map((label, index) => (
-                <div key={index} style={{ marginBottom: "10px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
-                    <span style={{ fontSize: "13px" }}>{label}</span>
-                    <span style={{ fontSize: "13px", fontWeight: "bold", color: coresConsultor.danger }}>
+                <div key={index} style={{ marginBottom: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                    <span style={{ fontSize: "10px" }}>{label}</span>
+                    <span style={{ fontSize: "10px", fontWeight: "bold", color: coresConsultor.danger }}>
                       R$ {(dadosGraficos.perdasPorEmpresa.valores[index] / 1000).toFixed(1)}K
                     </span>
                   </div>
                   <div style={{
-                    height: "6px",
+                    height: "4px",
                     backgroundColor: "#e5e7eb",
-                    borderRadius: "3px",
+                    borderRadius: "2px",
                     overflow: "hidden"
                   }}>
                     <div style={{
                       width: `${(dadosGraficos.perdasPorEmpresa.valores[index] / Math.max(...dadosGraficos.perdasPorEmpresa.valores)) * 100}%`,
                       height: "100%",
                       backgroundColor: coresConsultor.danger,
-                      borderRadius: "3px"
+                      borderRadius: "2px"
                     }} />
                   </div>
                 </div>
@@ -498,92 +520,92 @@ export default function ConsultorRelatorios() {
             </div>
 
             {/* Distribuição de Status */}
-            <div style={graficoContainer}>
-              <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
+            <div className="chart-print">
+              <h4 style={{ color: coresConsultor.primary, marginBottom: "10px", fontSize: "13px" }}>
                 🎯 Distribuição por Status
               </h4>
-              <div style={{ display: "flex", justifyContent: "center", gap: "20px", marginBottom: "20px" }}>
+              <div style={{ display: "flex", justifyContent: "center", gap: "15px" }}>
                 <div style={{ textAlign: "center" }}>
                   <div style={{
-                    width: "60px",
-                    height: "60px",
+                    width: "50px",
+                    height: "50px",
                     borderRadius: "50%",
                     backgroundColor: `${coresConsultor.danger}20`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "24px",
+                    fontSize: "20px",
                     fontWeight: "bold",
                     color: coresConsultor.danger,
                     margin: "0 auto 5px"
                   }}>
                     {dadosGraficos.statusDistribuicao?.critico || 0}
                   </div>
-                  <span style={{ fontSize: "12px", color: coresConsultor.danger }}>Crítico</span>
+                  <span style={{ fontSize: "10px", color: coresConsultor.danger }}>Crítico</span>
                 </div>
                 <div style={{ textAlign: "center" }}>
                   <div style={{
-                    width: "60px",
-                    height: "60px",
+                    width: "50px",
+                    height: "50px",
                     borderRadius: "50%",
                     backgroundColor: `${coresConsultor.warning}20`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "24px",
+                    fontSize: "20px",
                     fontWeight: "bold",
                     color: coresConsultor.warning,
                     margin: "0 auto 5px"
                   }}>
                     {dadosGraficos.statusDistribuicao?.atencao || 0}
                   </div>
-                  <span style={{ fontSize: "12px", color: coresConsultor.warning }}>Atenção</span>
+                  <span style={{ fontSize: "10px", color: coresConsultor.warning }}>Atenção</span>
                 </div>
                 <div style={{ textAlign: "center" }}>
                   <div style={{
-                    width: "60px",
-                    height: "60px",
+                    width: "50px",
+                    height: "50px",
                     borderRadius: "50%",
                     backgroundColor: `${coresConsultor.success}20`,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    fontSize: "24px",
+                    fontSize: "20px",
                     fontWeight: "bold",
                     color: coresConsultor.success,
                     margin: "0 auto 5px"
                   }}>
                     {dadosGraficos.statusDistribuicao?.bom || 0}
                   </div>
-                  <span style={{ fontSize: "12px", color: coresConsultor.success }}>Bom</span>
+                  <span style={{ fontSize: "10px", color: coresConsultor.success }}>Bom</span>
                 </div>
               </div>
             </div>
 
             {/* Top 5 Faturamento */}
-            <div style={graficoContainer}>
-              <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
+            <div className="chart-print">
+              <h4 style={{ color: coresConsultor.primary, marginBottom: "10px", fontSize: "13px" }}>
                 💰 Top 5 Faturamento
               </h4>
               {dadosGraficos.topFaturamento?.labels.map((label, index) => (
-                <div key={index} style={{ marginBottom: "10px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
-                    <span style={{ fontSize: "13px" }}>{label}</span>
-                    <span style={{ fontSize: "13px", fontWeight: "bold", color: coresConsultor.success }}>
+                <div key={index} style={{ marginBottom: "8px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "2px" }}>
+                    <span style={{ fontSize: "10px" }}>{label}</span>
+                    <span style={{ fontSize: "10px", fontWeight: "bold", color: coresConsultor.success }}>
                       R$ {(dadosGraficos.topFaturamento.valores[index] / 1000).toFixed(1)}K
                     </span>
                   </div>
                   <div style={{
-                    height: "6px",
+                    height: "4px",
                     backgroundColor: "#e5e7eb",
-                    borderRadius: "3px",
+                    borderRadius: "2px",
                     overflow: "hidden"
                   }}>
                     <div style={{
                       width: `${(dadosGraficos.topFaturamento.valores[index] / Math.max(...dadosGraficos.topFaturamento.valores)) * 100}%`,
                       height: "100%",
                       backgroundColor: coresConsultor.success,
-                      borderRadius: "3px"
+                      borderRadius: "2px"
                     }} />
                   </div>
                 </div>
@@ -592,29 +614,29 @@ export default function ConsultorRelatorios() {
           </div>
 
           {/* Tabela detalhada */}
-          <h4 style={{ color: coresConsultor.primary, marginBottom: "15px" }}>
+          <h4 style={{ color: coresConsultor.primary, marginBottom: "10px", fontSize: "13px" }}>
             📋 Detalhamento por Empresa
           </h4>
           <div style={{ overflowX: "auto" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <table>
               <thead>
                 <tr style={{ backgroundColor: coresConsultor.primary, color: "white" }}>
-                  <th style={thStyle}>Empresa</th>
-                  <th style={thStyle}>Linhas</th>
-                  <th style={thStyle}>Postos</th>
-                  <th style={thStyle}>OEE</th>
-                  <th style={thStyle}>Perdas</th>
-                  <th style={thStyle}>Faturamento</th>
-                  <th style={thStyle}>Produtividade</th>
-                 </tr>
+                  <th>Empresa</th>
+                  <th>Linhas</th>
+                  <th>Postos</th>
+                  <th>OEE</th>
+                  <th>Perdas</th>
+                  <th>Faturamento</th>
+                  <th>Produtividade</th>
+                </tr>
               </thead>
               <tbody>
-                {dadosRelatorio.dados.map((emp, index) => (
-                  <tr key={emp.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={tdStyle}>{emp.nome}</td>
-                    <td style={tdStyle}>{emp.totalLinhas}</td>
-                    <td style={tdStyle}>{emp.totalPostos}</td>
-                    <td style={tdStyle}>
+                {dadosRelatorio.dados.map((emp) => (
+                  <tr key={emp.id}>
+                    <td>{emp.nome}</td>
+                    <td>{emp.totalLinhas}</td>
+                    <td>{emp.totalPostos}</td>
+                    <td>
                       <span style={{
                         color: emp.oeeMedio >= 75 ? coresConsultor.success :
                                emp.oeeMedio >= 60 ? coresConsultor.warning : coresConsultor.danger,
@@ -623,9 +645,9 @@ export default function ConsultorRelatorios() {
                         {emp.oeeMedio}%
                       </span>
                     </td>
-                    <td style={tdStyle}>R$ {(emp.perdas / 1000).toFixed(1)}K</td>
-                    <td style={tdStyle}>R$ {(emp.faturamento / 1000).toFixed(1)}K</td>
-                    <td style={tdStyle}>R$ {emp.produtividade}</td>
+                    <td>R$ {(emp.perdas / 1000).toFixed(1)}K</td>
+                    <td>R$ {(emp.faturamento / 1000).toFixed(1)}K</td>
+                    <td>R$ {emp.produtividade}</td>
                   </tr>
                 ))}
               </tbody>
@@ -664,39 +686,3 @@ const botaoStyle = {
   fontSize: "13px",
   cursor: "pointer"
 };
-
-const thStyle = {
-  padding: "10px 8px",
-  border: "1px solid #e5e7eb",
-  textAlign: "center",
-  fontSize: "13px",
-  fontWeight: "500"
-};
-
-const tdStyle = {
-  padding: "8px",
-  border: "1px solid #e5e7eb",
-  textAlign: "center",
-  fontSize: "13px"
-};
-
-const graficoContainer = {
-  backgroundColor: "#f9fafb",
-  padding: "15px",
-  borderRadius: "8px"
-};
-
-function ResumoCardRelatorio({ titulo, valor, cor }) {
-  return (
-    <div style={{
-      backgroundColor: "#f9fafb",
-      padding: "12px",
-      borderRadius: "6px",
-      borderLeft: `4px solid ${cor}`,
-      textAlign: "center"
-    }}>
-      <div style={{ color: "#666", fontSize: "11px", marginBottom: "5px" }}>{titulo}</div>
-      <div style={{ fontSize: "18px", fontWeight: "bold", color: cor }}>{valor}</div>
-    </div>
-  );
-}
