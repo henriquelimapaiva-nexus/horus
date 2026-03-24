@@ -95,6 +95,9 @@ import Checklist from "./pages/consultor/Checklist";
 // 🟢 NOVO IMPORT - REGISTRO DE HORAS
 import RegistroHoras from "./pages/consultor/RegistroHoras";
 
+// 🟢 NOVO IMPORT - LEADS (PROSPECÇÃO COMERCIAL)
+import Leads from "./pages/consultor/Leads";
+
 // 👇 NOVOS CONTEXTS
 import { AuthProvider } from "./context/AuthContext";
 import { ConsultorAuthProvider } from "./context/ConsultorAuthContext";
@@ -158,6 +161,8 @@ function App() {
                 <Route path="proposta" element={<PropostaComercial />} />
                 {/* 🟢 NOVA ROTA - REGISTRO DE HORAS */}
                 <Route path="horas" element={<RegistroHoras />} />
+                {/* 🟢 NOVA ROTA - LEADS (PROSPECÇÃO COMERCIAL) */}
+                <Route path="leads" element={<Leads />} />
               </Route>
             </Route>
             
