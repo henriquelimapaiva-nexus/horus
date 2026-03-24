@@ -144,7 +144,7 @@ export default function ConsultorRelatorios() {
       const graficos = {
         // Gráfico de barras - Perdas por empresa
         perdasPorEmpresa: {
-          labels: dados.slice(0, 10).map(d => d.nome.length > 15 ? d.nome.substring(0, 12) + '...' : d.nome),
+          labels: dados.slice(0, 10).map(d => d.nome),
           valores: dados.slice(0, 10).map(d => d.perdas)
         },
         // Gráfico de pizza - Distribuição de status
