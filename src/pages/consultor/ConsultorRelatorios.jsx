@@ -192,7 +192,6 @@ export default function ConsultorRelatorios() {
     a.click();
   };
 
-  // 🔧 CORREÇÃO: Delay para garantir que tudo renderizou
   const exportarPDF = () => {
     setTimeout(() => {
       window.print();
@@ -214,20 +213,16 @@ export default function ConsultorRelatorios() {
 
   return (
     <div>
-      {/* 🔧 CSS de impressão - isola apenas a área do relatório */}
       <style>{`
         @media print {
-          /* Esconde tudo que está fora da área do relatório */
           body * {
             visibility: hidden;
           }
           
-          /* Mostra apenas a área do relatório */
           #area-pdf, #area-pdf * {
             visibility: visible;
           }
           
-          /* Força a área do relatório a ocupar a folha toda */
           #area-pdf {
             position: absolute;
             left: 0;
@@ -237,17 +232,14 @@ export default function ConsultorRelatorios() {
             padding: 10mm !important;
           }
           
-          /* Corrige grids que quebram no print */
           div[style*="grid"] {
             display: block !important;
           }
           
-          /* Evita quebras de página no meio de elementos */
           table, div {
             page-break-inside: avoid;
           }
           
-          /* Mantém as cores no PDF */
           * {
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
@@ -255,7 +247,6 @@ export default function ConsultorRelatorios() {
         }
       `}</style>
 
-      {/* Cabeçalho da página (NÃO aparece no PDF) */}
       <div style={{ marginBottom: "30px" }}>
         <h2 style={{ color: coresConsultor.primary, marginBottom: "5px" }}>
           📈 Relatórios Consolidados
@@ -265,7 +256,6 @@ export default function ConsultorRelatorios() {
         </p>
       </div>
 
-      {/* Filtros (NÃO aparecem no PDF) */}
       <div style={{
         backgroundColor: "white",
         padding: "25px",
@@ -365,7 +355,7 @@ export default function ConsultorRelatorios() {
         </div>
       </div>
 
-      {/* 🔧 ÁREA DO PDF - ISOLADA COM ID */}
+      {/* 🔧 ÁREA DO PDF - COM CABEÇALHO PADRÃO NEXUS */}
       {dadosRelatorio && (
         <div id="area-pdf" style={{
           backgroundColor: "white",
@@ -376,14 +366,44 @@ export default function ConsultorRelatorios() {
           margin: "0 auto"
         }}>
           
-          {/* Cabeçalho do relatório */}
+          {/* 🔧 CABEÇALHO PADRÃO NEXUS - CENTRALIZADO */}
+          <div style={{
+            textAlign: "center",
+            marginBottom: "30px",
+            paddingBottom: "15px",
+            borderBottom: "2px solid #ccc"
+          }}>
+            {/* Logo REAL */}
+            <div style={{ marginBottom: "10px" }}>
+              <img 
+                src="/src/assets/logo.png" 
+                alt="Nexus Engenharia Aplicada" 
+                style={{
+                  height: "60px",
+                  width: "auto",
+                  objectFit: "contain"
+                }}
+              />
+            </div>
+            
+            {/* Nome da Empresa */}
+            <div style={{
+              fontSize: "18px",
+              fontWeight: "bold",
+              color: "#333",
+              letterSpacing: "1px",
+              marginBottom: "5px"
+            }}>
+              NEXUS ENGENHARIA APLICADA
+            </div>
+          </div>
+          
+          {/* Título e data lado a lado (agora dentro do relatório, após o cabeçalho) */}
           <div style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: "25px",
-            paddingBottom: "15px",
-            borderBottom: "2px solid #e5e7eb"
+            marginBottom: "25px"
           }}>
             <div>
               <h3 style={{ color: coresConsultor.primary, marginBottom: "5px" }}>
@@ -588,7 +608,7 @@ export default function ConsultorRelatorios() {
                   <th style={thStyle}>Perdas</th>
                   <th style={thStyle}>Faturamento</th>
                   <th style={thStyle}>Produtividade</th>
-                  </tr>
+                 </tr>
               </thead>
               <tbody>
                 {dadosRelatorio.dados.map((emp, index) => (
@@ -619,7 +639,6 @@ export default function ConsultorRelatorios() {
   );
 }
 
-// Estilos (mantidos intactos)
 const labelStyle = {
   display: "block",
   marginBottom: "6px",
