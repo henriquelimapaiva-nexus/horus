@@ -20,7 +20,7 @@ export default function LinhaForm() {
   const [form, setForm] = useState({
     nome: "",
     empresa_id: clienteAtual || "",
-    horas_produtivas_dia: "16"
+    horas_produtivas_dia: ""
   });
 
   // Estados para múltiplos produtos
@@ -67,7 +67,7 @@ export default function LinhaForm() {
       
       if (linha) {
         // Formatar horas
-        const horasFormatadas = linha.horas_produtivas_dia 
+        const horasFormatadas = linha.horas_produtivas 
           ? parseFloat(linha.horas_produtivas_dia).toString() 
           : "16";
 
