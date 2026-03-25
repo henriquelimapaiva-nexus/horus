@@ -595,12 +595,14 @@ const th = {
   border: "1px solid #e5e7eb",
   textAlign: "center",
   fontSize: "14px",
-  fontWeight: "500"
+  fontWeight: "500",
+  whiteSpace: "nowrap", 
 };
 
 const td = {
   padding: "10px 12px",
   border: "1px solid #e5e7eb",
   textAlign: "center",
-  fontSize: "14px"
+  fontSize: "14px",
+  whiteSpace: "nowrap"
 };
