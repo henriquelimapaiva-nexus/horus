@@ -123,6 +123,22 @@ export default function Leads() {
     }
   };
 
+  const handleDelete = async (id, nome) => {
+    if (!window.confirm(`Tem certeza que deseja excluir o lead "${nome}"?`)) {
+      return;
+    }
+    
+    try {
+      await api.delete(`/leads/${id}`);
+      toast.success("Lead excluído com sucesso!");
+      carregarLeads();
+      carregarMetrics();
+    } catch (error) {
+      console.error("Erro ao excluir lead:", error);
+      toast.error("Erro ao excluir lead");
+    }
+  };
+
   const abrirEdicao = (lead) => {
     setEditandoId(lead.id);
     setForm({
@@ -242,7 +258,7 @@ export default function Leads() {
                 <th style={thStyle}>Prob.</th>
                 <th style={thStyle}>Próx. Contato</th>
                 <th style={thStyle}>Ações</th>
-               </tr>
+                </tr>
             </thead>
             <tbody>
               {leads.map(lead => (
@@ -298,16 +314,20 @@ export default function Leads() {
                       <button
                         onClick={() => abrirEdicao(lead)}
                         style={actionButtonStyle}
-                        title="Editar"
                       >
-                        ✏️
+                        Editar
                       </button>
                       <button
                         onClick={() => setModalInteracao(lead)}
                         style={actionButtonStyle}
-                        title="Registrar Interação"
                       >
-                        💬
+                        Interação
+                      </button>
+                      <button
+                        onClick={() => handleDelete(lead.id, lead.nome)}
+                        style={{ ...actionButtonStyle, color: "#dc2626", borderColor: "#dc2626" }}
+                      >
+                        Excluir
                       </button>
                     </div>
                   </td>
@@ -497,11 +517,12 @@ const tdStyle = {
 };
 
 const actionButtonStyle = {
-  background: "none",
-  border: "none",
-  fontSize: "18px",
-  cursor: "pointer",
-  padding: "4px 8px",
+  padding: "6px 12px",
+  backgroundColor: "#f3f4f6",
+  border: "1px solid #e5e7eb",
   borderRadius: "4px",
-  transition: "background 0.2s"
+  fontSize: "12px",
+  cursor: "pointer",
+  transition: "all 0.2s",
+  color: "#374151"
 };
