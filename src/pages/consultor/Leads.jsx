@@ -234,7 +234,7 @@ export default function Leads() {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+              <tr style={{ backgroundColor: "#1E3A8A" }}>
                 <th style={thStyle}>Empresa</th>
                 <th style={thStyle}>Contato</th>
                 <th style={thStyle}>Status</th>
@@ -242,7 +242,7 @@ export default function Leads() {
                 <th style={thStyle}>Prob.</th>
                 <th style={thStyle}>Próx. Contato</th>
                 <th style={thStyle}>Ações</th>
-              </tr>
+               </tr>
             </thead>
             <tbody>
               {leads.map(lead => (
@@ -488,8 +488,7 @@ const thStyle = {
   textAlign: "left",
   padding: "12px",
   fontWeight: "600",
-  color: "white",
-  backgroundColor: coresConsultor.primary
+  color: "white"
 };
 
 const tdStyle = {
