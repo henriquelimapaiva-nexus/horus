@@ -7,18 +7,14 @@ import Input from '../../../components/ui/Input';
 import Select from '../../../components/ui/Select';
 import api from '../../../api/api';
 import toast from 'react-hot-toast';
+import ModalNegociacao from './ModalNegociacao';
 
 export default function IAPrecificacaoPreContrato() {
   const navigate = useNavigate();
   const [carregando, setCarregando] = useState(false);
   const [carregandoContrato, setCarregandoContrato] = useState(false);
   const [resultado, setResultado] = useState(null);
-  
-  // Estado para o modal de negociação
   const [mostrarModalNegociacao, setMostrarModalNegociacao] = useState(false);
-  const [opcaoNegociacao, setOpcaoNegociacao] = useState('aceitar');
-  const [valorNegociado, setValorNegociado] = useState('');
-  const [motivoNegociacao, setMotivoNegociacao] = useState('');
 
   // Dados do cliente (estimativas)
   const [dadosCliente, setDadosCliente] = useState({
@@ -119,12 +115,13 @@ export default function IAPrecificacaoPreContrato() {
 
   const handleAbrirModalNegociacao = () => {
     if (resultado) {
-      setValorNegociado(resultado.precos.ideal.toString());
       setMostrarModalNegociacao(true);
     }
   };
 
-  const handleGerarContrato = async () => {
+  const handleGerarContrato = async (dadosNegociacao) => {
+    const { opcaoNegociacao, valorNegociado, motivoNegociacao } = dadosNegociacao;
+
     let valorFinal = resultado.precos.ideal;
     
     if (opcaoNegociacao === 'negociar') {
@@ -140,7 +137,6 @@ export default function IAPrecificacaoPreContrato() {
     toast.loading('Gerando contrato...', { id: 'gerandoContrato' });
 
     try {
-      // Preparar dados para o contrato
       const payload = {
         empresa: {
           nome: dadosCliente.empresa_nome,
@@ -177,7 +173,6 @@ export default function IAPrecificacaoPreContrato() {
       toast.dismiss('gerandoContrato');
       toast.success('Contrato gerado com sucesso!');
 
-      // Navegar para a tela de visualização do contrato
       navigate('/consultor/contrato-pre-diagnostico', {
         state: { contratoData: response.data }
       });
@@ -191,196 +186,16 @@ export default function IAPrecificacaoPreContrato() {
     }
   };
 
-  // Modal de negociação
-  const ModalNegociacao = () => {
-    if (!mostrarModalNegociacao) return null;
-
-    return (
-      <div style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        zIndex: 1000
-      }}>
-        <div style={{
-          backgroundColor: "white",
-          borderRadius: "8px",
-          padding: "30px",
-          maxWidth: "500px",
-          width: "90%",
-          maxHeight: "90vh",
-          overflow: "auto"
-        }}>
-          <h2 style={{ color: "#1E3A8A", marginBottom: "20px" }}>
-            💰 Negociação do Contrato
-          </h2>
-
-          <p style={{ marginBottom: "15px" }}>
-            <strong>Preço sugerido pela IA:</strong> {formatarMoeda(resultado.precos.ideal)}
-          </p>
-          <p style={{ marginBottom: "20px", fontSize: "14px", color: "#666" }}>
-            Faixa de negociação: {formatarMoeda(resultado.precos.minimo)} - {formatarMoeda(resultado.precos.maximo)}
-          </p>
-
-          <div style={{ marginBottom: "20px" }}>
-            <label style={{ display: "block", marginBottom: "10px" }}>
-              <input
-                type="radio"
-                value="aceitar"
-                checked={opcaoNegociacao === 'aceitar'}
-                onChange={(e) => setOpcaoNegociacao(e.target.value)}
-                style={{ marginRight: "8px" }}
-              />
-              Aceitar preço sugerido: {formatarMoeda(resultado.precos.ideal)}
-            </label>
-
-            <label style={{ display: "block", marginBottom: "10px" }}>
-              <input
-                type="radio"
-                value="negociar"
-                checked={opcaoNegociacao === 'negociar'}
-                onChange={(e) => setOpcaoNegociacao(e.target.value)}
-                style={{ marginRight: "8px" }}
-              />
-              Negociar novo valor
-            </label>
-
-            {opcaoNegociacao === 'negociar' && (
-              <div style={{ marginTop: "15px", marginLeft: "25px" }}>
-                <div style={{ marginBottom: "15px" }}>
-                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>
-                    Novo valor (R$)
-                  </label>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    value={valorNegociado}
-                    onChange={(e) => {
-                      const valor = e.target.value.replace(/[^0-9]/g, '');
-                      setValorNegociado(valor);
-                    }}
-                    placeholder="Ex: 55000"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #ccc",
-                      fontSize: "14px",
-                      boxSizing: "border-box"
-                    }}
-                  />
-                </div>
-                <div style={{ marginBottom: "15px" }}>
-                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>
-                    Motivo da negociação (opcional)
-                  </label>
-                  <input
-                    type="text"
-                    value={motivoNegociacao}
-                    onChange={(e) => setMotivoNegociacao(e.target.value)}
-                    placeholder="Ex: Cliente solicitou desconto, projeto piloto, etc"
-                    style={{
-                      width: "100%",
-                      padding: "10px 12px",
-                      borderRadius: "6px",
-                      border: "1px solid #ccc",
-                      fontSize: "14px",
-                      boxSizing: "border-box"
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          <hr style={{ margin: "20px 0" }} />
-
-          <h3 style={{ fontSize: "16px", marginBottom: "15px" }}>📋 Dados para o Contrato</h3>
-          <p style={{ fontSize: "13px", color: "#666", marginBottom: "15px" }}>
-            Estes dados serão inseridos no contrato. Os campos em branco serão preenchidos como "[A PREENCHER]".
-          </p>
-
-          <div style={{ maxHeight: "400px", overflow: "auto", marginBottom: "20px" }}>
-            <Input
-              label="CNPJ da Empresa"
-              value={dadosContrato.empresa_cnpj}
-              onChange={(e) => setDadosContrato({...dadosContrato, empresa_cnpj: e.target.value})}
-              placeholder="00.000.000/0001-00"
-            />
-            <Input
-              label="Endereço da Empresa"
-              value={dadosContrato.empresa_endereco}
-              onChange={(e) => setDadosContrato({...dadosContrato, empresa_endereco: e.target.value})}
-              placeholder="Rua, número, bairro, CEP"
-            />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <Input
-                label="Cidade"
-                value={dadosContrato.empresa_cidade}
-                onChange={(e) => setDadosContrato({...dadosContrato, empresa_cidade: e.target.value})}
-                placeholder="Cidade"
-              />
-              <Input
-                label="Estado (UF)"
-                value={dadosContrato.empresa_estado}
-                onChange={(e) => setDadosContrato({...dadosContrato, empresa_estado: e.target.value})}
-                placeholder="SP"
-              />
-            </div>
-            
-            <Input
-              label="Nome do Representante"
-              value={dadosContrato.representante_nome}
-              onChange={(e) => setDadosContrato({...dadosContrato, representante_nome: e.target.value})}
-              placeholder="Nome completo"
-            />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <Input
-                label="RG"
-                value={dadosContrato.representante_rg}
-                onChange={(e) => setDadosContrato({...dadosContrato, representante_rg: e.target.value})}
-                placeholder="RG"
-              />
-              <Input
-                label="CPF"
-                value={dadosContrato.representante_cpf}
-                onChange={(e) => setDadosContrato({...dadosContrato, representante_cpf: e.target.value})}
-                placeholder="CPF"
-              />
-            </div>
-            
-            <Input
-              label="E-mail da CONTRATANTE"
-              type="email"
-              value={dadosContrato.email_contratante}
-              onChange={(e) => setDadosContrato({...dadosContrato, email_contratante: e.target.value})}
-              placeholder="contato@empresa.com.br"
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-            <Botao variant="secondary" onClick={() => setMostrarModalNegociacao(false)}>
-              Cancelar
-            </Botao>
-            <Botao variant="primary" onClick={handleGerarContrato} loading={carregandoContrato}>
-              {carregandoContrato ? 'Gerando...' : '✅ Gerar Contrato'}
-            </Botao>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <div style={{ padding: '30px', maxWidth: '1400px', margin: '0 auto' }}>
       
-      <ModalNegociacao />
+      <ModalNegociacao
+        mostrar={mostrarModalNegociacao}
+        onClose={() => setMostrarModalNegociacao(false)}
+        resultado={resultado}
+        formatarMoeda={formatarMoeda}
+        onConfirmar={handleGerarContrato}
+      />
 
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ color: '#1E3A8A', marginBottom: '10px' }}>
@@ -549,7 +364,6 @@ export default function IAPrecificacaoPreContrato() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              {/* Preço sugerido (projeto total) */}
               <div style={{ background: '#1E3A8A', color: 'white', padding: '30px', borderRadius: '8px', textAlign: 'center' }}>
                 <div style={{ fontSize: '14px', opacity: 0.9 }}>PREÇO SUGERIDO (PROJETO TOTAL)</div>
                 <div style={{ fontSize: '48px', fontWeight: 'bold' }}>{formatarMoeda(resultado.precos.ideal)}</div>
@@ -558,7 +372,6 @@ export default function IAPrecificacaoPreContrato() {
                 </div>
               </div>
 
-              {/* 🆕 Preço da Fase 1 (Diagnóstico) */}
               {resultado.precos.fase1 && (
                 <div style={{ background: '#e6f7ff', padding: '15px', borderRadius: '8px', textAlign: 'center', marginTop: '5px' }}>
                   <div style={{ fontSize: '12px', color: '#1E3A8A' }}>📋 FASE 1 - DIAGNÓSTICO</div>
