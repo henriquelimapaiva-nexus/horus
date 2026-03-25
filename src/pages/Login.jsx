@@ -36,7 +36,7 @@ export default function Login() {
 
     try {
       // ✅ Rota correta: /login (api.js adiciona /api automaticamente)
-      const response = await api.post("/login", {
+      const response = await api.post("/auth/login", {
         email: form.email,
         senha: form.senha
       });
