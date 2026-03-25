@@ -35,6 +35,9 @@ export default function Leads() {
     descricao: ""
   });
   const [editandoId, setEditandoId] = useState(null);
+  // 🔧 NOVO: Estados para histórico de interações
+  const [interacoes, setInteracoes] = useState([]);
+  const [carregandoInteracoes, setCarregandoInteracoes] = useState(false);
 
   useEffect(() => {
     carregarLeads();
@@ -139,7 +142,8 @@ export default function Leads() {
     }
   };
 
-  const abrirEdicao = (lead) => {
+  // 🔧 NOVO: Função abrirEdicao modificada para carregar interações
+  const abrirEdicao = async (lead) => {
     setEditandoId(lead.id);
     setForm({
       nome: lead.nome || "",
@@ -154,6 +158,19 @@ export default function Leads() {
       proximo_contato: lead.proximo_contato ? lead.proximo_contato.split('T')[0] : "",
       observacoes: lead.observacoes || ""
     });
+    
+    // Carregar interações do lead
+    setCarregandoInteracoes(true);
+    try {
+      const res = await api.get(`/leads/${lead.id}`);
+      setInteracoes(res.data.interacoes || []);
+    } catch (error) {
+      console.error("Erro ao carregar interações:", error);
+      setInteracoes([]);
+    } finally {
+      setCarregandoInteracoes(false);
+    }
+    
     setModalAberto(true);
   };
 
@@ -266,12 +283,12 @@ export default function Leads() {
                   <td style={tdStyle}>
                     <div><strong>{lead.nome}</strong></div>
                     {lead.cnpj && <div style={{ fontSize: "12px", color: "#666" }}>{lead.cnpj}</div>}
-                  </td>
+                   </td>
                   <td style={tdStyle}>
                     {lead.contato_nome && <div>{lead.contato_nome}</div>}
                     {lead.contato_telefone && <div style={{ fontSize: "12px", color: "#666" }}>{lead.contato_telefone}</div>}
                     {lead.contato_email && <div style={{ fontSize: "12px", color: "#666" }}>{lead.contato_email}</div>}
-                  </td>
+                   </td>
                   <td style={tdStyle}>
                     <span style={{
                       padding: "4px 10px",
@@ -283,10 +300,10 @@ export default function Leads() {
                     }}>
                       {getStatusLabel(lead.status)}
                     </span>
-                  </td>
+                   </td>
                   <td style={tdStyle}>
                     {formatarMoeda(lead.potencial_faturamento)}
-                  </td>
+                   </td>
                   <td style={tdStyle}>
                     <div style={{
                       width: "60px",
@@ -305,10 +322,10 @@ export default function Leads() {
                         {lead.probabilidade_fechamento}%
                       </div>
                     </div>
-                  </td>
+                   </td>
                   <td style={tdStyle}>
                     {lead.proximo_contato ? new Date(lead.proximo_contato).toLocaleDateString('pt-BR') : "-"}
-                  </td>
+                   </td>
                   <td style={tdStyle}>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
@@ -330,18 +347,18 @@ export default function Leads() {
                         Excluir
                       </button>
                     </div>
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               ))}
               {leads.length === 0 && (
                 <tr>
                   <td colSpan="7" style={{ textAlign: "center", padding: "40px", color: "#666" }}>
                     Nenhum lead encontrado. Clique em "Novo Lead" para começar.
-                  </td>
-                </tr>
+                   </td>
+                 </tr>
               )}
             </tbody>
-          </table>
+           </table>
         </div>
       </Card>
 
@@ -431,6 +448,47 @@ export default function Leads() {
               onChange={(e) => setForm({...form, observacoes: e.target.value})}
             />
           </div>
+          
+          {/* 🔧 NOVO: Histórico de Interações */}
+          <div style={{ marginTop: "20px", borderTop: "1px solid #e5e7eb", paddingTop: "15px" }}>
+            <h4 style={{ color: "#1E3A8A", marginBottom: "10px", fontSize: "14px" }}>
+              📞 Histórico de Interações
+            </h4>
+            
+            {carregandoInteracoes ? (
+              <p style={{ color: "#666", fontSize: "12px" }}>Carregando...</p>
+            ) : interacoes.length === 0 ? (
+              <p style={{ color: "#666", fontSize: "12px" }}>Nenhuma interação registrada ainda.</p>
+            ) : (
+              <div style={{ maxHeight: "200px", overflowY: "auto" }}>
+                {interacoes.map((interacao, index) => (
+                  <div key={interacao.id || index} style={{
+                    backgroundColor: "#f9fafb",
+                    padding: "10px",
+                    borderRadius: "6px",
+                    marginBottom: "8px"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
+                      <span style={{ fontWeight: "bold", fontSize: "12px" }}>
+                        {interacao.tipo === "ligacao" ? "📞 Ligação" :
+                         interacao.tipo === "email" ? "✉️ E-mail" :
+                         interacao.tipo === "reuniao" ? "👥 Reunião" :
+                         interacao.tipo === "whatsapp" ? "💬 WhatsApp" : "🏢 Visita"}
+                      </span>
+                      <span style={{ fontSize: "11px", color: "#666" }}>
+                        {new Date(interacao.data).toLocaleDateString('pt-BR')}
+                        {interacao.hora && ` às ${interacao.hora}`}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#374151" }}>
+                      {interacao.descricao}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          
           <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
             <Botao variant="outline" onClick={() => setModalAberto(false)}>Cancelar</Botao>
             <Botao type="submit" loading={carregando}>Salvar</Botao>
