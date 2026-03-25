@@ -253,20 +253,48 @@ export default function IAPrecificacaoPreContrato() {
 
             {opcaoNegociacao === 'negociar' && (
               <div style={{ marginTop: "15px", marginLeft: "25px" }}>
-                <Input
-                  label="Novo valor (R$)"
-                  type="number"
-                  value={valorNegociado}
-                  onChange={(e) => setValorNegociado(e.target.value)}
-                  placeholder="Ex: 55000"
-                  required
-                />
-                <Input
-                  label="Motivo da negociação (opcional)"
-                  value={motivoNegociacao}
-                  onChange={(e) => setMotivoNegociacao(e.target.value)}
-                  placeholder="Ex: Cliente solicitou desconto, projeto piloto, etc"
-                />
+                <div style={{ marginBottom: "15px" }}>
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>
+                    Novo valor (R$)
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={valorNegociado}
+                    onChange={(e) => {
+                      const valor = e.target.value.replace(/[^0-9]/g, '');
+                      setValorNegociado(valor);
+                    }}
+                    placeholder="Ex: 55000"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #ccc",
+                      fontSize: "14px",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
+                <div style={{ marginBottom: "15px" }}>
+                  <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>
+                    Motivo da negociação (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={motivoNegociacao}
+                    onChange={(e) => setMotivoNegociacao(e.target.value)}
+                    placeholder="Ex: Cliente solicitou desconto, projeto piloto, etc"
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      borderRadius: "6px",
+                      border: "1px solid #ccc",
+                      fontSize: "14px",
+                      boxSizing: "border-box"
+                    }}
+                  />
+                </div>
               </div>
             )}
           </div>
