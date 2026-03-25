@@ -42,18 +42,18 @@ export default function ConsultorLogin() {
     setCarregando(true);
 
     try {
-      // ✅ CORRIGIDO: /consultor/login → /api/consultant/login
-      const response = await api.post("/consultant/login", {
+      // 🔧 CORREÇÃO: mudar de /consultant/login para /auth/login
+      const response = await api.post("/auth/login", {
         email: form.email,
         senha: form.senha
       });
 
-      const { token, profile } = response.data;
+      const { token, usuario } = response.data;
       
       // Adaptar para o formato esperado pelo contexto
       const usuarioData = { 
-        nome: profile?.nome || "Consultor",
-        cargo: profile?.cargo || "Consultor"
+        nome: usuario?.nome || "Consultor",
+        email: usuario?.email || form.email
       };
       
       login(token, usuarioData);
