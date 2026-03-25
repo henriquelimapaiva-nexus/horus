@@ -14,7 +14,12 @@ export default function IAPrecificacaoPreContrato() {
   const [carregando, setCarregando] = useState(false);
   const [carregandoContrato, setCarregandoContrato] = useState(false);
   const [resultado, setResultado] = useState(null);
+  
+  // Estado para o modal de negociação (MANTIDOS)
   const [mostrarModalNegociacao, setMostrarModalNegociacao] = useState(false);
+  const [opcaoNegociacao, setOpcaoNegociacao] = useState('aceitar');
+  const [valorNegociado, setValorNegociado] = useState('');
+  const [motivoNegociacao, setMotivoNegociacao] = useState('');
 
   // Dados do cliente (estimativas)
   const [dadosCliente, setDadosCliente] = useState({
@@ -115,13 +120,12 @@ export default function IAPrecificacaoPreContrato() {
 
   const handleAbrirModalNegociacao = () => {
     if (resultado) {
+      setValorNegociado(resultado.precos.ideal.toString());
       setMostrarModalNegociacao(true);
     }
   };
 
-  const handleGerarContrato = async (dadosNegociacao) => {
-    const { opcaoNegociacao, valorNegociado, motivoNegociacao } = dadosNegociacao;
-
+  const handleGerarContrato = () => {
     let valorFinal = resultado.precos.ideal;
     
     if (opcaoNegociacao === 'negociar') {
@@ -136,54 +140,53 @@ export default function IAPrecificacaoPreContrato() {
     setCarregandoContrato(true);
     toast.loading('Gerando contrato...', { id: 'gerandoContrato' });
 
-    try {
-      const payload = {
-        empresa: {
-          nome: dadosCliente.empresa_nome,
-          cnpj: dadosContrato.empresa_cnpj || '[CNPJ]',
-          endereco: dadosContrato.empresa_endereco || '[ENDEREÇO COMPLETO]',
-          cidade: dadosContrato.empresa_cidade || '[CIDADE]',
-          estado: dadosContrato.empresa_estado || '[UF]'
-        },
-        representante: {
-          nome: dadosContrato.representante_nome || '[NOME DO REPRESENTANTE]',
-          nacionalidade: dadosContrato.representante_nacionalidade || '[NACIONALIDADE]',
-          estado_civil: dadosContrato.representante_estado_civil || '[ESTADO CIVIL]',
-          profissao: dadosContrato.representante_profissao || '[PROFISSÃO]',
-          rg: dadosContrato.representante_rg || '[RG]',
-          cpf: dadosContrato.representante_cpf || '[CPF]',
-          endereco: dadosContrato.representante_endereco || '[ENDEREÇO]'
-        },
-        valor_negociado: valorFinal,
-        valor_original_ia: resultado.precos.ideal,
-        prazos: {
-          semanas_diagnostico: dadosContrato.semanas_diagnostico,
-          meses_vigencia: dadosContrato.meses_vigencia,
-          prazo_entrega_semanas: dadosContrato.prazo_entrega_semanas
-        },
-        contato: {
-          email_contratante: dadosContrato.email_contratante || '[E-MAIL DA CONTRATANTE]',
-          email_contratada: 'seu-email@nexus.com.br'
-        },
-        data_assinatura: new Date().toLocaleDateString('pt-BR')
-      };
+    const payload = {
+      empresa: {
+        nome: dadosCliente.empresa_nome,
+        cnpj: dadosContrato.empresa_cnpj || '[CNPJ]',
+        endereco: dadosContrato.empresa_endereco || '[ENDEREÇO COMPLETO]',
+        cidade: dadosContrato.empresa_cidade || '[CIDADE]',
+        estado: dadosContrato.empresa_estado || '[UF]'
+      },
+      representante: {
+        nome: dadosContrato.representante_nome || '[NOME DO REPRESENTANTE]',
+        nacionalidade: dadosContrato.representante_nacionalidade || '[NACIONALIDADE]',
+        estado_civil: dadosContrato.representante_estado_civil || '[ESTADO CIVIL]',
+        profissao: dadosContrato.representante_profissao || '[PROFISSÃO]',
+        rg: dadosContrato.representante_rg || '[RG]',
+        cpf: dadosContrato.representante_cpf || '[CPF]',
+        endereco: dadosContrato.representante_endereco || '[ENDEREÇO]'
+      },
+      valor_negociado: valorFinal,
+      valor_original_ia: resultado.precos.ideal,
+      prazos: {
+        semanas_diagnostico: dadosContrato.semanas_diagnostico,
+        meses_vigencia: dadosContrato.meses_vigencia,
+        prazo_entrega_semanas: dadosContrato.prazo_entrega_semanas
+      },
+      contato: {
+        email_contratante: dadosContrato.email_contratante || '[E-MAIL DA CONTRATANTE]',
+        email_contratada: 'seu-email@nexus.com.br'
+      },
+      data_assinatura: new Date().toLocaleDateString('pt-BR')
+    };
 
-      const response = await api.post('/ia/gerar-contrato-pre-diagnostico', payload);
-      
-      toast.dismiss('gerandoContrato');
-      toast.success('Contrato gerado com sucesso!');
-
-      navigate('/consultor/contrato-pre-diagnostico', {
-        state: { contratoData: response.data }
+    api.post('/ia/gerar-contrato-pre-diagnostico', payload)
+      .then(response => {
+        toast.dismiss('gerandoContrato');
+        toast.success('Contrato gerado com sucesso!');
+        navigate('/consultor/contrato-pre-diagnostico', {
+          state: { contratoData: response.data }
+        });
+      })
+      .catch(error => {
+        console.error('Erro ao gerar contrato:', error);
+        toast.dismiss('gerandoContrato');
+        toast.error(error.response?.data?.erro || 'Erro ao gerar contrato');
+      })
+      .finally(() => {
+        setCarregandoContrato(false);
       });
-
-    } catch (error) {
-      console.error('Erro ao gerar contrato:', error);
-      toast.dismiss('gerandoContrato');
-      toast.error(error.response?.data?.erro || 'Erro ao gerar contrato');
-    } finally {
-      setCarregandoContrato(false);
-    }
   };
 
   return (
@@ -194,7 +197,16 @@ export default function IAPrecificacaoPreContrato() {
         onClose={() => setMostrarModalNegociacao(false)}
         resultado={resultado}
         formatarMoeda={formatarMoeda}
-        onConfirmar={handleGerarContrato}
+        dadosContrato={dadosContrato}
+        setDadosContrato={setDadosContrato}
+        opcaoNegociacao={opcaoNegociacao}
+        setOpcaoNegociacao={setOpcaoNegociacao}
+        valorNegociado={valorNegociado}
+        setValorNegociado={setValorNegociado}
+        motivoNegociacao={motivoNegociacao}
+        setMotivoNegociacao={setMotivoNegociacao}
+        carregandoContrato={carregandoContrato}
+        onGerarContrato={handleGerarContrato}
       />
 
       <div style={{ marginBottom: '30px' }}>
