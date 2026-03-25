@@ -234,7 +234,7 @@ export default function Leads() {
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ borderBottom: "2px solid #e5e7eb" }}>
+              <tr style={{ backgroundColor: coresConsultor.primary, color: "white" }}>
                 <th style={thStyle}>Empresa</th>
                 <th style={thStyle}>Contato</th>
                 <th style={thStyle}>Status</th>
@@ -488,7 +488,8 @@ const thStyle = {
   textAlign: "left",
   padding: "12px",
   fontWeight: "600",
-  color: "#374151"
+  color: "white",
+  backgroundColor: coresConsultor.primary
 };
 
 const tdStyle = {
