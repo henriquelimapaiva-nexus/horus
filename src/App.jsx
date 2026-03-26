@@ -200,6 +200,7 @@ function App() {
               <Route path="/perdas" element={<Perdas />} />
               <Route path="/painel" element={<PainelExecutivo />} />
               <Route path="/postos" element={<Postos />} />
+              <Route path="/coleta-dados" element={<ColetaDados />} />
             </Route>
           </Routes>
         </Router>
