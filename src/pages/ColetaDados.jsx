@@ -492,7 +492,7 @@ export default function ColetaDados() {
         <Botao
           variant="secondary"
           size="md"
-          onClick={() => navigate('/coleta')}
+          onClick={() => navigate('/coleta-dados')}
         >
           Voltar
         </Botao>
