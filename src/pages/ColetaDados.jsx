@@ -186,6 +186,12 @@ export default function ColetaDados() {
         observacao: novaMedicao.observacao
       };
       
+      console.log("=== DEBUG MEDIÇÃO ===");
+      console.log("novaMed:", novaMed);
+      console.log("operador_id tipo:", typeof novaMed.operador_id, "valor:", novaMed.operador_id);
+      console.log("operadores disponíveis:", operadores);
+      console.log("operador encontrado:", operadores.find(op => op.id === parseInt(novaMed.operador_id)));
+
       setMedicoes([novaMed, ...medicoes]);
       calcularEstatisticas([novaMed, ...medicoes]);
       
