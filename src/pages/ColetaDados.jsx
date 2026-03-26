@@ -24,38 +24,17 @@ export default function ColetaDados() {
   // Formulário de medição
   const [novaMedicao, setNovaMedicao] = useState({
     operador_id: "",
-    elemento: "",
+    atividade: "",
     tempo_ciclo_segundos: "",
     metodo: "padrao",
-    condicao: "normal",
     observacao: ""
   });
-
-  // Elementos predefinidos para cronoanálise
-  const elementosPadrao = [
-    "Pegar peça",
-    "Posicionar",
-    "Operação principal",
-    "Inspecionar",
-    "Remover peça",
-    "Aguardar ciclo",
-    "Movimentação"
-  ];
 
   // Métodos disponíveis
   const metodos = [
     { value: "padrao", label: "Padrão (POP)" },
     { value: "melhorado", label: "Melhorado (Kaizen)" },
     { value: "fora_padrao", label: "Fora do padrão" }
-  ];
-
-  // Condições disponíveis
-  const condicoes = [
-    { value: "normal", label: "Normal" },
-    { value: "problema_material", label: "Problema com material" },
-    { value: "problema_ferramenta", label: "Problema com ferramenta" },
-    { value: "treinamento", label: "Operador em treinamento" },
-    { value: "falta_operador", label: "Falta de operador" }
   ];
 
   // Carregar linhas da empresa
@@ -171,8 +150,8 @@ export default function ColetaDados() {
       return;
     }
 
-    if (!novaMedicao.elemento) {
-      toast.error("Selecione um elemento");
+    if (!novaMedicao.atividade) {
+      toast.error("Descreva a atividade executada");
       return;
     }
 
@@ -181,10 +160,9 @@ export default function ColetaDados() {
       const dados = {
         posto_id: parseInt(postoSelecionado),
         operador_id: novaMedicao.operador_id ? parseInt(novaMedicao.operador_id) : null,
-        elemento: novaMedicao.elemento,
+        atividade: novaMedicao.atividade,
         tempo_ciclo_segundos: parseFloat(novaMedicao.tempo_ciclo_segundos),
         metodo: novaMedicao.metodo,
-        condicao: novaMedicao.condicao,
         observacao: novaMedicao.observacao || null
       };
       
@@ -194,10 +172,9 @@ export default function ColetaDados() {
         id: response.data.id,
         data_medicao: new Date().toISOString().split('T')[0],
         hora_medicao: new Date().toLocaleTimeString('pt-BR'),
-        elemento: novaMedicao.elemento,
+        atividade: novaMedicao.atividade,
         tempo_ciclo_segundos: response.data.tempo_ciclo_segundos,
         metodo: novaMedicao.metodo,
-        condicao: novaMedicao.condicao,
         operador_id: novaMedicao.operador_id,
         observacao: novaMedicao.observacao
       };
@@ -207,10 +184,9 @@ export default function ColetaDados() {
       
       setNovaMedicao({
         operador_id: "",
-        elemento: "",
+        atividade: "",
         tempo_ciclo_segundos: "",
         metodo: "padrao",
-        condicao: "normal",
         observacao: ""
       });
       
@@ -240,15 +216,14 @@ export default function ColetaDados() {
   }
 
   const exportarCSV = () => {
-    let csv = "Data,Hora,Posto,Elemento,Tempo (s),Método,Condição,Operador,Observação\n";
+    let csv = "Data,Hora,Posto,Atividade,Tempo (s),Método,Operador,Observação\n";
     
     medicoes.forEach(m => {
       const postoNome = postos.find(p => p.id === parseInt(postoSelecionado))?.nome || `Posto ${postoSelecionado}`;
       const operadorNome = operadores.find(op => op.id === m.operador_id)?.nome || "-";
       const metodoLabel = metodos.find(met => met.value === m.metodo)?.label || m.metodo;
-      const condicaoLabel = condicoes.find(c => c.value === m.condicao)?.label || m.condicao;
       
-      csv += `${m.data_medicao},${m.hora_medicao || "-"},${postoNome},${m.elemento},${m.tempo_ciclo_segundos},${metodoLabel},${condicaoLabel},${operadorNome},${m.observacao || "-"}\n`;
+      csv += `${m.data_medicao},${m.hora_medicao || "-"},${postoNome},${m.atividade},${m.tempo_ciclo_segundos},${metodoLabel},${operadorNome},${m.observacao || "-"}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -354,7 +329,7 @@ export default function ColetaDados() {
             color: "#666", 
             fontSize: "clamp(12px, 2vw, 14px)" 
           }}>
-            Registre medições de ciclo por elemento de trabalho
+            Registre medições de ciclo por atividade
           </p>
         </div>
         <Botao
@@ -486,20 +461,20 @@ export default function ColetaDados() {
             gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", 
             gap: "clamp(15px, 2vw, 20px)" 
           }}>
-            <div>
-              <label style={labelStyleResponsivo}>Elemento *</label>
-              <select
-                name="elemento"
-                value={novaMedicao.elemento}
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label style={labelStyleResponsivo}>Atividade Executada *</label>
+              <input
+                type="text"
+                name="atividade"
+                value={novaMedicao.atividade}
                 onChange={handleInputChange}
                 style={inputStyleResponsivo}
+                placeholder="Ex: Pegar peça, Posicionar, Furação, Inspeção, Montagem..."
                 required
-              >
-                <option value="">Selecione um elemento</option>
-                {elementosPadrao.map(elem => (
-                  <option key={elem} value={elem}>{elem}</option>
-                ))}
-              </select>
+              />
+              <small style={{ color: "#666", fontSize: "11px", display: "block", marginTop: "4px" }}>
+                Descreva a atividade que está sendo cronometrada
+              </small>
             </div>
 
             <div>
@@ -530,29 +505,15 @@ export default function ColetaDados() {
               </select>
             </div>
 
-            <div>
-              <label style={labelStyleResponsivo}>Condição</label>
-              <select
-                name="condicao"
-                value={novaMedicao.condicao}
-                onChange={handleInputChange}
-                style={inputStyleResponsivo}
-              >
-                {condicoes.map(c => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
-            </div>
-
             <div style={{ gridColumn: "1 / -1" }}>
-              <label style={labelStyleResponsivo}>Observação</label>
-              <input
-                type="text"
+              <label style={labelStyleResponsivo}>Observações</label>
+              <textarea
                 name="observacao"
                 value={novaMedicao.observacao}
                 onChange={handleInputChange}
-                style={inputStyleResponsivo}
-                placeholder="Anotações sobre a medição..."
+                rows={2}
+                style={{ ...inputStyleResponsivo, resize: "vertical" }}
+                placeholder="Ex: Problema com material, operador em treinamento, ferramenta desgastada, etc..."
               />
             </div>
           </div>
@@ -562,7 +523,7 @@ export default function ColetaDados() {
             size="md"
             fullWidth={true}
             onClick={adicionarMedicao}
-            disabled={salvando || !novaMedicao.elemento || !novaMedicao.tempo_ciclo_segundos}
+            disabled={salvando || !novaMedicao.atividade || !novaMedicao.tempo_ciclo_segundos}
             loading={salvando}
             style={{ marginTop: "20px" }}
           >
@@ -625,14 +586,13 @@ export default function ColetaDados() {
                 <thead>
                   <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
                     <th style={thResponsivo}>Data/Hora</th>
-                    <th style={thResponsivo}>Elemento</th>
+                    <th style={thResponsivo}>Atividade</th>
                     <th style={thResponsivo}>Tempo (s)</th>
                     <th style={thResponsivo}>Método</th>
-                    <th style={thResponsivo}>Condição</th>
                     <th style={thResponsivo}>Operador</th>
-                    <th style={thResponsivo}>Observação</th>
+                    <th style={thResponsivo}>Observações</th>
                     <th style={thResponsivo}>Ações</th>
-                  </tr>
+                   </tr>
                 </thead>
                 <tbody>
                   {medicoes.map((med) => (
@@ -641,7 +601,7 @@ export default function ColetaDados() {
                         {formatarData(med.data_medicao)}<br/>
                         <span style={{ fontSize: "11px", color: "#666" }}>{med.hora_medicao || "-"}</span>
                       </td>
-                      <td style={tdResponsivo}>{med.elemento}</td>
+                      <td style={tdResponsivo}>{med.atividade}</td>
                       <td style={tdResponsivo}>
                         <span style={{ fontWeight: "bold", color: "#16a34a" }}>
                           {parseFloat(med.tempo_ciclo_segundos).toFixed(2)}s
@@ -658,17 +618,6 @@ export default function ColetaDados() {
                                  med.metodo === "melhorado" ? "#3b82f6" : "#dc2626"
                         }}>
                           {metodos.find(m => m.value === med.metodo)?.label || med.metodo}
-                        </span>
-                      </td>
-                      <td style={tdResponsivo}>
-                        <span style={{
-                          padding: "2px 8px",
-                          borderRadius: "4px",
-                          fontSize: "11px",
-                          backgroundColor: med.condicao === "normal" ? "#16a34a20" : "#f59e0b20",
-                          color: med.condicao === "normal" ? "#16a34a" : "#f59e0b"
-                        }}>
-                          {condicoes.find(c => c.value === med.condicao)?.label || med.condicao}
                         </span>
                       </td>
                       <td style={tdResponsivo}>
