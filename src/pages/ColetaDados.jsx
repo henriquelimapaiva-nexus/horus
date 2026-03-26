@@ -73,14 +73,18 @@ export default function ColetaDados() {
 
   // Carregar operadores da empresa
   useEffect(() => {
+    console.log("clienteAtual para operadores:", clienteAtual);
     if (clienteAtual) {
       api.get(`/employees/${clienteAtual}`)
-        .then((res) => setOperadores(res.data))
+        .then((res) => {
+          console.log("Operadores carregados:", res.data);
+          setOperadores(res.data);
+        })
         .catch((err) => {
           console.error("Erro ao carregar operadores:", err);
         });
-    }
-  }, [clienteAtual]);
+  }
+}, [clienteAtual]);
 
   // Carregar medições existentes
   useEffect(() => {
