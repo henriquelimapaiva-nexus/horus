@@ -182,7 +182,7 @@ export default function ColetaDados() {
         atividade: novaMedicao.atividade,
         tempo_ciclo_segundos: response.data.tempo_ciclo_segundos,
         metodo: novaMedicao.metodo,
-        operador_id: novaMedicao.operador_id,
+        operador_id: parseInt(novaMedicao.operador_id) || null,
         observacao: novaMedicao.observacao
       };
       
