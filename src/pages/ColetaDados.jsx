@@ -41,6 +41,20 @@ export default function ColetaDados() {
     { value: "fora_padrao", label: "Fora do padrão" }
   ];
 
+  // 🔧 NOVO: Sincronizar URL com estado
+  useEffect(() => {
+    if (linhaId) {
+      // Se existe ID na URL, garante que o estado interno acompanhe
+      setLinhaSelecionada(linhaId);
+    } else {
+      // Se NÃO existe ID (está na tela de seleção), limpa os dados da linha anterior
+      setLinhaSelecionada("");
+      setPostoSelecionado("");
+      setPostos([]);
+      setMedicoes([]);
+    }
+  }, [linhaId]);
+
   // Carregar linhas da empresa
   useEffect(() => {
     if (clienteAtual) {
@@ -303,8 +317,8 @@ export default function ColetaDados() {
     return data.toLocaleDateString('pt-BR');
   };
 
-  // Seletor de linha (quando não tem linhaId na URL)
-  if (!linhaId && !linhaSelecionada) {
+  // 🔧 CORRIGIDO: Seletor de linha (quando não tem linhaId na URL)
+  if (!linhaId) {
     return (
       <div style={{ 
         padding: "clamp(20px, 5vw, 40px)", 
@@ -353,7 +367,7 @@ export default function ColetaDados() {
     );
   }
 
-  const linhaIdAtual = linhaId || linhaSelecionada;
+  const linhaIdAtual = linhaId;
   const postoAtual = postos.find(p => p.id === parseInt(postoSelecionado));
 
   return (
@@ -486,7 +500,7 @@ export default function ColetaDados() {
             color: "#666", 
             fontSize: "clamp(12px, 2vw, 14px)" 
           }}>
-            Registre medições de ciclo por atividade
+            Registre medições de ciclo por activité
           </p>
         </div>
         <Botao
@@ -749,7 +763,7 @@ export default function ColetaDados() {
                     <th style={thResponsivo}>Operador</th>
                     <th style={thResponsivo}>Observações</th>
                     <th style={thResponsivo}>Ações</th>
-                   </tr>
+                    </tr>
                 </thead>
                 <tbody>
                   {medicoes.map((med) => (
