@@ -177,7 +177,6 @@ function App() {
               <Route path="/linhas/editar/:id" element={<LinhaForm />} />
               <Route path="/postos/novo/:linhaId" element={<PostoForm />} />
               <Route path="/postos/editar/:postoId/linha/:linhaId" element={<PostoForm />} />
-              <Route path="/coleta/:linhaId" element={<ColetaDados />} />
               <Route path="/coleta-dados" element={<ColetaDados />} />
               <Route path="/cronoanalise/:linhaId" element={<ColetaDados />} />
               
