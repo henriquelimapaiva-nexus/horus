@@ -21,6 +21,10 @@ export default function ColetaDados() {
   const [salvando, setSalvando] = useState(false);
   const [analiseEstatistica, setAnaliseEstatistica] = useState(null);
 
+  // Estados para edição
+  const [editandoMedicao, setEditandoMedicao] = useState(null);
+  const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false);
+
   // Formulário de medição
   const [novaMedicao, setNovaMedicao] = useState({
     operador_id: "",
@@ -116,7 +120,6 @@ export default function ColetaDados() {
     const minimo = Math.min(...tempos);
     const maximo = Math.max(...tempos);
     
-    // Cálculo do desvio padrão
     const variancia = tempos.reduce((acc, val) => acc + Math.pow(val - media, 2), 0) / tempos.length;
     const desvio = Math.sqrt(variancia);
     const cv = (desvio / media) * 100;
@@ -215,6 +218,54 @@ export default function ColetaDados() {
     }
   }
 
+  // Função para abrir o modal de edição
+  const abrirEdicao = (med) => {
+    setEditandoMedicao(med);
+    setNovaMedicao({
+      operador_id: med.operador_id || "",
+      atividade: med.atividade || "",
+      tempo_ciclo_segundos: med.tempo_ciclo_segundos || "",
+      metodo: med.metodo || "padrao",
+      observacao: med.observacao || ""
+    });
+    setModalEdicaoAberto(true);
+  };
+
+  // Função para salvar a edição
+  const salvarEdicao = async () => {
+    if (!editandoMedicao) return;
+    
+    setSalvando(true);
+    try {
+      await api.put(`/cycle-measurements/${editandoMedicao.id}`, {
+        operador_id: novaMedicao.operador_id ? parseInt(novaMedicao.operador_id) : null,
+        atividade: novaMedicao.atividade,
+        tempo_ciclo_segundos: parseFloat(novaMedicao.tempo_ciclo_segundos),
+        metodo: novaMedicao.metodo,
+        observacao: novaMedicao.observacao
+      });
+      
+      toast.success("Medição atualizada! ✅");
+      setModalEdicaoAberto(false);
+      setEditandoMedicao(null);
+      carregarMedicoes();
+      
+      setNovaMedicao({
+        operador_id: "",
+        atividade: "",
+        tempo_ciclo_segundos: "",
+        metodo: "padrao",
+        observacao: ""
+      });
+      
+    } catch (error) {
+      console.error("Erro ao atualizar:", error);
+      toast.error("Erro ao atualizar medição");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   const exportarCSV = () => {
     let csv = "Data,Hora,Posto,Atividade,Tempo (s),Método,Operador,Observação\n";
     
@@ -304,6 +355,102 @@ export default function ColetaDados() {
       boxSizing: "border-box"
     }}>
       
+      {/* Modal de Edição */}
+      {modalEdicaoAberto && (
+        <div style={{
+          position: "fixed",
+          top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: "white",
+            borderRadius: "8px",
+            padding: "25px",
+            maxWidth: "500px",
+            width: "90%"
+          }}>
+            <h3 style={{ color: "#1E3A8A", marginBottom: "20px" }}>✏️ Editar Medição</h3>
+            
+            <div style={{ marginBottom: "15px" }}>
+              <label style={labelStyleResponsivo}>Atividade Executada *</label>
+              <input
+                type="text"
+                value={novaMedicao.atividade}
+                onChange={(e) => setNovaMedicao({...novaMedicao, atividade: e.target.value})}
+                style={inputStyleResponsivo}
+                placeholder="Ex: Pegar peça, Posicionar..."
+              />
+            </div>
+            
+            <div style={{ marginBottom: "15px" }}>
+              <label style={labelStyleResponsivo}>Tempo de Ciclo (s) *</label>
+              <input
+                type="number"
+                step="0.1"
+                value={novaMedicao.tempo_ciclo_segundos}
+                onChange={(e) => setNovaMedicao({...novaMedicao, tempo_ciclo_segundos: e.target.value})}
+                style={inputStyleResponsivo}
+                placeholder="Ex: 45.5"
+              />
+            </div>
+            
+            <div style={{ marginBottom: "15px" }}>
+              <label style={labelStyleResponsivo}>Método</label>
+              <select
+                value={novaMedicao.metodo}
+                onChange={(e) => setNovaMedicao({...novaMedicao, metodo: e.target.value})}
+                style={inputStyleResponsivo}
+              >
+                {metodos.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+            
+            <div style={{ marginBottom: "15px" }}>
+              <label style={labelStyleResponsivo}>Observações</label>
+              <textarea
+                rows={2}
+                value={novaMedicao.observacao}
+                onChange={(e) => setNovaMedicao({...novaMedicao, observacao: e.target.value})}
+                style={{ ...inputStyleResponsivo, resize: "vertical" }}
+                placeholder="Anotações sobre a medição..."
+              />
+            </div>
+            
+            <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+              <button
+                onClick={() => {
+                  setModalEdicaoAberto(false);
+                  setEditandoMedicao(null);
+                  setNovaMedicao({
+                    operador_id: "",
+                    atividade: "",
+                    tempo_ciclo_segundos: "",
+                    metodo: "padrao",
+                    observacao: ""
+                  });
+                }}
+                style={{ padding: "8px 16px", background: "#e5e7eb", border: "none", borderRadius: "4px", cursor: "pointer" }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={salvarEdicao}
+                disabled={salvando}
+                style={{ padding: "8px 16px", background: "#1E3A8A", color: "white", border: "none", borderRadius: "4px", cursor: "pointer" }}
+              >
+                {salvando ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Cabeçalho */}
       <div style={{ 
         backgroundColor: "white", 
@@ -627,13 +774,36 @@ export default function ColetaDados() {
                         {med.observacao ? (med.observacao.length > 20 ? med.observacao.substring(0, 20) + '...' : med.observacao) : "-"}
                       </td>
                       <td style={tdResponsivo}>
-                        <Botao
-                          variant="danger"
-                          size="sm"
-                          onClick={() => excluirMedicao(med.id)}
-                        >
-                          Excluir
-                        </Botao>
+                        <div style={{ display: "flex", gap: "8px", justifyContent: "center" }}>
+                          <button
+                            onClick={() => abrirEdicao(med)}
+                            style={{
+                              padding: "4px 12px",
+                              backgroundColor: "#dbeafe",
+                              color: "#1e40af",
+                              border: "none",
+                              borderRadius: "4px",
+                              fontSize: "11px",
+                              cursor: "pointer"
+                            }}
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => excluirMedicao(med.id)}
+                            style={{
+                              padding: "4px 12px",
+                              backgroundColor: "#fee2e2",
+                              color: "#b91c1c",
+                              border: "none",
+                              borderRadius: "4px",
+                              fontSize: "11px",
+                              cursor: "pointer"
+                            }}
+                          >
+                            Excluir
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
