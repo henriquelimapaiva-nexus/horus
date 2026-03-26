@@ -179,6 +179,7 @@ function App() {
               <Route path="/postos/editar/:postoId/linha/:linhaId" element={<PostoForm />} />
               <Route path="/coleta/:linhaId" element={<ColetaDados />} />
               <Route path="/coleta-dados" element={<ColetaDados />} />
+              <Route path="/cronoanalise/:linhaId" element={<ColetaDados />} />
               
               {/* 🟢 OEE em Tempo Real */}
               <Route path="/oee" element={<OEE />} />
