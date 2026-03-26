@@ -343,7 +343,7 @@ export default function ColetaDados() {
             variant="primary"
             size="lg"
             fullWidth={true}
-            onClick={() => navigate(`/coleta/${linhaSelecionada}`)}
+            onClick={() => navigate(`/cronoanalise/${linhaSelecionada}`)}
             disabled={!linhaSelecionada}
           >
             Iniciar Coleta
@@ -492,7 +492,7 @@ export default function ColetaDados() {
         <Botao
           variant="secondary"
           size="md"
-          onClick={() => navigate(`/linhas/${linhaIdAtual}`)}
+          onClick={() => navigate("/coleta-dados")}
         >
           Voltar
         </Botao>
