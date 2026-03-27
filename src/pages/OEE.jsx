@@ -561,7 +561,7 @@ export default function OEE() {
                 value={producao.pecas_boas}
                 onChange={handleProducaoChange}
                 style={inputStyle}
-                placeholder="Deixe em branco se igual às produzidas"
+                placeholder="se igual às produzidas não preencha"
               />
             </div>
 
