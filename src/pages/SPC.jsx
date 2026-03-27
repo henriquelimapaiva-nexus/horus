@@ -48,6 +48,7 @@ export default function SPC() {
     tipo_defeito: "",
     quantidade: "",
     turno: "",
+    data: "",
     descricao: "",
     acao_imediata: ""
   });
@@ -60,7 +61,8 @@ export default function SPC() {
     limite_inferior: "",
     limite_superior: "",
     unidade: "mm",
-    turno: ""
+    turno: "",
+    data: ""
   });
 
   const [carregando, setCarregando] = useState(false);
@@ -229,7 +231,7 @@ export default function SPC() {
   };
 
   async function salvarDefeito() {
-    if (!novoDefeito.posto_id || !novoDefeito.produto_id || !novoDefeito.tipo_defeito || !novoDefeito.quantidade || !novoDefeito.turno) {
+    if (!novoDefeito.posto_id || !novoDefeito.produto_id || !novoDefeito.tipo_defeito || !novoDefeito.quantidade || !novoDefeito.turno || !novoDefeito.data) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -240,7 +242,7 @@ export default function SPC() {
         ...novoDefeito,
         quantidade: parseInt(novoDefeito.quantidade),
         turno: parseInt(novoDefeito.turno),
-        data: new Date().toISOString().split('T')[0]
+        data: novoDefeito.data
       });
       
       toast.success("Defeito registrado com sucesso! ✅");
@@ -251,6 +253,7 @@ export default function SPC() {
         tipo_defeito: "",
         quantidade: "",
         turno: "",
+        data: "",
         descricao: "",
         acao_imediata: ""
       });
@@ -266,7 +269,7 @@ export default function SPC() {
   }
 
   async function salvarMedicao() {
-    if (!novaMedicao.posto_id || !novaMedicao.produto_id || !novaMedicao.caracteristica || !novaMedicao.valor_medido || !novaMedicao.turno) {
+    if (!novaMedicao.posto_id || !novaMedicao.produto_id || !novaMedicao.caracteristica || !novaMedicao.valor_medido || !novaMedicao.turno || !novaMedicao.data) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -279,7 +282,7 @@ export default function SPC() {
         limite_inferior: novaMedicao.limite_inferior ? parseFloat(novaMedicao.limite_inferior) : null,
         limite_superior: novaMedicao.limite_superior ? parseFloat(novaMedicao.limite_superior) : null,
         turno: parseInt(novaMedicao.turno),
-        data: new Date().toISOString().split('T')[0]
+        data: novaMedicao.data
       });
       
       toast.success("Medição registrada com sucesso! ✅");
@@ -292,7 +295,8 @@ export default function SPC() {
         limite_inferior: "",
         limite_superior: "",
         unidade: "mm",
-        turno: ""
+        turno: "",
+        data: ""
       });
       
       carregarMedicoesDimensionais();
@@ -595,6 +599,17 @@ export default function SPC() {
                   <option value="3">3º Turno</option>
                 </select>
               </div>
+
+              <div>
+                <label style={labelStyle}>Data *</label>
+                <input
+                  type="date"
+                  name="data"
+                  value={novoDefeito.data}
+                  onChange={handleDefeitoChange}
+                  style={inputStyle}
+                />
+              </div>
             </div>
 
             <div style={{ marginBottom: "15px" }}>
@@ -664,7 +679,7 @@ export default function SPC() {
                       <th style={{ padding: "10px", textAlign: "left" }}>Tipo</th>
                       <th style={{ padding: "10px", textAlign: "right" }}>Quantidade</th>
                       <th style={{ padding: "10px", textAlign: "right" }}>Percentual</th>
-                     </tr>
+                    </tr>
                   </thead>
                   <tbody>
                     {estatisticasDefeitos.principais.map(([tipo, qtd]) => (
@@ -859,6 +874,17 @@ export default function SPC() {
                   <option value="3">3º Turno</option>
                 </select>
               </div>
+
+              <div>
+                <label style={labelStyle}>Data *</label>
+                <input
+                  type="date"
+                  name="data"
+                  value={novaMedicao.data}
+                  onChange={handleMedicaoChange}
+                  style={inputStyle}
+                />
+              </div>
             </div>
 
             <Botao
@@ -948,7 +974,7 @@ export default function SPC() {
                       <th style={thStyle}>LIE</th>
                       <th style={thStyle}>LSE</th>
                       <th style={thStyle}>Turno</th>
-                     </tr>
+                      </tr>
                   </thead>
                   <tbody>
                     {medicoesDimensionais.map((m, idx) => (
