@@ -43,9 +43,16 @@ export default function Perdas() {
   const [editId, setEditId] = useState(null);
   const [carregando, setCarregando] = useState(false);
 
-  const [dadosGrafico, setDadosGrafico] = useState({
+// Estado para o gráfico de PIZZA (registros individuais)
+  const [dadosPizza, setDadosPizza] = useState({
     labels: [],
     valores: []
+  });
+
+// Estado para o gráfico de BARRAS (totais agregados)
+  const [dadosBarras, setDadosBarras] = useState({
+    labels: ['Microparadas (min)', 'Retrabalho (pç)', 'Refugo (pç)'],
+    valores: [0, 0, 0]
   });
 
   useEffect(() => {
@@ -84,7 +91,7 @@ export default function Perdas() {
   }, [filtros.linhaId, filtros.dataInicio, filtros.dataFim]);
 
   useEffect(() => {
-    calcularDadosGrafico();
+    calcularDadosGraficos();
   }, [perdas]);
 
   async function carregarLinhaProdutos(linhaId) {
@@ -168,32 +175,72 @@ export default function Perdas() {
     }
   }
 
-  // Função com logs de debug
-  const calcularDadosGrafico = () => {
-    console.log('📊 Calculando gráfico com perdas:', perdas);
+// Função para calcular dados dos dois gráficos << NOVO
+const calcularDadosGraficos = () => {
+  console.log('📊 Calculando gráficos com perdas:', perdas);
+  
+  // 1. CALCULAR TOTAIS AGREGADOS (para o gráfico de barras)
+  let totalMicro = 0;
+  let totalRetrabalho = 0;
+  let totalRefugo = 0;
+
+  perdas.forEach(p => {
+    totalMicro += parseFloat(p.microparadas_minutos) || 0;
+    totalRetrabalho += parseInt(p.retrabalho_pecas) || 0;
+    totalRefugo += parseInt(p.refugo_pecas) || 0;
+  });
+
+  // Atualizar gráfico de BARRAS (totais agregados)
+  setDadosBarras({
+    labels: ['Microparadas (min)', 'Retrabalho (pç)', 'Refugo (pç)'],
+    valores: [totalMicro, totalRetrabalho, totalRefugo]
+  });
+
+  console.log('📊 Totais para barras:', { totalMicro, totalRetrabalho, totalRefugo });
+
+  // 2. PREPARAR REGISTROS INDIVIDUAIS (para o gráfico de pizza)
+  // Vamos criar um array com cada registro individual como uma fatia da pizza
+  const labelsPizza = [];
+  const valoresPizza = [];
+
+  perdas.forEach((perda, index) => {
+    // Para cada perda, vamos adicionar as informações relevantes
+    // Mas precisamos decidir: uma perda pode ter múltiplos tipos de perda no mesmo registro?
+    // Pelo formulário, um registro pode ter microparada, retrabalho E refugo ao mesmo tempo
     
-    let totalMicro = 0;
-    let totalRetrabalho = 0;
-    let totalRefugo = 0;
-
-    perdas.forEach(p => {
-      totalMicro += parseFloat(p.microparadas_minutos) || 0;
-      totalRetrabalho += parseInt(p.retrabalho_pecas) || 0;
-      totalRefugo += parseInt(p.refugo_pecas) || 0;
-    });
-
-    console.log('📊 Totais calculados:', { totalMicro, totalRetrabalho, totalRefugo });
-
-    if (totalMicro === 0 && totalRetrabalho === 0 && totalRefugo === 0) {
-      setDadosGrafico({ labels: [], valores: [] });
-      return;
+    // Vamos tratar cada tipo de perda como um item separado na pizza
+    const micro = parseFloat(perda.microparadas_minutos) || 0;
+    const retrabalho = parseInt(perda.retrabalho_pecas) || 0;
+    const refugo = parseInt(perda.refugo_pecas) || 0;
+    
+    const dataFormatada = formatarData(perda.data_perda || perda.data_medicao);
+    const produtoNome = perda.produto_nome || getProdutoNome(perda.linha_produto_id);
+    
+    if (micro > 0) {
+      labelsPizza.push(`${produtoNome} - ${dataFormatada} (Micro: ${micro}min)`);
+      valoresPizza.push(micro);
     }
+    
+    if (retrabalho > 0) {
+      labelsPizza.push(`${produtoNome} - ${dataFormatada} (Retrab: ${retrabalho}pç)`);
+      valoresPizza.push(retrabalho);
+    }
+    
+    if (refugo > 0) {
+      labelsPizza.push(`${produtoNome} - ${dataFormatada} (Refugo: ${refugo}pç)`);
+      valoresPizza.push(refugo);
+    }
+  });
 
-    setDadosGrafico({
-      labels: ['Microparadas (min)', 'Retrabalho (pç)', 'Refugo (pç)'],
-      valores: [totalMicro, totalRetrabalho, totalRefugo]
-    });
-  };
+  // Atualizar gráfico de PIZZA (registros individuais)
+  setDadosPizza({
+    labels: labelsPizza,
+    valores: valoresPizza
+  });
+
+  console.log('📊 Registros individuais para pizza:', labelsPizza.length, 'itens');
+};
+// final 
 
   const handleFiltroChange = (e) => {
     setFiltros({
@@ -436,7 +483,7 @@ export default function Perdas() {
       </div>
 
       {/* GRÁFICO DE PERDAS */}
-      {filtros.linhaId && dadosGrafico.valores.length > 0 && (
+      {filtros.linhaId && dadosBarras.valores.some(v => v > 0) && (
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
@@ -461,17 +508,17 @@ export default function Perdas() {
           }}>
             <div style={{ width: "100%", overflow: "hidden" }}>
               <GraficoPizza 
-                labels={dadosGrafico.labels}
-                valores={dadosGrafico.valores}
-                titulo="Perdas por Tipo"
+                labels={dadosPizza.labels}
+                valores={dadosPizza.valores}
+                titulo="Perdas por Tipo (Registros Individuais)"
                 cores={[coresNexus.warning, coresNexus.info, coresNexus.danger]}
               />
             </div>
 
             <div style={{ width: "100%", overflow: "hidden" }}>
               <GraficoBarras 
-                labels={dadosGrafico.labels}
-                valores={dadosGrafico.valores}
+                labels={dadosBarras.labels}
+                valores={dadosBarras.valores}
                 titulo="Total por Tipo de Perda"
                 cor={coresNexus.primary}
                 formato="numero"
@@ -487,17 +534,17 @@ export default function Perdas() {
           }}>
             <ResumoCardResponsivo 
               titulo="Microparadas"
-              valor={`${dadosGrafico.valores[0] || 0} min`}
+              valor={`${dadosBarras.valores[0] || 0} min`}
               cor={coresNexus.warning}
             />
             <ResumoCardResponsivo 
               titulo="Retrabalho"
-              valor={`${dadosGrafico.valores[1] || 0} pç`}
+              valor={`${dadosBarras.valores[1] || 0} pç`}
               cor={coresNexus.info}
             />
             <ResumoCardResponsivo 
               titulo="Refugo"
-              valor={`${dadosGrafico.valores[2] || 0} pç`}
+              valor={`${dadosBarras.valores[2] || 0} pç`}
               cor={coresNexus.danger}
             />
           </div>
