@@ -32,6 +32,7 @@ export default function SPC() {
   const [defeitos, setDefeitos] = useState([]);
   const [medicoesDimensionais, setMedicoesDimensionais] = useState([]);
   const [historicoDefeitos, setHistoricoDefeitos] = useState([]);
+  const [editId, setEditId] = useState(null);
   
   const [filtros, setFiltros] = useState({
     empresaId: clienteAtual || "",
@@ -238,14 +239,21 @@ export default function SPC() {
 
     setSalvando(true);
     try {
-      await api.post("/qualidade/defeitos", {
+      const dados = {
         ...novoDefeito,
         quantidade: parseInt(novoDefeito.quantidade),
         turno: parseInt(novoDefeito.turno),
         data: novoDefeito.data
-      });
-      
-      toast.success("Defeito registrado com sucesso! ✅");
+      };
+
+      if (editId) {
+        await api.put(`/qualidade/defeitos/${editId}`, dados);
+        toast.success("Defeito atualizado com sucesso! ✅");
+        setEditId(null);
+      } else {
+        await api.post("/qualidade/defeitos", dados);
+        toast.success("Defeito registrado com sucesso! ✅");
+      }
       
       setNovoDefeito({
         posto_id: "",
@@ -262,7 +270,7 @@ export default function SPC() {
       
     } catch (error) {
       console.error("Erro ao salvar defeito:", error);
-      toast.error("Erro ao salvar defeito ❌");
+      toast.error(editId ? "Erro ao atualizar defeito ❌" : "Erro ao salvar defeito ❌");
     } finally {
       setSalvando(false);
     }
@@ -276,16 +284,23 @@ export default function SPC() {
 
     setSalvando(true);
     try {
-      await api.post("/qualidade/medicoes", {
+      const dados = {
         ...novaMedicao,
         valor_medido: parseFloat(novaMedicao.valor_medido),
         limite_inferior: novaMedicao.limite_inferior ? parseFloat(novaMedicao.limite_inferior) : null,
         limite_superior: novaMedicao.limite_superior ? parseFloat(novaMedicao.limite_superior) : null,
         turno: parseInt(novaMedicao.turno),
         data: novaMedicao.data
-      });
-      
-      toast.success("Medição registrada com sucesso! ✅");
+      };
+
+      if (editId) {
+        await api.put(`/qualidade/medicoes/${editId}`, dados);
+        toast.success("Medição atualizada com sucesso! ✅");
+        setEditId(null);
+      } else {
+        await api.post("/qualidade/medicoes", dados);
+        toast.success("Medição registrada com sucesso! ✅");
+      }
       
       setNovaMedicao({
         posto_id: "",
@@ -303,10 +318,90 @@ export default function SPC() {
       
     } catch (error) {
       console.error("Erro ao salvar medição:", error);
-      toast.error("Erro ao salvar medição ❌");
+      toast.error(editId ? "Erro ao atualizar medição ❌" : "Erro ao salvar medição ❌");
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function handleDelete(id, tipo) {
+    if (!window.confirm("Deseja realmente excluir este registro?")) return;
+    
+    setCarregando(true);
+    try {
+      if (tipo === "defeito") {
+        await api.delete(`/qualidade/defeitos/${id}`);
+        toast.success("Defeito excluído com sucesso ✅");
+        carregarDefeitos();
+      } else {
+        await api.delete(`/qualidade/medicoes/${id}`);
+        toast.success("Medição excluída com sucesso ✅");
+        carregarMedicoesDimensionais();
+      }
+    } catch (error) {
+      console.error("Erro ao excluir registro:", error);
+      toast.error("Erro ao excluir registro ❌");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  function handleEditDefeito(defeito) {
+    setEditId(defeito.id);
+    setNovoDefeito({
+      posto_id: defeito.posto_id.toString(),
+      produto_id: defeito.produto_id.toString(),
+      tipo_defeito: defeito.tipo_defeito,
+      quantidade: defeito.quantidade,
+      turno: defeito.turno.toString(),
+      data: defeito.data.split('T')[0],
+      descricao: defeito.descricao || "",
+      acao_imediata: defeito.acao_imediata || ""
+    });
+    setAbaAtiva("defeitos");
+    document.getElementById('formulario-defeitos')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleEditMedicao(medicao) {
+    setEditId(medicao.id);
+    setNovaMedicao({
+      posto_id: medicao.posto_id.toString(),
+      produto_id: medicao.produto_id.toString(),
+      caracteristica: medicao.caracteristica,
+      valor_medido: medicao.valor_medido,
+      limite_inferior: medicao.limite_inferior || "",
+      limite_superior: medicao.limite_superior || "",
+      unidade: medicao.unidade || "mm",
+      turno: medicao.turno.toString(),
+      data: medicao.data.split('T')[0]
+    });
+    setAbaAtiva("dimensional");
+    document.getElementById('formulario-medicoes')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleCancelEdit() {
+    setEditId(null);
+    setNovoDefeito({
+      posto_id: "",
+      produto_id: "",
+      tipo_defeito: "",
+      quantidade: "",
+      turno: "",
+      data: "",
+      descricao: "",
+      acao_imediata: ""
+    });
+    setNovaMedicao({
+      posto_id: "",
+      produto_id: "",
+      caracteristica: "",
+      valor_medido: "",
+      limite_inferior: "",
+      limite_superior: "",
+      unidade: "mm",
+      turno: "",
+      data: ""
+    });
   }
 
   const getTipoDefeitoNome = (codigo) => {
@@ -479,7 +574,10 @@ export default function SPC() {
         borderBottom: "1px solid #e5e7eb"
       }}>
         <button
-          onClick={() => setAbaAtiva("defeitos")}
+          onClick={() => {
+            setAbaAtiva("defeitos");
+            handleCancelEdit();
+          }}
           style={{
             padding: "10px 20px",
             backgroundColor: abaAtiva === "defeitos" ? "#1E3A8A" : "transparent",
@@ -493,7 +591,10 @@ export default function SPC() {
           📊 Registro de Defeitos
         </button>
         <button
-          onClick={() => setAbaAtiva("dimensional")}
+          onClick={() => {
+            setAbaAtiva("dimensional");
+            handleCancelEdit();
+          }}
           style={{
             padding: "10px 20px",
             backgroundColor: abaAtiva === "dimensional" ? "#1E3A8A" : "transparent",
@@ -512,14 +613,19 @@ export default function SPC() {
       {abaAtiva === "defeitos" && (
         <>
           {/* Formulário de Defeitos */}
-          <div style={{ 
-            backgroundColor: "white", 
-            padding: "20px", 
-            borderRadius: "8px", 
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            marginBottom: "30px"
-          }}>
-            <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📊 Registrar Defeito</h3>
+          <div 
+            id="formulario-defeitos"
+            style={{ 
+              backgroundColor: "white", 
+              padding: "20px", 
+              borderRadius: "8px", 
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              marginBottom: "30px"
+            }}
+          >
+            <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>
+              {editId ? "✏️ Editar Defeito" : "📊 Registrar Defeito"}
+            </h3>
             
             <div style={{ 
               display: "grid", 
@@ -636,16 +742,28 @@ export default function SPC() {
               />
             </div>
 
-            <Botao
-              variant="success"
-              size="md"
-              fullWidth
-              onClick={salvarDefeito}
-              loading={salvando}
-              disabled={salvando}
-            >
-              Registrar Defeito
-            </Botao>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <Botao
+                variant="success"
+                size="md"
+                fullWidth
+                onClick={salvarDefeito}
+                loading={salvando}
+                disabled={salvando}
+              >
+                {editId ? "Atualizar Defeito" : "Registrar Defeito"}
+              </Botao>
+              {editId && (
+                <Botao
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  onClick={handleCancelEdit}
+                >
+                  Cancelar Edição
+                </Botao>
+              )}
+            </div>
           </div>
 
           {/* Estatísticas de Defeitos */}
@@ -679,7 +797,7 @@ export default function SPC() {
                       <th style={{ padding: "10px", textAlign: "left" }}>Tipo</th>
                       <th style={{ padding: "10px", textAlign: "right" }}>Quantidade</th>
                       <th style={{ padding: "10px", textAlign: "right" }}>Percentual</th>
-                    </tr>
+                     </tr>
                   </thead>
                   <tbody>
                     {estatisticasDefeitos.principais.map(([tipo, qtd]) => (
@@ -697,7 +815,7 @@ export default function SPC() {
             </div>
           )}
 
-          {/* Lista de Defeitos */}
+          {/* Lista de Defeitos com Editar e Excluir */}
           <div style={{ 
             backgroundColor: "white", 
             padding: "20px", 
@@ -722,6 +840,7 @@ export default function SPC() {
                       <th style={thStyle}>Qtd</th>
                       <th style={thStyle}>Turno</th>
                       <th style={thStyle}>Ação Imediata</th>
+                      <th style={thStyle}>Ações</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -734,6 +853,26 @@ export default function SPC() {
                         <td style={tdStyle}>{d.quantidade}</td>
                         <td style={tdStyle}>{d.turno}º</td>
                         <td style={tdStyle}>{d.acao_imediata || "-"}</td>
+                        <td style={tdStyle}>
+                          <div style={{ display: "flex", gap: "5px", justifyContent: "center" }}>
+                            <Botao
+                              variant="primary"
+                              size="xs"
+                              onClick={() => handleEditDefeito(d)}
+                              style={{ padding: "4px 8px", fontSize: "11px" }}
+                            >
+                              Editar
+                            </Botao>
+                            <Botao
+                              variant="danger"
+                              size="xs"
+                              onClick={() => handleDelete(d.id, "defeito")}
+                              style={{ padding: "4px 8px", fontSize: "11px" }}
+                            >
+                              Excluir
+                            </Botao>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -748,14 +887,19 @@ export default function SPC() {
       {abaAtiva === "dimensional" && (
         <>
           {/* Formulário de Medições */}
-          <div style={{ 
-            backgroundColor: "white", 
-            padding: "20px", 
-            borderRadius: "8px", 
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            marginBottom: "30px"
-          }}>
-            <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📏 Registrar Medição Dimensional</h3>
+          <div 
+            id="formulario-medicoes"
+            style={{ 
+              backgroundColor: "white", 
+              padding: "20px", 
+              borderRadius: "8px", 
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              marginBottom: "30px"
+            }}
+          >
+            <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>
+              {editId ? "✏️ Editar Medição" : "📏 Registrar Medição Dimensional"}
+            </h3>
             
             <div style={{ 
               display: "grid", 
@@ -887,16 +1031,28 @@ export default function SPC() {
               </div>
             </div>
 
-            <Botao
-              variant="success"
-              size="md"
-              fullWidth
-              onClick={salvarMedicao}
-              loading={salvando}
-              disabled={salvando}
-            >
-              Registrar Medição
-            </Botao>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <Botao
+                variant="success"
+                size="md"
+                fullWidth
+                onClick={salvarMedicao}
+                loading={salvando}
+                disabled={salvando}
+              >
+                {editId ? "Atualizar Medição" : "Registrar Medição"}
+              </Botao>
+              {editId && (
+                <Botao
+                  variant="secondary"
+                  size="md"
+                  fullWidth
+                  onClick={handleCancelEdit}
+                >
+                  Cancelar Edição
+                </Botao>
+              )}
+            </div>
           </div>
 
           {/* Estatísticas de Medições */}
@@ -950,7 +1106,7 @@ export default function SPC() {
             </div>
           )}
 
-          {/* Lista de Medições */}
+          {/* Lista de Medições com Editar e Excluir */}
           <div style={{ 
             backgroundColor: "white", 
             padding: "20px", 
@@ -974,7 +1130,8 @@ export default function SPC() {
                       <th style={thStyle}>LIE</th>
                       <th style={thStyle}>LSE</th>
                       <th style={thStyle}>Turno</th>
-                      </tr>
+                      <th style={thStyle}>Ações</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {medicoesDimensionais.map((m, idx) => (
@@ -995,6 +1152,26 @@ export default function SPC() {
                         <td style={tdStyle}>{m.limite_inferior || "-"} {m.limite_inferior && m.unidade}</td>
                         <td style={tdStyle}>{m.limite_superior || "-"} {m.limite_superior && m.unidade}</td>
                         <td style={tdStyle}>{m.turno}º</td>
+                        <td style={tdStyle}>
+                          <div style={{ display: "flex", gap: "5px", justifyContent: "center" }}>
+                            <Botao
+                              variant="primary"
+                              size="xs"
+                              onClick={() => handleEditMedicao(m)}
+                              style={{ padding: "4px 8px", fontSize: "11px" }}
+                            >
+                              Editar
+                            </Botao>
+                            <Botao
+                              variant="danger"
+                              size="xs"
+                              onClick={() => handleDelete(m.id, "medicao")}
+                              style={{ padding: "4px 8px", fontSize: "11px" }}
+                            >
+                              Excluir
+                            </Botao>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
