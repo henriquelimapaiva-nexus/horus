@@ -21,6 +21,18 @@ const tiposDefeito = [
   { codigo: "D07", nome: "Defeito de Embalagem", categoria: "embalagem" }
 ];
 
+// Função auxiliar para formatar data sem timezone
+const formatarData = (dataString) => {
+  if (!dataString) return "-";
+  // Se já estiver no formato YYYY-MM-DD, converte para DD/MM/YYYY
+  if (dataString.includes('-') && dataString.length === 10) {
+    return dataString.split('-').reverse().join('/');
+  }
+  // Se for ISO, pega só a parte da data
+  const dataParte = dataString.split('T')[0];
+  return dataParte.split('-').reverse().join('/');
+};
+
 export default function SPC() {
   const { clienteAtual } = useOutletContext();
 
@@ -354,7 +366,7 @@ export default function SPC() {
       tipo_defeito: defeito.tipo_defeito,
       quantidade: defeito.quantidade,
       turno: defeito.turno.toString(),
-      data: defeito.data.split('T')[0],
+      data: defeito.data ? defeito.data.split('T')[0] : "",
       descricao: defeito.descricao || "",
       acao_imediata: defeito.acao_imediata || ""
     });
@@ -373,7 +385,7 @@ export default function SPC() {
       limite_superior: medicao.limite_superior || "",
       unidade: medicao.unidade || "mm",
       turno: medicao.turno.toString(),
-      data: medicao.data.split('T')[0]
+      data: medicao.data ? medicao.data.split('T')[0] : ""
     });
     setAbaAtiva("dimensional");
     document.getElementById('formulario-medicoes')?.scrollIntoView({ behavior: 'smooth' });
@@ -846,7 +858,7 @@ export default function SPC() {
                   <tbody>
                     {defeitos.map((d, idx) => (
                       <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                        <td style={tdStyle}>{new Date(d.data).toLocaleDateString('pt-BR')}</td>
+                        <td style={tdStyle}>{formatarData(d.data)}</td>
                         <td style={tdStyle}>{getPostoNome(d.posto_id)}</td>
                         <td style={tdStyle}>{getProdutoNome(d.produto_id)}</td>
                         <td style={tdStyle}>{getTipoDefeitoNome(d.tipo_defeito)}</td>
@@ -872,8 +884,8 @@ export default function SPC() {
                               Excluir
                             </Botao>
                           </div>
-                        </td>
-                      </tr>
+                         </td>
+                       </tr>
                     ))}
                   </tbody>
                 </table>
@@ -1131,12 +1143,12 @@ export default function SPC() {
                       <th style={thStyle}>LSE</th>
                       <th style={thStyle}>Turno</th>
                       <th style={thStyle}>Ações</th>
-                    </tr>
+                     </tr>
                   </thead>
                   <tbody>
                     {medicoesDimensionais.map((m, idx) => (
                       <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                        <td style={tdStyle}>{new Date(m.data).toLocaleDateString('pt-BR')}</td>
+                        <td style={tdStyle}>{formatarData(m.data)}</td>
                         <td style={tdStyle}>{getPostoNome(m.posto_id)}</td>
                         <td style={tdStyle}>{getProdutoNome(m.produto_id)}</td>
                         <td style={tdStyle}>{m.caracteristica}</td>
