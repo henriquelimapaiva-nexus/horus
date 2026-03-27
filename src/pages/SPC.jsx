@@ -855,9 +855,14 @@ export default function SPC() {
 
               <h4 style={{ marginBottom: "10px" }}>Top 5 Defeitos Mais Comuns</h4>
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                  <colgroup>
+                    <col style={{ width: "50%" }} />
+                    <col style={{ width: "25%" }} />
+                    <col style={{ width: "25%" }} />
+                  </colgroup>
                   <thead>
-                    <tr style={{ backgroundColor: "#f3f4f6" }}>
+                    <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
                       <th style={{ padding: "10px", textAlign: "left" }}>Tipo</th>
                       <th style={{ padding: "10px", textAlign: "right" }}>Quantidade</th>
                       <th style={{ padding: "10px", textAlign: "right" }}>Percentual</th>
