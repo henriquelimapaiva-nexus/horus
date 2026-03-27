@@ -4,6 +4,9 @@ import { useOutletContext } from "react-router-dom";
 import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast';
+import GraficoPizza from "../components/graficos/GraficoPizza";
+import GraficoBarras from "../components/graficos/GraficoBarras";
+import { coresNexus } from "../components/graficos/GraficoBase";
 
 // Tipos de manutenção corrigidos
 const tiposManutencao = [
@@ -25,6 +28,7 @@ export default function TPM() {
   const [linhas, setLinhas] = useState([]);
   const [postos, setPostos] = useState([]);
   const [registros, setRegistros] = useState([]);
+  const [editId, setEditId] = useState(null);
   
   const [filtros, setFiltros] = useState({
     empresaId: clienteAtual || "",
@@ -110,6 +114,8 @@ export default function TPM() {
     
     const corretivas = dados.filter(r => r.tipo === "corretiva").length;
     const preventivas = dados.filter(r => r.tipo === "preventiva").length;
+    const preditivas = dados.filter(r => r.tipo === "preditiva").length;
+    const detectivas = dados.filter(r => r.tipo === "detectiva").length;
     
     const causasMap = {};
     dados.forEach(r => {
@@ -125,7 +131,10 @@ export default function TPM() {
       mttr: mttr.toFixed(1),
       corretivas,
       preventivas,
-      causa_mais_frequente: causaMaisFrequente ? causaMaisFrequente[0] : "-"
+      preditivas,
+      detectivas,
+      causa_mais_frequente: causaMaisFrequente ? causaMaisFrequente[0] : "-",
+      causas: causasMap
     });
   }
 
@@ -145,15 +154,26 @@ export default function TPM() {
 
     setSalvando(true);
     try {
-      await api.post("/manutencao/registros", {
-        ...novoRegistro,
+      const dados = {
+        posto_id: parseInt(novoRegistro.posto_id),
+        tipo: novoRegistro.tipo,
+        causa: novoRegistro.causa || null,
         tempo_parada_min: parseFloat(novoRegistro.tempo_parada_min),
         tempo_reparo_min: parseFloat(novoRegistro.tempo_reparo_min) || 0,
+        descricao: novoRegistro.descricao || null,
+        peca_substituida: novoRegistro.peca_substituida || null,
         turno: parseInt(novoRegistro.turno),
         data: new Date().toISOString().split('T')[0]
-      });
-      
-      toast.success("Registro de manutenção salvo! ✅");
+      };
+
+      if (editId) {
+        await api.put(`/manutencao/registros/${editId}`, dados);
+        toast.success("Registro atualizado com sucesso! ✅");
+        setEditId(null);
+      } else {
+        await api.post("/manutencao/registros", dados);
+        toast.success("Registro de manutenção salvo! ✅");
+      }
       
       setNovoRegistro({
         posto_id: "",
@@ -170,10 +190,56 @@ export default function TPM() {
       
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      toast.error("Erro ao salvar registro ❌");
+      toast.error(editId ? "Erro ao atualizar registro ❌" : "Erro ao salvar registro ❌");
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function handleDelete(id) {
+    if (!window.confirm("Deseja realmente excluir este registro?")) return;
+    
+    setCarregando(true);
+    try {
+      await api.delete(`/manutencao/registros/${id}`);
+      toast.success("Registro excluído com sucesso ✅");
+      carregarRegistros();
+    } catch (error) {
+      console.error("Erro ao excluir registro:", error);
+      toast.error("Erro ao excluir registro ❌");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  function handleEdit(registro) {
+    setEditId(registro.id);
+    setNovoRegistro({
+      posto_id: registro.posto_id.toString(),
+      tipo: registro.tipo,
+      causa: registro.causa || "",
+      tempo_parada_min: registro.tempo_parada_min,
+      tempo_reparo_min: registro.tempo_reparo_min || "",
+      descricao: registro.descricao || "",
+      peca_substituida: registro.peca_substituida || "",
+      turno: registro.turno.toString()
+    });
+    
+    document.getElementById('formulario-manutencao')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleCancelEdit() {
+    setEditId(null);
+    setNovoRegistro({
+      posto_id: "",
+      tipo: "",
+      causa: "",
+      tempo_parada_min: "",
+      tempo_reparo_min: "",
+      descricao: "",
+      peca_substituida: "",
+      turno: ""
+    });
   }
 
   const getPostoNome = (id) => {
@@ -185,6 +251,17 @@ export default function TPM() {
     const tipo = tiposManutencao.find(t => t.valor === valor);
     return tipo ? tipo.label : valor;
   };
+
+  // Preparar dados para gráficos
+  const dadosGraficoTipos = estatisticas ? {
+    labels: ["Corretiva", "Preventiva", "Preditiva", "Detectiva"],
+    valores: [estatisticas.corretivas, estatisticas.preventivas, estatisticas.preditivas, estatisticas.detectivas]
+  } : null;
+
+  const dadosGraficoCausas = estatisticas && estatisticas.causas ? {
+    labels: Object.keys(estatisticas.causas),
+    valores: Object.values(estatisticas.causas)
+  } : null;
 
   if (!filtros.empresaId) {
     return (
@@ -238,16 +315,18 @@ export default function TPM() {
               {postos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </div>
-          <div><label style={labelStyle}>Data Início</label><input type="date" name="dataInicio" value={filtros.dataInicio} onChange={handleFiltroChange} style={inputStyle} placeholder="Selecione a data" /></div>
-          <div><label style={labelStyle}>Data Fim</label><input type="date" name="dataFim" value={filtros.dataFim} onChange={handleFiltroChange} style={inputStyle} placeholder="Selecione a data" /></div>
+          <div><label style={labelStyle}>Data Início</label><input type="date" name="dataInicio" value={filtros.dataInicio} onChange={handleFiltroChange} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Data Fim</label><input type="date" name="dataFim" value={filtros.dataFim} onChange={handleFiltroChange} style={inputStyle} /></div>
         </div>
       </div>
 
-      {/* Estatísticas */}
+      {/* Gráficos e Indicadores */}
       {estatisticas && (
         <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", marginBottom: "30px" }}>
           <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📊 Indicadores de Confiabilidade</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "15px" }}>
+          
+          {/* Cards de MTBF e MTTR */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "15px", marginBottom: "20px" }}>
             <div style={{ backgroundColor: "#f9fafb", padding: "15px", borderRadius: "8px", textAlign: "center" }}>
               <div style={{ fontSize: "12px", color: "#666" }}>Total de Paradas</div>
               <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1E3A8A" }}>{estatisticas.total_paradas}</div>
@@ -267,12 +346,42 @@ export default function TPM() {
               <div style={{ fontSize: "18px", fontWeight: "bold" }}>{estatisticas.causa_mais_frequente}</div>
             </div>
           </div>
+
+          {/* Gráficos */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
+            {dadosGraficoTipos && dadosGraficoTipos.valores.some(v => v > 0) && (
+              <div>
+                <GraficoPizza
+                  labels={dadosGraficoTipos.labels}
+                  valores={dadosGraficoTipos.valores}
+                  titulo="Tipos de Manutenção"
+                  cores={["#dc2626", "#3b82f6", "#8b5cf6", "#f59e0b"]}
+                />
+              </div>
+            )}
+            {dadosGraficoCausas && dadosGraficoCausas.valores.some(v => v > 0) && (
+              <div>
+                <GraficoBarras
+                  labels={dadosGraficoCausas.labels}
+                  valores={dadosGraficoCausas.valores}
+                  titulo="Causas mais Frequentes"
+                  cor={coresNexus.primary}
+                  formato="numero"
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
       {/* Formulário */}
-      <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", marginBottom: "30px" }}>
-        <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>🔧 Novo Registro de Manutenção</h3>
+      <div 
+        id="formulario-manutencao"
+        style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", marginBottom: "30px" }}
+      >
+        <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>
+          {editId ? "✏️ Editar Registro de Manutenção" : "🔧 Novo Registro de Manutenção"}
+        </h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px", marginBottom: "15px" }}>
           <div><label style={labelStyle}>Posto *</label><select name="posto_id" value={novoRegistro.posto_id} onChange={handleFormChange} style={inputStyle}><option value="">Selecione</option>{postos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
           <div><label style={labelStyle}>Tipo *</label><select name="tipo" value={novoRegistro.tipo} onChange={handleFormChange} style={inputStyle}><option value="">Selecione</option>{tiposManutencao.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}</select></div>
@@ -283,16 +392,36 @@ export default function TPM() {
         </div>
         <div style={{ marginBottom: "15px" }}><label style={labelStyle}>Descrição</label><input type="text" name="descricao" value={novoRegistro.descricao} onChange={handleFormChange} style={inputStyle} placeholder="Descreva o ocorrido..." /></div>
         <div style={{ marginBottom: "15px" }}><label style={labelStyle}>Peça Substituída</label><input type="text" name="peca_substituida" value={novoRegistro.peca_substituida} onChange={handleFormChange} style={inputStyle} placeholder="Peça trocada (se aplicável)" /></div>
-        <Botao variant="success" size="md" fullWidth onClick={salvarRegistro} loading={salvando}>Registrar Manutenção</Botao>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <Botao variant="success" size="md" fullWidth onClick={salvarRegistro} loading={salvando}>
+            {editId ? "Atualizar Registro" : "Registrar Manutenção"}
+          </Botao>
+          {editId && (
+            <Botao variant="secondary" size="md" fullWidth onClick={handleCancelEdit}>
+              Cancelar Edição
+            </Botao>
+          )}
+        </div>
       </div>
 
-      {/* Histórico */}
+      {/* Histórico com Editar e Excluir */}
       <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px" }}>
         <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📋 Histórico de Manutenção</h3>
         {carregando ? <div style={{ textAlign: "center", padding: "40px" }}>Carregando...</div> : registros.length === 0 ? <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Nenhum registro encontrado.</div> : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr style={{ backgroundColor: "#1E3A8A", color: "white" }}><th style={thStyle}>Data</th><th style={thStyle}>Posto</th><th style={thStyle}>Tipo</th><th style={thStyle}>Causa</th><th style={thStyle}>Parada</th><th style={thStyle}>Reparo</th><th style={thStyle}>Turno</th> </tr></thead>
+              <thead>
+                <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+                  <th style={thStyle}>Data</th>
+                  <th style={thStyle}>Posto</th>
+                  <th style={thStyle}>Tipo</th>
+                  <th style={thStyle}>Causa</th>
+                  <th style={thStyle}>Parada</th>
+                  <th style={thStyle}>Reparo</th>
+                  <th style={thStyle}>Turno</th>
+                  <th style={thStyle}>Ações</th>
+                 </tr>
+              </thead>
               <tbody>
                 {registros.map((r, idx) => (
                   <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
@@ -303,6 +432,26 @@ export default function TPM() {
                     <td style={tdStyle}>{r.tempo_parada_min} min</td>
                     <td style={tdStyle}>{r.tempo_reparo_min || "-"} min</td>
                     <td style={tdStyle}>{r.turno}º</td>
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", gap: "5px", justifyContent: "center" }}>
+                        <Botao
+                          variant="primary"
+                          size="xs"
+                          onClick={() => handleEdit(r)}
+                          style={{ padding: "4px 8px", fontSize: "11px" }}
+                        >
+                          Editar
+                        </Botao>
+                        <Botao
+                          variant="danger"
+                          size="xs"
+                          onClick={() => handleDelete(r.id)}
+                          style={{ padding: "4px 8px", fontSize: "11px" }}
+                        >
+                          Excluir
+                        </Botao>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
