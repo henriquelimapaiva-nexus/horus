@@ -41,7 +41,6 @@ export default function SPC() {
   const [produtos, setProdutos] = useState([]);
   const [defeitos, setDefeitos] = useState([]);
   const [medicoesDimensionais, setMedicoesDimensionais] = useState([]);
-  const [historicoDefeitos, setHistoricoDefeitos] = useState([]);
   const [editId, setEditId] = useState(null);
   
   const [filtros, setFiltros] = useState({
@@ -53,7 +52,8 @@ export default function SPC() {
     dataFim: ""
   });
 
-  const [novoDefeito, setNovoDefeito] = useState({
+  // Formulário temporário para defeitos
+  const [defeitoTemp, setDefeitoTemp] = useState({
     posto_id: "",
     produto_id: "",
     tipo_defeito: "",
@@ -64,7 +64,11 @@ export default function SPC() {
     acao_imediata: ""
   });
 
-  const [novaMedicao, setNovaMedicao] = useState({
+  // Lista de defeitos pendentes
+  const [listaDefeitos, setListaDefeitos] = useState([]);
+
+  // Formulário temporário para medições
+  const [medicaoTemp, setMedicaoTemp] = useState({
     posto_id: "",
     produto_id: "",
     caracteristica: "",
@@ -75,6 +79,9 @@ export default function SPC() {
     turno: "",
     data: ""
   });
+
+  // Lista de medições pendentes
+  const [listaMedicoes, setListaMedicoes] = useState([]);
 
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -227,112 +234,172 @@ export default function SPC() {
     });
   };
 
-  const handleDefeitoChange = (e) => {
-    setNovoDefeito({
-      ...novoDefeito,
+  const handleDefeitoTempChange = (e) => {
+    setDefeitoTemp({
+      ...defeitoTemp,
       [e.target.name]: e.target.value
     });
   };
 
-  const handleMedicaoChange = (e) => {
-    setNovaMedicao({
-      ...novaMedicao,
+  const handleMedicaoTempChange = (e) => {
+    setMedicaoTemp({
+      ...medicaoTemp,
       [e.target.name]: e.target.value
     });
   };
 
-  async function salvarDefeito() {
-    if (!novoDefeito.posto_id || !novoDefeito.produto_id || !novoDefeito.tipo_defeito || !novoDefeito.quantidade || !novoDefeito.turno || !novoDefeito.data) {
+  // Adicionar defeito à lista
+  const adicionarDefeitoLista = () => {
+    if (!defeitoTemp.posto_id || !defeitoTemp.produto_id || !defeitoTemp.tipo_defeito || !defeitoTemp.quantidade || !defeitoTemp.turno || !defeitoTemp.data) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    setSalvando(true);
-    try {
-      const dados = {
-        ...novoDefeito,
-        quantidade: parseInt(novoDefeito.quantidade),
-        turno: parseInt(novoDefeito.turno),
-        data: novoDefeito.data
-      };
+    setListaDefeitos([...listaDefeitos, { ...defeitoTemp, id: Date.now() }]);
+    
+    setDefeitoTemp({
+      posto_id: "",
+      produto_id: "",
+      tipo_defeito: "",
+      quantidade: "",
+      turno: "",
+      data: "",
+      descricao: "",
+      acao_imediata: ""
+    });
+    
+    toast.success("Defeito adicionado à lista!");
+  };
 
-      if (editId) {
-        await api.put(`/qualidade/defeitos/${editId}`, dados);
-        toast.success("Defeito atualizado com sucesso! ✅");
-        setEditId(null);
-      } else {
-        await api.post("/qualidade/defeitos", dados);
-        toast.success("Defeito registrado com sucesso! ✅");
-      }
-      
-      setNovoDefeito({
-        posto_id: "",
-        produto_id: "",
-        tipo_defeito: "",
-        quantidade: "",
-        turno: "",
-        data: "",
-        descricao: "",
-        acao_imediata: ""
-      });
-      
-      carregarDefeitos();
-      
-    } catch (error) {
-      console.error("Erro ao salvar defeito:", error);
-      toast.error(editId ? "Erro ao atualizar defeito ❌" : "Erro ao salvar defeito ❌");
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function salvarMedicao() {
-    if (!novaMedicao.posto_id || !novaMedicao.produto_id || !novaMedicao.caracteristica || !novaMedicao.valor_medido || !novaMedicao.turno || !novaMedicao.data) {
+  // Adicionar medição à lista
+  const adicionarMedicaoLista = () => {
+    if (!medicaoTemp.posto_id || !medicaoTemp.produto_id || !medicaoTemp.caracteristica || !medicaoTemp.valor_medido || !medicaoTemp.turno || !medicaoTemp.data) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
-    setSalvando(true);
-    try {
-      const dados = {
-        ...novaMedicao,
-        valor_medido: parseFloat(novaMedicao.valor_medido),
-        limite_inferior: novaMedicao.limite_inferior ? parseFloat(novaMedicao.limite_inferior) : null,
-        limite_superior: novaMedicao.limite_superior ? parseFloat(novaMedicao.limite_superior) : null,
-        turno: parseInt(novaMedicao.turno),
-        data: novaMedicao.data
-      };
+    setListaMedicoes([...listaMedicoes, { ...medicaoTemp, id: Date.now() }]);
+    
+    setMedicaoTemp({
+      posto_id: "",
+      produto_id: "",
+      caracteristica: "",
+      valor_medido: "",
+      limite_inferior: "",
+      limite_superior: "",
+      unidade: "mm",
+      turno: "",
+      data: ""
+    });
+    
+    toast.success("Medição adicionada à lista!");
+  };
 
-      if (editId) {
-        await api.put(`/qualidade/medicoes/${editId}`, dados);
-        toast.success("Medição atualizada com sucesso! ✅");
-        setEditId(null);
-      } else {
-        await api.post("/qualidade/medicoes", dados);
-        toast.success("Medição registrada com sucesso! ✅");
-      }
-      
-      setNovaMedicao({
-        posto_id: "",
-        produto_id: "",
-        caracteristica: "",
-        valor_medido: "",
-        limite_inferior: "",
-        limite_superior: "",
-        unidade: "mm",
-        turno: "",
-        data: ""
-      });
-      
-      carregarMedicoesDimensionais();
-      
-    } catch (error) {
-      console.error("Erro ao salvar medição:", error);
-      toast.error(editId ? "Erro ao atualizar medição ❌" : "Erro ao salvar medição ❌");
-    } finally {
-      setSalvando(false);
+  // Remover defeito da lista
+  const removerDefeitoLista = (id) => {
+    setListaDefeitos(listaDefeitos.filter(item => item.id !== id));
+  };
+
+  // Remover medição da lista
+  const removerMedicaoLista = (id) => {
+    setListaMedicoes(listaMedicoes.filter(item => item.id !== id));
+  };
+
+  // Enviar todos os defeitos
+  async function enviarTodosDefeitos() {
+    if (listaDefeitos.length === 0) {
+      toast.error("Nenhum defeito para enviar");
+      return;
     }
+
+    setSalvando(true);
+    let sucessos = 0;
+    let erros = 0;
+
+    for (const defeito of listaDefeitos) {
+      try {
+        await api.post("/qualidade/defeitos", {
+          posto_id: parseInt(defeito.posto_id),
+          produto_id: parseInt(defeito.produto_id),
+          tipo_defeito: defeito.tipo_defeito,
+          quantidade: parseInt(defeito.quantidade),
+          turno: parseInt(defeito.turno),
+          data: defeito.data,
+          descricao: defeito.descricao || null,
+          acao_imediata: defeito.acao_imediata || null
+        });
+        sucessos++;
+      } catch (error) {
+        console.error("Erro ao salvar defeito:", error);
+        erros++;
+      }
+    }
+
+    if (erros === 0) {
+      toast.success(`${sucessos} defeitos registrados com sucesso! ✅`);
+    } else {
+      toast.warning(`${sucessos} registrados, ${erros} falhas ❌`);
+    }
+
+    setListaDefeitos([]);
+    carregarDefeitos();
+    setSalvando(false);
   }
+
+  // Enviar todas as medições
+  async function enviarTodasMedicoes() {
+    if (listaMedicoes.length === 0) {
+      toast.error("Nenhuma medição para enviar");
+      return;
+    }
+
+    setSalvando(true);
+    let sucessos = 0;
+    let erros = 0;
+
+    for (const medicao of listaMedicoes) {
+      try {
+        await api.post("/qualidade/medicoes", {
+          posto_id: parseInt(medicao.posto_id),
+          produto_id: parseInt(medicao.produto_id),
+          caracteristica: medicao.caracteristica,
+          valor_medido: parseFloat(medicao.valor_medido),
+          limite_inferior: medicao.limite_inferior ? parseFloat(medicao.limite_inferior) : null,
+          limite_superior: medicao.limite_superior ? parseFloat(medicao.limite_superior) : null,
+          unidade: medicao.unidade,
+          turno: parseInt(medicao.turno),
+          data: medicao.data
+        });
+        sucessos++;
+      } catch (error) {
+        console.error("Erro ao salvar medição:", error);
+        erros++;
+      }
+    }
+
+    if (erros === 0) {
+      toast.success(`${sucessos} medições registradas com sucesso! ✅`);
+    } else {
+      toast.warning(`${sucessos} registradas, ${erros} falhas ❌`);
+    }
+
+    setListaMedicoes([]);
+    carregarMedicoesDimensionais();
+    setSalvando(false);
+  }
+
+  // Limpar lista
+  const limparListaDefeitos = () => {
+    if (window.confirm("Deseja limpar toda a lista de defeitos pendentes?")) {
+      setListaDefeitos([]);
+    }
+  };
+
+  const limparListaMedicoes = () => {
+    if (window.confirm("Deseja limpar toda a lista de medições pendentes?")) {
+      setListaMedicoes([]);
+    }
+  };
 
   async function handleDelete(id, tipo) {
     if (!window.confirm("Deseja realmente excluir este registro?")) return;
@@ -358,7 +425,7 @@ export default function SPC() {
 
   function handleEditDefeito(defeito) {
     setEditId(defeito.id);
-    setNovoDefeito({
+    setDefeitoTemp({
       posto_id: defeito.posto_id.toString(),
       produto_id: defeito.produto_id.toString(),
       tipo_defeito: defeito.tipo_defeito,
@@ -374,7 +441,7 @@ export default function SPC() {
 
   function handleEditMedicao(medicao) {
     setEditId(medicao.id);
-    setNovaMedicao({
+    setMedicaoTemp({
       posto_id: medicao.posto_id.toString(),
       produto_id: medicao.produto_id.toString(),
       caracteristica: medicao.caracteristica,
@@ -391,7 +458,7 @@ export default function SPC() {
 
   function handleCancelEdit() {
     setEditId(null);
-    setNovoDefeito({
+    setDefeitoTemp({
       posto_id: "",
       produto_id: "",
       tipo_defeito: "",
@@ -401,7 +468,7 @@ export default function SPC() {
       descricao: "",
       acao_imediata: ""
     });
-    setNovaMedicao({
+    setMedicaoTemp({
       posto_id: "",
       produto_id: "",
       caracteristica: "",
@@ -412,6 +479,8 @@ export default function SPC() {
       turno: "",
       data: ""
     });
+    setListaDefeitos([]);
+    setListaMedicoes([]);
   }
 
   const getTipoDefeitoNome = (codigo) => {
@@ -633,7 +702,7 @@ export default function SPC() {
             }}
           >
             <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>
-              {editId ? "✏️ Editar Defeito" : "📊 Registrar Defeito"}
+              {editId ? "✏️ Editar Defeito" : "📊 Adicionar Defeito à Lista"}
             </h3>
             
             <div style={{ 
@@ -646,8 +715,8 @@ export default function SPC() {
                 <label style={labelStyle}>Posto *</label>
                 <select
                   name="posto_id"
-                  value={novoDefeito.posto_id}
-                  onChange={handleDefeitoChange}
+                  value={defeitoTemp.posto_id}
+                  onChange={handleDefeitoTempChange}
                   style={inputStyle}
                 >
                   <option value="">Selecione</option>
@@ -661,8 +730,8 @@ export default function SPC() {
                 <label style={labelStyle}>Produto *</label>
                 <select
                   name="produto_id"
-                  value={novoDefeito.produto_id}
-                  onChange={handleDefeitoChange}
+                  value={defeitoTemp.produto_id}
+                  onChange={handleDefeitoTempChange}
                   style={inputStyle}
                 >
                   <option value="">Selecione</option>
@@ -676,8 +745,8 @@ export default function SPC() {
                 <label style={labelStyle}>Tipo de Defeito *</label>
                 <select
                   name="tipo_defeito"
-                  value={novoDefeito.tipo_defeito}
-                  onChange={handleDefeitoChange}
+                  value={defeitoTemp.tipo_defeito}
+                  onChange={handleDefeitoTempChange}
                   style={inputStyle}
                 >
                   <option value="">Selecione</option>
@@ -692,8 +761,8 @@ export default function SPC() {
                 <input
                   type="number"
                   name="quantidade"
-                  value={novoDefeito.quantidade}
-                  onChange={handleDefeitoChange}
+                  value={defeitoTemp.quantidade}
+                  onChange={handleDefeitoTempChange}
                   style={inputStyle}
                   placeholder="Número de peças"
                   min="1"
@@ -704,8 +773,8 @@ export default function SPC() {
                 <label style={labelStyle}>Turno *</label>
                 <select
                   name="turno"
-                  value={novoDefeito.turno}
-                  onChange={handleDefeitoChange}
+                  value={defeitoTemp.turno}
+                  onChange={handleDefeitoTempChange}
                   style={inputStyle}
                 >
                   <option value="">Selecione o turno</option>
@@ -720,8 +789,8 @@ export default function SPC() {
                 <input
                   type="date"
                   name="data"
-                  value={novoDefeito.data}
-                  onChange={handleDefeitoChange}
+                  value={defeitoTemp.data}
+                  onChange={handleDefeitoTempChange}
                   style={inputStyle}
                 />
               </div>
@@ -732,8 +801,8 @@ export default function SPC() {
               <input
                 type="text"
                 name="descricao"
-                value={novoDefeito.descricao}
-                onChange={handleDefeitoChange}
+                value={defeitoTemp.descricao}
+                onChange={handleDefeitoTempChange}
                 style={inputStyle}
                 placeholder="Descreva o defeito..."
               />
@@ -744,8 +813,8 @@ export default function SPC() {
               <input
                 type="text"
                 name="acao_imediata"
-                value={novoDefeito.acao_imediata}
-                onChange={handleDefeitoChange}
+                value={defeitoTemp.acao_imediata}
+                onChange={handleDefeitoTempChange}
                 style={inputStyle}
                 placeholder="O que foi feito imediatamente?"
               />
@@ -753,20 +822,17 @@ export default function SPC() {
 
             <div style={{ display: "flex", gap: "10px" }}>
               <Botao
-                variant="success"
+                variant="primary"
                 size="md"
-                fullWidth
-                onClick={salvarDefeito}
-                loading={salvando}
+                onClick={adicionarDefeitoLista}
                 disabled={salvando}
               >
-                {editId ? "Atualizar Defeito" : "Registrar Defeito"}
+                + Adicionar à Lista
               </Botao>
               {editId && (
                 <Botao
                   variant="secondary"
                   size="md"
-                  fullWidth
                   onClick={handleCancelEdit}
                 >
                   Cancelar Edição
@@ -774,6 +840,63 @@ export default function SPC() {
               )}
             </div>
           </div>
+
+          {/* Lista de Defeitos Pendentes */}
+          {listaDefeitos.length > 0 && (
+            <div style={{ 
+              backgroundColor: "white", 
+              padding: "20px", 
+              borderRadius: "8px", 
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              marginBottom: "30px",
+              border: "2px solid #f59e0b"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                <h3 style={{ color: "#f59e0b", margin: 0 }}>📋 Defeitos Pendentes ({listaDefeitos.length})</h3>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <Botao variant="secondary" size="sm" onClick={limparListaDefeitos}>
+                    Limpar Lista
+                  </Botao>
+                  <Botao variant="success" size="sm" onClick={enviarTodosDefeitos} loading={salvando}>
+                    Enviar Todos ({listaDefeitos.length})
+                  </Botao>
+                </div>
+              </div>
+              
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#fef3c7" }}>
+                      <th style={thStyle}>Data</th>
+                      <th style={thStyle}>Posto</th>
+                      <th style={thStyle}>Produto</th>
+                      <th style={thStyle}>Tipo</th>
+                      <th style={thStyle}>Qtd</th>
+                      <th style={thStyle}>Turno</th>
+                      <th style={thStyle}>Ações</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                    {listaDefeitos.map((item) => (
+                      <tr key={item.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={tdStyle}>{formatarData(item.data)}</td>
+                        <td style={tdStyle}>{getPostoNome(parseInt(item.posto_id))}</td>
+                        <td style={tdStyle}>{getProdutoNome(parseInt(item.produto_id))}</td>
+                        <td style={tdStyle}>{getTipoDefeitoNome(item.tipo_defeito)}</td>
+                        <td style={tdStyle}>{item.quantidade}</td>
+                        <td style={tdStyle}>{item.turno}º</td>
+                        <td style={tdStyle}>
+                          <Botao variant="danger" size="xs" onClick={() => removerDefeitoLista(item.id)}>
+                            Remover
+                          </Botao>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Estatísticas de Defeitos */}
           {estatisticasDefeitos && estatisticasDefeitos.total > 0 && (
@@ -803,9 +926,9 @@ export default function SPC() {
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
                     <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-                      <th style={{ padding: "10px", textAlign: "left", width: "50%" }}>Tipo</th>
-                      <th style={{ padding: "10px", textAlign: "right", width: "25%" }}>Quantidade</th>
-                      <th style={{ padding: "10px", textAlign: "right", width: "25%" }}>Percentual</th>
+                      <th style={{ padding: "10px", textAlign: "left" }}>Tipo</th>
+                      <th style={{ padding: "10px", textAlign: "right" }}>Quantidade</th>
+                      <th style={{ padding: "10px", textAlign: "right" }}>Percentual</th>
                      </tr>
                   </thead>
                   <tbody>
@@ -824,7 +947,7 @@ export default function SPC() {
             </div>
           )}
 
-          {/* Lista de Defeitos com Editar e Excluir */}
+          {/* Histórico de Defeitos */}
           <div style={{ 
             backgroundColor: "white", 
             padding: "20px", 
@@ -881,8 +1004,8 @@ export default function SPC() {
                               Excluir
                             </Botao>
                           </div>
-                         </td>
-                       </tr>
+                        </td>
+                      </tr>
                     ))}
                   </tbody>
                 </table>
@@ -907,7 +1030,7 @@ export default function SPC() {
             }}
           >
             <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>
-              {editId ? "✏️ Editar Medição" : "📏 Registrar Medição Dimensional"}
+              {editId ? "✏️ Editar Medição" : "📏 Adicionar Medição à Lista"}
             </h3>
             
             <div style={{ 
@@ -920,8 +1043,8 @@ export default function SPC() {
                 <label style={labelStyle}>Posto *</label>
                 <select
                   name="posto_id"
-                  value={novaMedicao.posto_id}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.posto_id}
+                  onChange={handleMedicaoTempChange}
                   style={inputStyle}
                 >
                   <option value="">Selecione</option>
@@ -935,8 +1058,8 @@ export default function SPC() {
                 <label style={labelStyle}>Produto *</label>
                 <select
                   name="produto_id"
-                  value={novaMedicao.produto_id}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.produto_id}
+                  onChange={handleMedicaoTempChange}
                   style={inputStyle}
                 >
                   <option value="">Selecione</option>
@@ -951,8 +1074,8 @@ export default function SPC() {
                 <input
                   type="text"
                   name="caracteristica"
-                  value={novaMedicao.caracteristica}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.caracteristica}
+                  onChange={handleMedicaoTempChange}
                   style={inputStyle}
                   placeholder="Ex: Diâmetro externo, Comprimento..."
                 />
@@ -963,8 +1086,8 @@ export default function SPC() {
                 <input
                   type="number"
                   name="valor_medido"
-                  value={novaMedicao.valor_medido}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.valor_medido}
+                  onChange={handleMedicaoTempChange}
                   step="0.001"
                   style={inputStyle}
                   placeholder="Valor medido"
@@ -976,8 +1099,8 @@ export default function SPC() {
                 <input
                   type="number"
                   name="limite_inferior"
-                  value={novaMedicao.limite_inferior}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.limite_inferior}
+                  onChange={handleMedicaoTempChange}
                   step="0.001"
                   style={inputStyle}
                   placeholder="Opcional"
@@ -989,8 +1112,8 @@ export default function SPC() {
                 <input
                   type="number"
                   name="limite_superior"
-                  value={novaMedicao.limite_superior}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.limite_superior}
+                  onChange={handleMedicaoTempChange}
                   step="0.001"
                   style={inputStyle}
                   placeholder="Opcional"
@@ -1001,8 +1124,8 @@ export default function SPC() {
                 <label style={labelStyle}>Unidade</label>
                 <select
                   name="unidade"
-                  value={novaMedicao.unidade}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.unidade}
+                  onChange={handleMedicaoTempChange}
                   style={inputStyle}
                 >
                   <option value="mm">mm</option>
@@ -1017,8 +1140,8 @@ export default function SPC() {
                 <label style={labelStyle}>Turno *</label>
                 <select
                   name="turno"
-                  value={novaMedicao.turno}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.turno}
+                  onChange={handleMedicaoTempChange}
                   style={inputStyle}
                 >
                   <option value="">Selecione o turno</option>
@@ -1033,8 +1156,8 @@ export default function SPC() {
                 <input
                   type="date"
                   name="data"
-                  value={novaMedicao.data}
-                  onChange={handleMedicaoChange}
+                  value={medicaoTemp.data}
+                  onChange={handleMedicaoTempChange}
                   style={inputStyle}
                 />
               </div>
@@ -1042,20 +1165,17 @@ export default function SPC() {
 
             <div style={{ display: "flex", gap: "10px" }}>
               <Botao
-                variant="success"
+                variant="primary"
                 size="md"
-                fullWidth
-                onClick={salvarMedicao}
-                loading={salvando}
+                onClick={adicionarMedicaoLista}
                 disabled={salvando}
               >
-                {editId ? "Atualizar Medição" : "Registrar Medição"}
+                + Adicionar à Lista
               </Botao>
               {editId && (
                 <Botao
                   variant="secondary"
                   size="md"
-                  fullWidth
                   onClick={handleCancelEdit}
                 >
                   Cancelar Edição
@@ -1063,6 +1183,63 @@ export default function SPC() {
               )}
             </div>
           </div>
+
+          {/* Lista de Medições Pendentes */}
+          {listaMedicoes.length > 0 && (
+            <div style={{ 
+              backgroundColor: "white", 
+              padding: "20px", 
+              borderRadius: "8px", 
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              marginBottom: "30px",
+              border: "2px solid #f59e0b"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                <h3 style={{ color: "#f59e0b", margin: 0 }}>📏 Medições Pendentes ({listaMedicoes.length})</h3>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <Botao variant="secondary" size="sm" onClick={limparListaMedicoes}>
+                    Limpar Lista
+                  </Botao>
+                  <Botao variant="success" size="sm" onClick={enviarTodasMedicoes} loading={salvando}>
+                    Enviar Todas ({listaMedicoes.length})
+                  </Botao>
+                </div>
+              </div>
+              
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: "#fef3c7" }}>
+                      <th style={thStyle}>Data</th>
+                      <th style={thStyle}>Posto</th>
+                      <th style={thStyle}>Produto</th>
+                      <th style={thStyle}>Característica</th>
+                      <th style={thStyle}>Valor</th>
+                      <th style={thStyle}>Turno</th>
+                      <th style={thStyle}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {listaMedicoes.map((item) => (
+                      <tr key={item.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={tdStyle}>{formatarData(item.data)}</td>
+                        <td style={tdStyle}>{getPostoNome(parseInt(item.posto_id))}</td>
+                        <td style={tdStyle}>{getProdutoNome(parseInt(item.produto_id))}</td>
+                        <td style={tdStyle}>{item.caracteristica}</td>
+                        <td style={tdStyle}>{item.valor_medido} {item.unidade}</td>
+                        <td style={tdStyle}>{item.turno}º</td>
+                        <td style={tdStyle}>
+                          <Botao variant="danger" size="xs" onClick={() => removerMedicaoLista(item.id)}>
+                            Remover
+                          </Botao>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Estatísticas de Medições */}
           {estatisticasMedicoes && estatisticasMedicoes.total > 0 && (
@@ -1115,7 +1292,7 @@ export default function SPC() {
             </div>
           )}
 
-          {/* Lista de Medições com Editar e Excluir */}
+          {/* Histórico de Medições */}
           <div style={{ 
             backgroundColor: "white", 
             padding: "20px", 
@@ -1140,7 +1317,7 @@ export default function SPC() {
                       <th style={thStyle}>LSE</th>
                       <th style={thStyle}>Turno</th>
                       <th style={thStyle}>Ações</th>
-                     </tr>
+                    </tr>
                   </thead>
                   <tbody>
                     {medicoesDimensionais.map((m, idx) => (
