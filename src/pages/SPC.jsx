@@ -38,8 +38,8 @@ export default function SPC() {
     linhaId: "",
     postoId: "",
     produtoId: "",
-    dataInicio: new Date().toISOString().split('T')[0],
-    dataFim: new Date().toISOString().split('T')[0]
+    dataInicio: "",
+    dataFim: ""
   });
 
   const [novoDefeito, setNovoDefeito] = useState({
@@ -47,7 +47,7 @@ export default function SPC() {
     produto_id: "",
     tipo_defeito: "",
     quantidade: "",
-    turno: "1",
+    turno: "",
     descricao: "",
     acao_imediata: ""
   });
@@ -60,7 +60,7 @@ export default function SPC() {
     limite_inferior: "",
     limite_superior: "",
     unidade: "mm",
-    turno: "1"
+    turno: ""
   });
 
   const [carregando, setCarregando] = useState(false);
@@ -229,7 +229,7 @@ export default function SPC() {
   };
 
   async function salvarDefeito() {
-    if (!novoDefeito.posto_id || !novoDefeito.produto_id || !novoDefeito.tipo_defeito || !novoDefeito.quantidade) {
+    if (!novoDefeito.posto_id || !novoDefeito.produto_id || !novoDefeito.tipo_defeito || !novoDefeito.quantidade || !novoDefeito.turno) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -250,7 +250,7 @@ export default function SPC() {
         produto_id: "",
         tipo_defeito: "",
         quantidade: "",
-        turno: "1",
+        turno: "",
         descricao: "",
         acao_imediata: ""
       });
@@ -266,7 +266,7 @@ export default function SPC() {
   }
 
   async function salvarMedicao() {
-    if (!novaMedicao.posto_id || !novaMedicao.produto_id || !novaMedicao.caracteristica || !novaMedicao.valor_medido) {
+    if (!novaMedicao.posto_id || !novaMedicao.produto_id || !novaMedicao.caracteristica || !novaMedicao.valor_medido || !novaMedicao.turno) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -292,7 +292,7 @@ export default function SPC() {
         limite_inferior: "",
         limite_superior: "",
         unidade: "mm",
-        turno: "1"
+        turno: ""
       });
       
       carregarMedicoesDimensionais();
@@ -405,7 +405,7 @@ export default function SPC() {
               style={inputStyle}
               disabled={!filtros.empresaId}
             >
-              <option value="">Todas</option>
+              <option value="">Selecione a linha</option>
               {linhas.map(linha => (
                 <option key={linha.id} value={linha.id}>{linha.nome}</option>
               ))}
@@ -421,7 +421,7 @@ export default function SPC() {
               style={inputStyle}
               disabled={!filtros.linhaId}
             >
-              <option value="">Todos</option>
+              <option value="">Selecione o posto</option>
               {postos.map(posto => (
                 <option key={posto.id} value={posto.id}>{posto.nome}</option>
               ))}
@@ -436,7 +436,7 @@ export default function SPC() {
               onChange={handleFiltroChange}
               style={inputStyle}
             >
-              <option value="">Todos</option>
+              <option value="">Selecione o produto</option>
               {produtos.map(prod => (
                 <option key={prod.id} value={prod.id}>{prod.nome}</option>
               ))}
@@ -531,7 +531,7 @@ export default function SPC() {
                   onChange={handleDefeitoChange}
                   style={inputStyle}
                 >
-                  <option value="">Selecione...</option>
+                  <option value="">Selecione</option>
                   {postos.map(posto => (
                     <option key={posto.id} value={posto.id}>{posto.nome}</option>
                   ))}
@@ -546,7 +546,7 @@ export default function SPC() {
                   onChange={handleDefeitoChange}
                   style={inputStyle}
                 >
-                  <option value="">Selecione...</option>
+                  <option value="">Selecione</option>
                   {produtos.map(prod => (
                     <option key={prod.id} value={prod.id}>{prod.nome}</option>
                   ))}
@@ -561,7 +561,7 @@ export default function SPC() {
                   onChange={handleDefeitoChange}
                   style={inputStyle}
                 >
-                  <option value="">Selecione...</option>
+                  <option value="">Selecione</option>
                   {tiposDefeito.map(tipo => (
                     <option key={tipo.codigo} value={tipo.codigo}>{tipo.codigo} - {tipo.nome}</option>
                   ))}
@@ -582,13 +582,14 @@ export default function SPC() {
               </div>
 
               <div>
-                <label style={labelStyle}>Turno</label>
+                <label style={labelStyle}>Turno *</label>
                 <select
                   name="turno"
                   value={novoDefeito.turno}
                   onChange={handleDefeitoChange}
                   style={inputStyle}
                 >
+                  <option value="">Selecione o turno</option>
                   <option value="1">1º Turno</option>
                   <option value="2">2º Turno</option>
                   <option value="3">3º Turno</option>
@@ -663,7 +664,7 @@ export default function SPC() {
                       <th style={{ padding: "10px", textAlign: "left" }}>Tipo</th>
                       <th style={{ padding: "10px", textAlign: "right" }}>Quantidade</th>
                       <th style={{ padding: "10px", textAlign: "right" }}>Percentual</th>
-                    </tr>
+                     </tr>
                   </thead>
                   <tbody>
                     {estatisticasDefeitos.principais.map(([tipo, qtd]) => (
@@ -755,7 +756,7 @@ export default function SPC() {
                   onChange={handleMedicaoChange}
                   style={inputStyle}
                 >
-                  <option value="">Selecione...</option>
+                  <option value="">Selecione</option>
                   {postos.map(posto => (
                     <option key={posto.id} value={posto.id}>{posto.nome}</option>
                   ))}
@@ -770,7 +771,7 @@ export default function SPC() {
                   onChange={handleMedicaoChange}
                   style={inputStyle}
                 >
-                  <option value="">Selecione...</option>
+                  <option value="">Selecione</option>
                   {produtos.map(prod => (
                     <option key={prod.id} value={prod.id}>{prod.nome}</option>
                   ))}
@@ -845,13 +846,14 @@ export default function SPC() {
               </div>
 
               <div>
-                <label style={labelStyle}>Turno</label>
+                <label style={labelStyle}>Turno *</label>
                 <select
                   name="turno"
                   value={novaMedicao.turno}
                   onChange={handleMedicaoChange}
                   style={inputStyle}
                 >
+                  <option value="">Selecione o turno</option>
                   <option value="1">1º Turno</option>
                   <option value="2">2º Turno</option>
                   <option value="3">3º Turno</option>
