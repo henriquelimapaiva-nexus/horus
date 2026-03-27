@@ -33,6 +33,7 @@ export default function OEE() {
   const [postos, setPostos] = useState([]);
   const [historicoOEE, setHistoricoOEE] = useState([]);
   const [taktTime, setTaktTime] = useState(null);
+  const [editId, setEditId] = useState(null); // Estado para edição
   
   const [filtros, setFiltros] = useState({
     empresaId: clienteAtual || "",
@@ -47,6 +48,7 @@ export default function OEE() {
     pecas_produzidas: "",
     pecas_boas: "",
     tempo_operando_min: "",
+    data: new Date().toISOString().split('T')[0], // Campo data adicionado
     paradas: []
   });
 
@@ -236,14 +238,19 @@ export default function OEE() {
     }
 
     const oeeCalculado = calcularOEE();
+    
+    if (!oeeCalculado) {
+      toast.error("Takt time não configurado para este produto");
+      return;
+    }
 
     setSalvando(true);
     try {
-      await api.post("/producao/registrar", {
+      const dados = {
         linha_id: parseInt(filtros.linhaId),
         produto_id: parseInt(filtros.produtoId),
         turno: parseInt(producao.turno),
-        data: new Date().toISOString().split('T')[0],
+        data: producao.data,
         pecas_produzidas: parseInt(producao.pecas_produzidas),
         pecas_boas: parseInt(producao.pecas_boas) || parseInt(producao.pecas_produzidas),
         tempo_operando_min: parseFloat(producao.tempo_operando_min) || null,
@@ -252,9 +259,18 @@ export default function OEE() {
         disponibilidade: parseFloat(oeeCalculado.disponibilidade),
         performance: parseFloat(oeeCalculado.performance),
         qualidade: parseFloat(oeeCalculado.qualidade)
-      });
-      
-      toast.success("Produção registrada com sucesso! ✅");
+      };
+
+      if (editId) {
+        // Edição
+        await api.put(`/producao/${editId}`, dados);
+        toast.success("Produção atualizada com sucesso! ✅");
+        setEditId(null);
+      } else {
+        // Criação
+        await api.post("/producao/registrar", dados);
+        toast.success("Produção registrada com sucesso! ✅");
+      }
       
       // Limpar formulário
       setProducao({
@@ -262,6 +278,7 @@ export default function OEE() {
         pecas_produzidas: "",
         pecas_boas: "",
         tempo_operando_min: "",
+        data: new Date().toISOString().split('T')[0],
         paradas: []
       });
       
@@ -270,10 +287,53 @@ export default function OEE() {
       
     } catch (error) {
       console.error("Erro ao salvar produção:", error);
-      toast.error("Erro ao salvar produção ❌");
+      toast.error(editId ? "Erro ao atualizar produção ❌" : "Erro ao salvar produção ❌");
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function handleDelete(id) {
+    if (!window.confirm("Deseja realmente excluir este registro?")) return;
+    
+    setCarregando(true);
+    try {
+      await api.delete(`/producao/${id}`);
+      toast.success("Registro excluído com sucesso ✅");
+      carregarHistoricoOEE();
+    } catch (error) {
+      console.error("Erro ao excluir registro:", error);
+      toast.error("Erro ao excluir registro ❌");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  function handleEdit(registro) {
+    setEditId(registro.id);
+    setProducao({
+      turno: registro.turno.toString(),
+      pecas_produzidas: registro.pecas_produzidas,
+      pecas_boas: registro.pecas_boas,
+      tempo_operando_min: registro.tempo_operando_min || "",
+      data: registro.data.split('T')[0],
+      paradas: registro.paradas || []
+    });
+    
+    // Rolar para o formulário
+    document.getElementById('formulario-producao')?.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function handleCancelEdit() {
+    setEditId(null);
+    setProducao({
+      turno: "1",
+      pecas_produzidas: "",
+      pecas_boas: "",
+      tempo_operando_min: "",
+      data: new Date().toISOString().split('T')[0],
+      paradas: []
+    });
   }
 
   const oeeCalculado = producao.pecas_produzidas ? calcularOEE() : null;
@@ -436,14 +496,19 @@ export default function OEE() {
 
       {/* Formulário de Produção */}
       {filtros.linhaId && filtros.produtoId && (
-        <div style={{ 
-          backgroundColor: "white", 
-          padding: "clamp(15px, 2vw, 25px)", 
-          borderRadius: "8px", 
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          marginBottom: "30px"
-        }}>
-          <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📊 Registrar Produção</h3>
+        <div 
+          id="formulario-producao"
+          style={{ 
+            backgroundColor: "white", 
+            padding: "clamp(15px, 2vw, 25px)", 
+            borderRadius: "8px", 
+            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            marginBottom: "30px"
+          }}
+        >
+          <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>
+            {editId ? "✏️ Editar Produção" : "📊 Registrar Produção"}
+          </h3>
           
           <div style={{ 
             display: "grid", 
@@ -451,6 +516,17 @@ export default function OEE() {
             gap: "15px",
             marginBottom: "20px"
           }}>
+            <div>
+              <label style={labelStyle}>Data *</label>
+              <input
+                type="date"
+                name="data"
+                value={producao.data}
+                onChange={handleProducaoChange}
+                style={inputStyle}
+              />
+            </div>
+
             <div>
               <label style={labelStyle}>Turno</label>
               <select
@@ -613,7 +689,7 @@ export default function OEE() {
                       <th style={{ padding: "8px", textAlign: "left" }}>Duração</th>
                       <th style={{ padding: "8px", textAlign: "left" }}>Descrição</th>
                       <th style={{ padding: "8px" }}></th>
-                    </tr>
+                     </tr>
                   </thead>
                   <tbody>
                     {producao.paradas.map((p, idx) => (
@@ -635,20 +711,33 @@ export default function OEE() {
             )}
           </div>
 
-          <Botao
-            variant="success"
-            size="lg"
-            fullWidth
-            onClick={salvarProducao}
-            loading={salvando}
-            disabled={salvando || !producao.pecas_produzidas}
-          >
-            {salvando ? "Salvando..." : "✅ Registrar Produção"}
-          </Botao>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <Botao
+              variant="success"
+              size="lg"
+              fullWidth
+              onClick={salvarProducao}
+              loading={salvando}
+              disabled={salvando || !producao.pecas_produzidas}
+            >
+              {salvando ? "Salvando..." : (editId ? "✅ Atualizar Produção" : "✅ Registrar Produção")}
+            </Botao>
+            
+            {editId && (
+              <Botao
+                variant="secondary"
+                size="lg"
+                fullWidth
+                onClick={handleCancelEdit}
+              >
+                Cancelar Edição
+              </Botao>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Tabela de Histórico */}
+      {/* Tabela de Histórico com Editar e Excluir */}
       {historicoOEE.length > 0 && (
         <div style={{ 
           backgroundColor: "white", 
@@ -670,6 +759,7 @@ export default function OEE() {
                   <th style={thStyle}>Performance</th>
                   <th style={thStyle}>Qualidade</th>
                   <th style={thStyle}>OEE</th>
+                  <th style={thStyle}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -689,6 +779,26 @@ export default function OEE() {
                       }}>
                         {h.oee}%
                       </span>
+                    </td>
+                    <td style={tdStyle}>
+                      <div style={{ display: "flex", gap: "5px", justifyContent: "center" }}>
+                        <Botao
+                          variant="primary"
+                          size="xs"
+                          onClick={() => handleEdit(h)}
+                          style={{ padding: "4px 8px", fontSize: "11px" }}
+                        >
+                          Editar
+                        </Botao>
+                        <Botao
+                          variant="danger"
+                          size="xs"
+                          onClick={() => handleDelete(h.id)}
+                          style={{ padding: "4px 8px", fontSize: "11px" }}
+                        >
+                          Excluir
+                        </Botao>
+                      </div>
                     </td>
                   </tr>
                 ))}
