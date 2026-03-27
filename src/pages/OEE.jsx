@@ -23,6 +23,8 @@ const codigosParada = [
 ];
 
 export default function OEE() {
+  console.log("🔥 NOVO BUILD OEE V2");
+
   const { clienteAtual } = useOutletContext();
   const navigate = useNavigate();
 
