@@ -581,7 +581,21 @@ export default function OEE() {
           </div>
 
           {/* Cálculo OEE em Tempo Real */}
-          {oeeCalculado ? (
+          {!taktTime ? (
+            <div style={{ 
+              backgroundColor: "#fef2f2", 
+              padding: "15px", 
+              borderRadius: "8px", 
+              marginBottom: "20px",
+              textAlign: "center",
+              color: "#dc2626",
+              border: "1px solid #fecaca"
+            }}>
+              ⚠️ Takt Time não configurado para este produto na linha selecionada.
+              <br />
+              <small>Configure o Takt Time no cadastro da linha antes de registrar produção.</small>
+            </div>
+          ) : oeeCalculado ? (
             <div style={{ 
               backgroundColor: "#f9fafb", 
               padding: "15px", 
@@ -615,21 +629,21 @@ export default function OEE() {
                 </div>
               </div>
             </div>
-          ) : (filtros.linhaId && filtros.produtoId && (
+          ) : (
             <div style={{ 
-              backgroundColor: "#fef2f2", 
+              backgroundColor: "#fef9e6", 
               padding: "15px", 
               borderRadius: "8px", 
               marginBottom: "20px",
               textAlign: "center",
-              color: "#dc2626",
-              border: "1px solid #fecaca"
+              color: "#b45309",
+              border: "1px solid #fed7aa"
             }}>
-              ⚠️ Aguardando configuração do Takt Time para este produto na linha selecionada.
+              📊 Preencha as peças produzidas para calcular o OEE.
               <br />
-              <small>Configure o Takt Time no cadastro da linha antes de registrar produção.</small>
+              <small>Takt Time configurado: {taktTime}s</small>
             </div>
-          ))}
+          )}
 
           {/* Registro de Paradas */}
           <div style={{ marginBottom: "20px" }}>
@@ -691,7 +705,7 @@ export default function OEE() {
                       <th style={{ padding: "8px", textAlign: "left" }}>Duração</th>
                       <th style={{ padding: "8px", textAlign: "left" }}>Descrição</th>
                       <th style={{ padding: "8px" }}></th>
-                     </tr>
+                    </tr>
                   </thead>
                   <tbody>
                     {producao.paradas.map((p, idx) => (
