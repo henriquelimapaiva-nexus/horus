@@ -32,6 +32,7 @@ export default function OEE() {
   const [produtos, setProdutos] = useState([]);
   const [postos, setPostos] = useState([]);
   const [historicoOEE, setHistoricoOEE] = useState([]);
+  const [taktTime, setTaktTime] = useState(null);
   
   const [filtros, setFiltros] = useState({
     empresaId: clienteAtual || "",
@@ -92,6 +93,15 @@ export default function OEE() {
     }
   }, [filtros.linhaId]);
 
+  // Carregar takt time do produto na linha selecionada
+  useEffect(() => {
+    if (filtros.linhaId && filtros.produtoId) {
+      carregarTaktTime();
+    } else {
+      setTaktTime(null);
+    }
+  }, [filtros.linhaId, filtros.produtoId]);
+
   // Carregar histórico OEE
   useEffect(() => {
     if (filtros.linhaId) {
@@ -108,6 +118,25 @@ export default function OEE() {
       console.error("Erro ao carregar histórico OEE:", error);
     } finally {
       setCarregando(false);
+    }
+  }
+
+  async function carregarTaktTime() {
+    try {
+      const res = await api.get(`/line-products/${filtros.linhaId}`);
+      const produtos = res.data.dados || res.data || [];
+      const produtoEncontrado = produtos.find(p => p.produto_id === parseInt(filtros.produtoId));
+      
+      if (produtoEncontrado && produtoEncontrado.takt_time_segundos && produtoEncontrado.takt_time_segundos > 0) {
+        setTaktTime(produtoEncontrado.takt_time_segundos);
+        console.log(`✅ Takt time carregado: ${produtoEncontrado.takt_time_segundos}s`);
+      } else {
+        console.error(`❌ Takt time NÃO CADASTRADO para este produto`);
+        setTaktTime(null);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar takt time:", error);
+      setTaktTime(null);
     }
   }
 
@@ -160,6 +189,11 @@ export default function OEE() {
   };
 
   const calcularOEE = () => {
+    // Validação: só calcula se takt time estiver carregado
+    if (!taktTime || taktTime <= 0) {
+      return null;
+    }
+    
     // Tempo planejado (8h = 480 min)
     const tempoPlanejado = 480;
     
@@ -170,10 +204,9 @@ export default function OEE() {
     // Disponibilidade
     const disponibilidade = (tempoOperando / tempoPlanejado) * 100;
     
-    // Performance (considerando ciclo teórico)
+    // Performance (usando takt time do cadastro)
     const pecasProduzidas = parseInt(producao.pecas_produzidas) || 0;
-    const cicloTeorico = 60; // segundos por peça (valor padrão, ideal seria do produto)
-    const tempoTeorico = (pecasProduzidas * cicloTeorico) / 60; // em minutos
+    const tempoTeorico = (pecasProduzidas * taktTime) / 60; // em minutos
     const performance = (tempoTeorico / tempoOperando) * 100;
     
     // Qualidade
@@ -391,12 +424,11 @@ export default function OEE() {
           <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>📈 Tendência de OEE</h3>
           <div style={{ height: "300px" }}>
             <GraficoLinha
-              dados={historicoOEE.map(h => ({
-                data: h.data,
-                valor: parseFloat(h.oee)
-              }))}
+              labels={historicoOEE.map(h => h.data)}
+              valores={historicoOEE.map(h => parseFloat(h.oee))}
               titulo="Evolução do OEE"
               cor={coresNexus.primary}
+              formato="percentual"
             />
           </div>
         </div>
@@ -471,7 +503,7 @@ export default function OEE() {
           </div>
 
           {/* Cálculo OEE em Tempo Real */}
-          {oeeCalculado && (
+          {oeeCalculado ? (
             <div style={{ 
               backgroundColor: "#f9fafb", 
               padding: "15px", 
@@ -482,6 +514,10 @@ export default function OEE() {
               gap: "15px",
               textAlign: "center"
             }}>
+              <div>
+                <div style={{ fontSize: "12px", color: "#666" }}>Takt Time</div>
+                <div style={{ fontSize: "18px", fontWeight: "bold", color: coresNexus.primary }}>{taktTime}s</div>
+              </div>
               <div>
                 <div style={{ fontSize: "12px", color: "#666" }}>Disponibilidade</div>
                 <div style={{ fontSize: "24px", fontWeight: "bold", color: coresNexus.primary }}>{oeeCalculado.disponibilidade}%</div>
@@ -501,7 +537,21 @@ export default function OEE() {
                 </div>
               </div>
             </div>
-          )}
+          ) : (filtros.linhaId && filtros.produtoId && (
+            <div style={{ 
+              backgroundColor: "#fef2f2", 
+              padding: "15px", 
+              borderRadius: "8px", 
+              marginBottom: "20px",
+              textAlign: "center",
+              color: "#dc2626",
+              border: "1px solid #fecaca"
+            }}>
+              ⚠️ Aguardando configuração do Takt Time para este produto na linha selecionada.
+              <br />
+              <small>Configure o Takt Time no cadastro da linha antes de registrar produção.</small>
+            </div>
+          ))}
 
           {/* Registro de Paradas */}
           <div style={{ marginBottom: "20px" }}>
