@@ -399,7 +399,7 @@ export default function OEE() {
         
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", 
           gap: "15px" 
         }}>
           <div>
@@ -516,7 +516,7 @@ export default function OEE() {
             gap: "15px",
             marginBottom: "20px"
           }}>
-            <div>
+            <div style={{ minWidth: "140px" }}>
               <label style={labelStyle}>Data *</label>
               <input
                 type="date"
