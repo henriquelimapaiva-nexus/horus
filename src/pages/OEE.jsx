@@ -46,11 +46,11 @@ export default function OEE() {
   });
 
   const [producao, setProducao] = useState({
-    turno: "1",
+    turno: "",
     pecas_produzidas: "",
     pecas_boas: "",
     tempo_operando_min: "",
-    data: new Date().toISOString().split('T')[0], // Campo data adicionado
+    data: "",
     paradas: []
   });
 
@@ -276,12 +276,18 @@ export default function OEE() {
       
       // Limpar formulário
       setProducao({
-        turno: "1",
+        turno: "",
         pecas_produzidas: "",
         pecas_boas: "",
         tempo_operando_min: "",
-        data: new Date().toISOString().split('T')[0],
+        data: "",
         paradas: []
+      });
+      
+      setNovaParada({
+        codigo: "",
+        duracao_min: "",
+        descricao: ""
       });
       
       // Recarregar histórico
@@ -322,6 +328,12 @@ export default function OEE() {
       paradas: registro.paradas || []
     });
     
+    setNovaParada({
+      codigo: "",
+      duracao_min: "",
+      descricao: ""
+    });
+    
     // Rolar para o formulário
     document.getElementById('formulario-producao')?.scrollIntoView({ behavior: 'smooth' });
   }
@@ -329,12 +341,17 @@ export default function OEE() {
   function handleCancelEdit() {
     setEditId(null);
     setProducao({
-      turno: "1",
+      turno: "",
       pecas_produzidas: "",
       pecas_boas: "",
       tempo_operando_min: "",
-      data: new Date().toISOString().split('T')[0],
+      data: "",
       paradas: []
+    });
+    setNovaParada({
+      codigo: "",
+      duracao_min: "",
+      descricao: ""
     });
   }
 
@@ -537,6 +554,7 @@ export default function OEE() {
                 onChange={handleProducaoChange}
                 style={inputStyle}
               >
+                <option value="">Selecione o turno</option>
                 <option value="1">1º Turno</option>
                 <option value="2">2º Turno</option>
                 <option value="3">3º Turno</option>
