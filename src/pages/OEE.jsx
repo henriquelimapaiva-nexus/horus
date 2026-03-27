@@ -129,7 +129,7 @@ export default function OEE() {
       const produtos = res.data.dados || res.data || [];
       const produtoEncontrado = produtos.find(p => p.produto_id === parseInt(filtros.produtoId));
       
-      if (produtoEncontrado && produtoEncontrado.takt_time_segundos && produtoEncontrado.takt_time_segundos > 0) {
+      if (produtoEncontrado && produtoEncontrado.takt_configurado && produtoEncontrado.takt_configurado > 0) {
         setTaktTime(produtoEncontrado.takt_time_segundos);
         console.log(`✅ Takt time carregado: ${produtoEncontrado.takt_time_segundos}s`);
       } else {
