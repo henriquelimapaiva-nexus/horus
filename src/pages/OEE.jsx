@@ -399,7 +399,7 @@ export default function OEE() {
         
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(100px, 1fr))", 
           gap: "15px" 
         }}>
           <div>
