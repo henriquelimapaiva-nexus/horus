@@ -5,13 +5,12 @@ import api from "../api/api";
 import Botao from "../components/ui/Botao";
 import toast from 'react-hot-toast';
 
-// Tipos de parada e causas
-const tiposParada = [
-  { valor: "quebra", label: "Quebra de Máquina", cor: "#dc2626" },
-  { valor: "setup", label: "Setup / Troca", cor: "#f59e0b" },
-  { valor: "manutencao", label: "Manutenção Preventiva", cor: "#3b82f6" },
-  { valor: "falta_material", label: "Falta de Material", cor: "#8b5cf6" },
-  { valor: "falta_operador", label: "Falta de Operador", cor: "#ec489a" }
+// Tipos de manutenção corrigidos
+const tiposManutencao = [
+  { valor: "corretiva", label: "🔧 Corretiva", cor: "#dc2626" },
+  { valor: "preventiva", label: "📅 Preventiva", cor: "#3b82f6" },
+  { valor: "preditiva", label: "📊 Preditiva", cor: "#8b5cf6" },
+  { valor: "detectiva", label: "🔍 Detectiva", cor: "#f59e0b" }
 ];
 
 const causasParada = [
@@ -31,8 +30,8 @@ export default function TPM() {
     empresaId: clienteAtual || "",
     linhaId: "",
     postoId: "",
-    dataInicio: new Date().toISOString().split('T')[0],
-    dataFim: new Date().toISOString().split('T')[0]
+    dataInicio: "",
+    dataFim: ""
   });
 
   const [novoRegistro, setNovoRegistro] = useState({
@@ -43,7 +42,7 @@ export default function TPM() {
     tempo_reparo_min: "",
     descricao: "",
     peca_substituida: "",
-    turno: "1"
+    turno: ""
   });
 
   const [estatisticas, setEstatisticas] = useState(null);
@@ -109,8 +108,8 @@ export default function TPM() {
     const mtbf = tempoTotalParado / totalParadas;
     const mttr = tempoTotalReparo / totalParadas;
     
-    const quebras = dados.filter(r => r.tipo === "quebra").length;
-    const setups = dados.filter(r => r.tipo === "setup").length;
+    const corretivas = dados.filter(r => r.tipo === "corretiva").length;
+    const preventivas = dados.filter(r => r.tipo === "preventiva").length;
     
     const causasMap = {};
     dados.forEach(r => {
@@ -124,8 +123,8 @@ export default function TPM() {
       tempo_total_reparo: tempoTotalReparo,
       mtbf: (mtbf / 60).toFixed(1),
       mttr: mttr.toFixed(1),
-      quebras,
-      setups,
+      corretivas,
+      preventivas,
       causa_mais_frequente: causaMaisFrequente ? causaMaisFrequente[0] : "-"
     });
   }
@@ -139,8 +138,8 @@ export default function TPM() {
   };
 
   async function salvarRegistro() {
-    if (!novoRegistro.posto_id || !novoRegistro.tipo || !novoRegistro.tempo_parada_min) {
-      toast.error("Preencha os campos obrigatórios");
+    if (!novoRegistro.posto_id || !novoRegistro.tipo || !novoRegistro.tempo_parada_min || !novoRegistro.turno) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
@@ -164,7 +163,7 @@ export default function TPM() {
         tempo_reparo_min: "",
         descricao: "",
         peca_substituida: "",
-        turno: "1"
+        turno: ""
       });
       
       carregarRegistros();
@@ -180,6 +179,11 @@ export default function TPM() {
   const getPostoNome = (id) => {
     const posto = postos.find(p => p.id === id);
     return posto ? posto.nome : `Posto ${id}`;
+  };
+
+  const getTipoLabel = (valor) => {
+    const tipo = tiposManutencao.find(t => t.valor === valor);
+    return tipo ? tipo.label : valor;
   };
 
   if (!filtros.empresaId) {
@@ -223,19 +227,19 @@ export default function TPM() {
           <div>
             <label style={labelStyle}>Linha</label>
             <select name="linhaId" value={filtros.linhaId} onChange={handleFiltroChange} style={inputStyle}>
-              <option value="">Todas</option>
+              <option value="">Selecione a linha</option>
               {linhas.map(l => <option key={l.id} value={l.id}>{l.nome}</option>)}
             </select>
           </div>
           <div>
             <label style={labelStyle}>Posto</label>
             <select name="postoId" value={filtros.postoId} onChange={handleFiltroChange} style={inputStyle}>
-              <option value="">Todos</option>
+              <option value="">Selecione o posto</option>
               {postos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </div>
-          <div><label style={labelStyle}>Data Início</label><input type="date" name="dataInicio" value={filtros.dataInicio} onChange={handleFiltroChange} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Data Fim</label><input type="date" name="dataFim" value={filtros.dataFim} onChange={handleFiltroChange} style={inputStyle} /></div>
+          <div><label style={labelStyle}>Data Início</label><input type="date" name="dataInicio" value={filtros.dataInicio} onChange={handleFiltroChange} style={inputStyle} placeholder="Selecione a data" /></div>
+          <div><label style={labelStyle}>Data Fim</label><input type="date" name="dataFim" value={filtros.dataFim} onChange={handleFiltroChange} style={inputStyle} placeholder="Selecione a data" /></div>
         </div>
       </div>
 
@@ -271,11 +275,11 @@ export default function TPM() {
         <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>🔧 Novo Registro de Manutenção</h3>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px", marginBottom: "15px" }}>
           <div><label style={labelStyle}>Posto *</label><select name="posto_id" value={novoRegistro.posto_id} onChange={handleFormChange} style={inputStyle}><option value="">Selecione</option>{postos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}</select></div>
-          <div><label style={labelStyle}>Tipo *</label><select name="tipo" value={novoRegistro.tipo} onChange={handleFormChange} style={inputStyle}><option value="">Selecione</option>{tiposParada.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}</select></div>
+          <div><label style={labelStyle}>Tipo *</label><select name="tipo" value={novoRegistro.tipo} onChange={handleFormChange} style={inputStyle}><option value="">Selecione</option>{tiposManutencao.map(t => <option key={t.valor} value={t.valor}>{t.label}</option>)}</select></div>
           <div><label style={labelStyle}>Causa</label><select name="causa" value={novoRegistro.causa} onChange={handleFormChange} style={inputStyle}><option value="">Selecione</option>{causasParada.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
           <div><label style={labelStyle}>Tempo Parada (min) *</label><input type="number" name="tempo_parada_min" value={novoRegistro.tempo_parada_min} onChange={handleFormChange} style={inputStyle} /></div>
           <div><label style={labelStyle}>Tempo Reparo (min)</label><input type="number" name="tempo_reparo_min" value={novoRegistro.tempo_reparo_min} onChange={handleFormChange} style={inputStyle} /></div>
-          <div><label style={labelStyle}>Turno</label><select name="turno" value={novoRegistro.turno} onChange={handleFormChange} style={inputStyle}><option value="1">1º Turno</option><option value="2">2º Turno</option><option value="3">3º Turno</option></select></div>
+          <div><label style={labelStyle}>Turno *</label><select name="turno" value={novoRegistro.turno} onChange={handleFormChange} style={inputStyle}><option value="">Selecione o turno</option><option value="1">1º Turno</option><option value="2">2º Turno</option><option value="3">3º Turno</option></select></div>
         </div>
         <div style={{ marginBottom: "15px" }}><label style={labelStyle}>Descrição</label><input type="text" name="descricao" value={novoRegistro.descricao} onChange={handleFormChange} style={inputStyle} placeholder="Descreva o ocorrido..." /></div>
         <div style={{ marginBottom: "15px" }}><label style={labelStyle}>Peça Substituída</label><input type="text" name="peca_substituida" value={novoRegistro.peca_substituida} onChange={handleFormChange} style={inputStyle} placeholder="Peça trocada (se aplicável)" /></div>
@@ -288,13 +292,13 @@ export default function TPM() {
         {carregando ? <div style={{ textAlign: "center", padding: "40px" }}>Carregando...</div> : registros.length === 0 ? <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Nenhum registro encontrado.</div> : (
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead><tr style={{ backgroundColor: "#1E3A8A", color: "white" }}><th style={thStyle}>Data</th><th style={thStyle}>Posto</th><th style={thStyle}>Tipo</th><th style={thStyle}>Causa</th><th style={thStyle}>Parada</th><th style={thStyle}>Reparo</th><th style={thStyle}>Turno</th></tr></thead>
+              <thead><tr style={{ backgroundColor: "#1E3A8A", color: "white" }}><th style={thStyle}>Data</th><th style={thStyle}>Posto</th><th style={thStyle}>Tipo</th><th style={thStyle}>Causa</th><th style={thStyle}>Parada</th><th style={thStyle}>Reparo</th><th style={thStyle}>Turno</th> </tr></thead>
               <tbody>
                 {registros.map((r, idx) => (
                   <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={tdStyle}>{new Date(r.data).toLocaleDateString('pt-BR')}</td>
                     <td style={tdStyle}>{getPostoNome(r.posto_id)}</td>
-                    <td style={tdStyle}>{tiposParada.find(t => t.valor === r.tipo)?.label || r.tipo}</td>
+                    <td style={tdStyle}>{getTipoLabel(r.tipo)}</td>
                     <td style={tdStyle}>{r.causa || "-"}</td>
                     <td style={tdStyle}>{r.tempo_parada_min} min</td>
                     <td style={tdStyle}>{r.tempo_reparo_min || "-"} min</td>
