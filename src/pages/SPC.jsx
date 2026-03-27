@@ -31,6 +31,30 @@ const formatarData = (dataString) => {
   return dataParte.split('-').reverse().join('/');
 };
 
+// Estilos específicos para a tabela Top 5 Defeitos
+const thDefeitos = {
+  padding: "12px",
+  textAlign: "left",
+  fontSize: "13px",
+  fontWeight: "600"
+};
+
+const thNumero = {
+  ...thDefeitos,
+  textAlign: "right"
+};
+
+const tdDefeitos = {
+  padding: "12px",
+  textAlign: "left",
+  fontSize: "13px"
+};
+
+const tdNumero = {
+  ...tdDefeitos,
+  textAlign: "right"
+};
+
 export default function SPC() {
   const { clienteAtual } = useOutletContext();
 
@@ -874,7 +898,7 @@ export default function SPC() {
                       <th style={thStyle}>Qtd</th>
                       <th style={thStyle}>Turno</th>
                       <th style={thStyle}>Ações</th>
-                      </tr>
+                       </tr>
                   </thead>
                   <tbody>
                     {listaDefeitos.map((item) => (
@@ -923,20 +947,20 @@ export default function SPC() {
 
               <h4 style={{ marginBottom: "10px" }}>Top 5 Defeitos Mais Comuns</h4>
               <div style={{ overflowX: "auto", width: "100%" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
                   <thead>
                     <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-                      <th style={{ padding: "10px", textAlign: "left", width: "50%" }}>Tipo</th>
-                      <th style={{ padding: "10px", textAlign: "right", width: "25%" }}>Quantidade</th>
-                      <th style={{ padding: "10px", textAlign: "right", width: "25%" }}>Percentual</th>
+                      <th style={{ ...thDefeitos, width: "50%" }}>Tipo</th>
+                      <th style={{ ...thNumero, width: "25%" }}>Quantidade</th>
+                      <th style={{ ...thNumero, width: "25%" }}>Percentual</th>
                      </tr>
                   </thead>
                   <tbody>
                     {estatisticasDefeitos.principais.map(([tipo, qtd]) => (
                       <tr key={tipo} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                        <td style={{ padding: "10px", textAlign: "left" }}>{getTipoDefeitoNome(tipo)}</td>
-                        <td style={{ padding: "10px", textAlign: "right" }}>{qtd}</td>
-                        <td style={{ padding: "10px", textAlign: "right" }}>
+                        <td style={tdDefeitos}>{getTipoDefeitoNome(tipo)}</td>
+                        <td style={tdNumero}>{qtd}</td>
+                        <td style={tdNumero}>
                           {((qtd / estatisticasDefeitos.total) * 100).toFixed(1)}%
                         </td>
                       </tr>
