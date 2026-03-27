@@ -132,8 +132,8 @@ export default function OEE() {
       const produtoEncontrado = produtos.find(p => p.produto_id === parseInt(filtros.produtoId));
       
       if (produtoEncontrado && produtoEncontrado.takt_configurado && produtoEncontrado.takt_configurado > 0) {
-        setTaktTime(produtoEncontrado.takt_time_segundos);
-        console.log(`✅ Takt time carregado: ${produtoEncontrado.takt_time_segundos}s`);
+        setTaktTime(produtoEncontrado.takt_configurado);
+        console.log(`✅ Takt time carregado: ${produtoEncontrado.takt_configurado}s`);
       } else {
         console.error(`❌ Takt time NÃO CADASTRADO para este produto`);
         setTaktTime(null);
