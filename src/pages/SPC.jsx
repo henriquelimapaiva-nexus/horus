@@ -10,17 +10,6 @@ import GraficoLinha from "../components/graficos/GraficoLinha";
 import GraficoBarras from "../components/graficos/GraficoBarras";
 import { coresNexus } from "../components/graficos/GraficoBase";
 
-// Tipos de defeito padronizados
-const tiposDefeito = [
-  { codigo: "D01", nome: "Defeito Dimensional", categoria: "dimensional" },
-  { codigo: "D02", nome: "Defeito de Aparência", categoria: "visual" },
-  { codigo: "D03", nome: "Defeito Funcional", categoria: "funcional" },
-  { codigo: "D04", nome: "Defeito de Montagem", categoria: "montagem" },
-  { codigo: "D05", nome: "Defeito de Material", categoria: "material" },
-  { codigo: "D06", nome: "Defeito de Superfície", categoria: "superficie" },
-  { codigo: "D07", nome: "Defeito de Embalagem", categoria: "embalagem" }
-];
-
 // Função auxiliar para formatar data sem timezone
 const formatarData = (dataString) => {
   if (!dataString) return "-";
@@ -99,7 +88,7 @@ export default function SPC() {
     valor_medido: "",
     limite_inferior: "",
     limite_superior: "",
-    unidade: "mm",
+    unidade: "",
     turno: "",
     data: ""
   });
@@ -311,7 +300,7 @@ export default function SPC() {
       valor_medido: "",
       limite_inferior: "",
       limite_superior: "",
-      unidade: "mm",
+      unidade: "",
       turno: "",
       data: ""
     });
@@ -472,7 +461,7 @@ export default function SPC() {
       valor_medido: medicao.valor_medido,
       limite_inferior: medicao.limite_inferior || "",
       limite_superior: medicao.limite_superior || "",
-      unidade: medicao.unidade || "mm",
+      unidade: medicao.unidade || "",
       turno: medicao.turno.toString(),
       data: medicao.data ? medicao.data.split('T')[0] : ""
     });
@@ -499,7 +488,7 @@ export default function SPC() {
       valor_medido: "",
       limite_inferior: "",
       limite_superior: "",
-      unidade: "mm",
+      unidade: "",
       turno: "",
       data: ""
     });
@@ -508,8 +497,7 @@ export default function SPC() {
   }
 
   const getTipoDefeitoNome = (codigo) => {
-    const tipo = tiposDefeito.find(t => t.codigo === codigo);
-    return tipo ? tipo.nome : codigo;
+    return codigo; // Agora é texto livre, retorna o próprio valor
   };
 
   const getPostoNome = (id) => {
@@ -767,17 +755,14 @@ export default function SPC() {
 
               <div>
                 <label style={labelStyle}>Tipo de Defeito *</label>
-                <select
+                <input
+                  type="text"
                   name="tipo_defeito"
                   value={defeitoTemp.tipo_defeito}
                   onChange={handleDefeitoTempChange}
                   style={inputStyle}
-                >
-                  <option value="">Selecione</option>
-                  {tiposDefeito.map(tipo => (
-                    <option key={tipo.codigo} value={tipo.codigo}>{tipo.codigo} - {tipo.nome}</option>
-                  ))}
-                </select>
+                  placeholder="Ex: Defeito Dimensional, Impureza, Cor fora do padrão..."
+                />
               </div>
 
               <div>
@@ -898,7 +883,7 @@ export default function SPC() {
                       <th style={thStyle}>Qtd</th>
                       <th style={thStyle}>Turno</th>
                       <th style={thStyle}>Ações</th>
-                        </tr>
+                       </tr>
                   </thead>
                   <tbody>
                     {listaDefeitos.map((item) => (
@@ -906,7 +891,7 @@ export default function SPC() {
                         <td style={tdStyle}>{formatarData(item.data)}</td>
                         <td style={tdStyle}>{getPostoNome(parseInt(item.posto_id))}</td>
                         <td style={tdStyle}>{getProdutoNome(parseInt(item.produto_id))}</td>
-                        <td style={tdStyle}>{getTipoDefeitoNome(item.tipo_defeito)}</td>
+                        <td style={tdStyle}>{item.tipo_defeito}</td>
                         <td style={tdStyle}>{item.quantidade}</td>
                         <td style={tdStyle}>{item.turno}º</td>
                         <td style={tdStyle}>
@@ -958,7 +943,7 @@ export default function SPC() {
                   <tbody>
                     {estatisticasDefeitos.principais.map(([tipo, qtd]) => (
                       <tr key={tipo} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                        <td style={tdDefeitos}>{getTipoDefeitoNome(tipo)}</td>
+                        <td style={tdDefeitos}>{tipo}</td>
                         <td style={tdNumero}>{qtd}</td>
                         <td style={tdNumero}>
                           {((qtd / estatisticasDefeitos.total) * 100).toFixed(1)}%
@@ -1005,7 +990,7 @@ export default function SPC() {
                         <td style={tdStyle}>{formatarData(d.data)}</td>
                         <td style={tdStyle}>{getPostoNome(d.posto_id)}</td>
                         <td style={tdStyle}>{getProdutoNome(d.produto_id)}</td>
-                        <td style={tdStyle}>{getTipoDefeitoNome(d.tipo_defeito)}</td>
+                        <td style={tdStyle}>{d.tipo_defeito}</td>
                         <td style={tdStyle}>{d.quantidade}</td>
                         <td style={tdStyle}>{d.turno}º</td>
                         <td style={tdStyle}>{d.acao_imediata || "-"}</td>
@@ -1101,7 +1086,7 @@ export default function SPC() {
                   value={medicaoTemp.caracteristica}
                   onChange={handleMedicaoTempChange}
                   style={inputStyle}
-                  placeholder="Ex: Diâmetro externo, Comprimento..."
+                  placeholder="Ex: Diâmetro externo, pH, Viscosidade, Temperatura..."
                 />
               </div>
 
@@ -1145,19 +1130,15 @@ export default function SPC() {
               </div>
 
               <div>
-                <label style={labelStyle}>Unidade</label>
-                <select
+                <label style={labelStyle}>Unidade *</label>
+                <input
+                  type="text"
                   name="unidade"
                   value={medicaoTemp.unidade}
                   onChange={handleMedicaoTempChange}
                   style={inputStyle}
-                >
-                  <option value="mm">mm</option>
-                  <option value="cm">cm</option>
-                  <option value="pol">pol</option>
-                  <option value="kg">kg</option>
-                  <option value="g">g</option>
-                </select>
+                  placeholder="Ex: mm, cm, °C, pH, cP, %..."
+                />
               </div>
 
               <div>
