@@ -898,7 +898,7 @@ export default function SPC() {
                       <th style={thStyle}>Qtd</th>
                       <th style={thStyle}>Turno</th>
                       <th style={thStyle}>Ações</th>
-                       </tr>
+                        </tr>
                   </thead>
                   <tbody>
                     {listaDefeitos.map((item) => (
@@ -953,7 +953,7 @@ export default function SPC() {
                       <th style={{ ...thDefeitos, width: "50%" }}>Tipo</th>
                       <th style={{ ...thNumero, width: "25%" }}>Quantidade</th>
                       <th style={{ ...thNumero, width: "25%" }}>Percentual</th>
-                     </tr>
+                      </tr>
                   </thead>
                   <tbody>
                     {estatisticasDefeitos.principais.map(([tipo, qtd]) => (
@@ -1188,21 +1188,33 @@ export default function SPC() {
             </div>
 
             <div style={{ display: "flex", gap: "10px" }}>
-              <Botao
-                variant="primary"
-                size="md"
-                onClick={adicionarMedicaoLista}
-                disabled={salvando}
-              >
-                + Adicionar à Lista
-              </Botao>
-              {editId && (
+              {editId ? (
+                <>
+                  <Botao
+                    variant="success"
+                    size="md"
+                    onClick={salvarMedicao}
+                    loading={salvando}
+                    disabled={salvando}
+                  >
+                    💾 Salvar Edição
+                  </Botao>
+                  <Botao
+                    variant="secondary"
+                    size="md"
+                    onClick={handleCancelEdit}
+                  >
+                    Cancelar Edição
+                  </Botao>
+                </>
+              ) : (
                 <Botao
-                  variant="secondary"
+                  variant="primary"
                   size="md"
-                  onClick={handleCancelEdit}
+                  onClick={adicionarMedicaoLista}
+                  disabled={salvando}
                 >
-                  Cancelar Edição
+                  + Adicionar à Lista
                 </Botao>
               )}
             </div>
