@@ -11,20 +11,20 @@ export default function RH() {
   const [empresas, setEmpresas] = useState([]);
   const [colaboradores, setColaboradores] = useState([]);
   const [treinamentos, setTreinamentos] = useState([]);
-  const [habilidades, setHabilidades] = useState([]); // ✅ ADICIONADO
+  const [habilidades, setHabilidades] = useState([]);
   
   const [filtros, setFiltros] = useState({
     empresaId: clienteAtual || "",
     colaboradorId: "",
-    dataInicio: new Date().toISOString().split('T')[0],
-    dataFim: new Date().toISOString().split('T')[0]
+    dataInicio: "",
+    dataFim: ""
   });
 
   const [novoTreinamento, setNovoTreinamento] = useState({
     colaborador_id: "",
     nome_curso: "",
     carga_horaria: "",
-    data_realizacao: new Date().toISOString().split('T')[0],
+    data_realizacao: "",
     certificado: "",
     observacao: ""
   });
@@ -32,7 +32,7 @@ export default function RH() {
   const [novaHabilidade, setNovaHabilidade] = useState({
     colaborador_id: "",
     habilidade: "",
-    nivel: "3"
+    nivel: ""
   });
 
   const [carregando, setCarregando] = useState(false);
@@ -63,7 +63,6 @@ export default function RH() {
     }
   }, [filtros.colaboradorId]);
 
-  // ✅ FUNÇÃO CORRIGIDA - Carrega treinamentos E habilidades
   async function carregarDados() {
     setCarregando(true);
     try {
@@ -81,7 +80,7 @@ export default function RH() {
   }
 
   async function salvarTreinamento() {
-    if (!novoTreinamento.colaborador_id || !novoTreinamento.nome_curso) {
+    if (!novoTreinamento.colaborador_id || !novoTreinamento.nome_curso || !novoTreinamento.data_realizacao) {
       toast.error("Preencha os campos obrigatórios");
       return;
     }
@@ -94,7 +93,7 @@ export default function RH() {
         colaborador_id: filtros.colaboradorId,
         nome_curso: "",
         carga_horaria: "",
-        data_realizacao: new Date().toISOString().split('T')[0],
+        data_realizacao: "",
         certificado: "",
         observacao: ""
       });
@@ -107,8 +106,8 @@ export default function RH() {
   }
 
   async function salvarHabilidade() {
-    if (!novaHabilidade.colaborador_id || !novaHabilidade.habilidade) {
-      toast.error("Preencha os campos obrigatórios");
+    if (!novaHabilidade.colaborador_id || !novaHabilidade.habilidade || !novaHabilidade.nivel) {
+      toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
@@ -119,7 +118,7 @@ export default function RH() {
       setNovaHabilidade({
         colaborador_id: filtros.colaboradorId,
         habilidade: "",
-        nivel: "3"
+        nivel: ""
       });
       carregarDados();
     } catch (error) {
@@ -190,7 +189,7 @@ export default function RH() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px", marginBottom: "15px" }}>
                   <input type="text" name="nome_curso" value={novoTreinamento.nome_curso} onChange={(e) => setNovoTreinamento({ ...novoTreinamento, nome_curso: e.target.value, colaborador_id: filtros.colaboradorId })} placeholder="Nome do Curso *" style={inputStyle} />
                   <input type="number" name="carga_horaria" value={novoTreinamento.carga_horaria} onChange={(e) => setNovoTreinamento({ ...novoTreinamento, carga_horaria: e.target.value })} placeholder="Carga Horária (h)" style={inputStyle} />
-                  <input type="date" name="data_realizacao" value={novoTreinamento.data_realizacao} onChange={(e) => setNovoTreinamento({ ...novoTreinamento, data_realizacao: e.target.value })} style={inputStyle} />
+                  <input type="date" name="data_realizacao" value={novoTreinamento.data_realizacao} onChange={(e) => setNovoTreinamento({ ...novoTreinamento, data_realizacao: e.target.value })} style={inputStyle} placeholder="Selecione a data" />
                   <input type="text" name="certificado" value={novoTreinamento.certificado} onChange={(e) => setNovoTreinamento({ ...novoTreinamento, certificado: e.target.value })} placeholder="Certificado (opcional)" style={inputStyle} />
                 </div>
                 <input type="text" name="observacao" value={novoTreinamento.observacao} onChange={(e) => setNovoTreinamento({ ...novoTreinamento, observacao: e.target.value })} placeholder="Observações" style={{ ...inputStyle, marginBottom: "15px" }} />
@@ -202,7 +201,7 @@ export default function RH() {
                 {treinamentos.length === 0 ? <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>Nenhum treinamento registrado.</div> : (
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                      <thead><tr style={{ backgroundColor: "#1E3A8A", color: "white" }}><th style={thStyle}>Data</th><th style={thStyle}>Curso</th><th style={thStyle}>Carga</th><th style={thStyle}>Certificado</th> </tr></thead>
+                      <thead><tr style={{ backgroundColor: "#1E3A8A", color: "white" }}><th style={thStyle}>Data</th><th style={thStyle}>Curso</th><th style={thStyle}>Carga</th><th style={thStyle}>Certificado</th>  </tr></thead>
                       <tbody>
                         {treinamentos.map((t, idx) => (
                           <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
@@ -220,7 +219,7 @@ export default function RH() {
             </>
           )}
 
-          {/* ✅ ABA HABILIDADES CORRIGIDA COM LISTA */}
+          {/* ABA HABILIDADES CORRIGIDA */}
           {abaAtiva === "habilidades" && (
             <>
               <div style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px", marginBottom: "30px" }}>
@@ -228,6 +227,7 @@ export default function RH() {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "15px", marginBottom: "15px" }}>
                   <input type="text" placeholder="Habilidade *" value={novaHabilidade.habilidade} onChange={(e) => setNovaHabilidade({ ...novaHabilidade, habilidade: e.target.value, colaborador_id: filtros.colaboradorId })} style={inputStyle} />
                   <select value={novaHabilidade.nivel} onChange={(e) => setNovaHabilidade({ ...novaHabilidade, nivel: e.target.value })} style={inputStyle}>
+                    <option value="">Selecione o nível</option>
                     {niveisHabilidade.map(n => <option key={n.valor} value={n.valor}>{n.label}</option>)}
                   </select>
                 </div>
