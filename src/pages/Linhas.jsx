@@ -137,11 +137,8 @@ export default function Linhas() {
           <Link to="/linhas/novo"><Botao variant="primary">Cadastrar primeira linha</Botao></Link>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "20px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: "20px" }}>
           {linhas.map((linha) => {
-            // Pega o primeiro produto para mostrar takt e meta no card
-            const primeiroProduto = linha.produtos && linha.produtos.length > 0 ? linha.produtos[0] : null;
-            
             return (
               <div 
                 key={linha.id} 
@@ -184,40 +181,55 @@ export default function Linhas() {
                     {truncarTexto(linha.nome, 40)}
                   </h3>
                   
-                  <div style={{ 
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    fontSize: "14px", 
-                    marginBottom: "8px" 
-                  }}>
-                    <span style={{ color: "#666" }}>Takt time:</span>
-                    <span style={{ fontWeight: "bold" }}>
-                      {primeiroProduto ? `${primeiroProduto.takt_configurado}s` : '—'}
-                    </span>
-                  </div>
-                  
-                  <div style={{ 
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    fontSize: "14px",
-                    marginBottom: linha.produtos && linha.produtos.length > 1 ? "8px" : 0
-                  }}>
-                    <span style={{ color: "#666" }}>Meta diária:</span>
-                    <span style={{ fontWeight: "bold", color: "#16a34a" }}>
-                      {primeiroProduto ? `${primeiroProduto.meta_diaria} pçs` : '—'}
-                    </span>
-                  </div>
-
-                  {linha.produtos && linha.produtos.length > 1 && (
+                  {/* LISTA DE PRODUTOS - CORRIGIDO: MOSTRA TODOS OS PRODUTOS */}
+                  <div style={{ marginTop: "12px" }}>
                     <div style={{ 
-                      fontSize: "12px", 
-                      color: "#666",
-                      fontStyle: "italic",
-                      marginTop: "4px"
+                      fontSize: "13px", 
+                      fontWeight: "600", 
+                      color: "#4b5563", 
+                      marginBottom: "8px",
+                      borderBottom: "1px solid #e5e7eb",
+                      paddingBottom: "4px"
                     }}>
-                      +{linha.produtos.length - 1} produto(s)
+                      Produtos:
                     </div>
-                  )}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                      {linha.produtos && linha.produtos.length > 0 ? (
+                        linha.produtos.map((produto, idx) => (
+                          <div 
+                            key={produto.produto_id || produto.id || idx} 
+                            style={{ 
+                              fontSize: "13px",
+                              padding: "6px 8px",
+                              backgroundColor: "#f3f4f6",
+                              borderRadius: "6px",
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              flexWrap: "wrap",
+                              gap: "8px"
+                            }}
+                          >
+                            <span style={{ fontWeight: "500", color: "#1f2937" }}>
+                              {truncarTexto(produto.produto_nome || produto.nome, 20)}
+                            </span>
+                            <div style={{ display: "flex", gap: "12px", fontSize: "12px" }}>
+                              <span style={{ color: "#6b7280" }}>
+                                Takt: <strong style={{ color: "#1E3A8A" }}>{produto.takt_configurado || produto.takt_time_segundos || '—'}s</strong>
+                              </span>
+                              <span style={{ color: "#6b7280" }}>
+                                Meta: <strong style={{ color: "#16a34a" }}>{produto.meta_diaria || '—'}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: "13px", color: "#9ca3af", fontStyle: "italic", padding: "8px" }}>
+                          Nenhum produto vinculado
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Botões na parte inferior */}
