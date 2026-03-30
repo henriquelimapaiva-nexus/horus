@@ -853,20 +853,20 @@ function Balanceamento({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 5 - VARIABILIDADE (COM GRÁFICOS)
+// ABA 5 - VARIABILIDADE (COM GRÁFICOS) - CORRIGIDA
 // ========================================
 function Variabilidade({ linha, linhaId }) {
   const [postos, setPostos] = useState([]);
-  const [dadosVariabilidade, setDadosVariabilidade] = useState({});
+  const [dadosVariabilidade, setDadosVariabilidade] = useState(null);
   const [carregando, setCarregando] = useState(false);
   const [postoSelecionado, setPostoSelecionado] = useState("");
   const [dadosMedicoes, setDadosMedicoes] = useState([]);
+  const [carregandoPosto, setCarregandoPosto] = useState(false);
 
   useEffect(() => {
     if (!linhaId) return;
     
     setCarregando(true);
-    // ✅ CORRIGIDO: /postos → /work-stations
     api.get(`/work-stations/${linhaId}`)
       .then((res) => setPostos(res.data))
       .catch((err) => {
@@ -876,30 +876,32 @@ function Variabilidade({ linha, linhaId }) {
       .finally(() => setCarregando(false));
   }, [linhaId]);
 
+  // Carrega dados APENAS do posto selecionado
   useEffect(() => {
-    if (!postoSelecionado) return;
+    if (!postoSelecionado) {
+      setDadosVariabilidade(null);
+      setDadosMedicoes([]);
+      return;
+    }
     
-    setCarregando(true);
+    setCarregandoPosto(true);
     Promise.all([
-      // ✅ CORRIGIDO: /variabilidade → /variability
       api.get(`/variability/${postoSelecionado}`),
       api.get(`/cycle-measurements?posto_id=${postoSelecionado}`).catch(() => ({ data: [] }))
     ])
       .then(([variabilidade, medicoes]) => {
-        setDadosVariabilidade({
-          ...dadosVariabilidade,
-          [postoSelecionado]: variabilidade.data
-        });
+        setDadosVariabilidade(variabilidade.data);
         setDadosMedicoes(medicoes.data);
       })
       .catch((err) => {
         console.error("Erro ao carregar dados:", err);
         toast.error("Erro ao carregar dados de variabilidade");
       })
-      .finally(() => setCarregando(false));
+      .finally(() => setCarregandoPosto(false));
   }, [postoSelecionado]);
 
   const getClassificacaoCor = (classificacao) => {
+    if (!classificacao) return "#ccc";
     if (classificacao.includes("Excelente")) return "#16a34a";
     if (classificacao.includes("estável")) return "#16a34a";
     if (classificacao.includes("instável")) return "#f59e0b";
@@ -916,6 +918,12 @@ function Variabilidade({ linha, linhaId }) {
 
   const labelsHistograma = Object.keys(histograma).map(k => `${k}-${parseInt(k) + 2}s`);
   const valoresHistograma = Object.values(histograma);
+
+  const postoSelecionadoObj = postos.find(p => p.id === parseInt(postoSelecionado));
+
+  if (carregando) {
+    return <div style={{ padding: "clamp(20px, 5vw, 40px)", textAlign: "center" }}>Carregando postos...</div>;
+  }
 
   if (postos.length === 0) {
     return (
@@ -941,6 +949,7 @@ function Variabilidade({ linha, linhaId }) {
         Análise de Variabilidade
       </h2>
       
+      {/* Seletor de posto */}
       <div style={{ 
         backgroundColor: "white", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -970,161 +979,276 @@ function Variabilidade({ linha, linhaId }) {
             fontSize: "clamp(13px, 1.8vw, 14px)"
           }}
         >
-          <option value="">Selecione...</option>
+          <option value="">Selecione um posto...</option>
           {postos.map((posto) => (
             <option key={posto.id} value={posto.id}>{posto.nome}</option>
           ))}
         </select>
       </div>
 
-      <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", 
-        gap: "clamp(15px, 2vw, 20px)",
-        marginBottom: "clamp(20px, 3vw, 30px)"
-      }}>
-        {postos.map((posto) => {
-          const dado = dadosVariabilidade[posto.id];
-          
-          return (
-            <div key={posto.id} style={{ 
-              backgroundColor: "white", 
-              padding: "clamp(12px, 1.5vw, 15px)", 
-              borderRadius: "8px", 
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              borderLeft: dado ? `4px solid ${getClassificacaoCor(dado.diagnostico?.classificacao)}` : "4px solid #ccc",
-              width: "100%",
-              boxSizing: "border-box"
-            }}>
-              <h3 style={{ 
-                color: "#1E3A8A", 
-                marginBottom: "10px", 
-                fontSize: "clamp(14px, 2vw, 16px)",
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis"
-              }} title={posto.nome}>
-                {truncarTexto(posto.nome, 20)}
-              </h3>
-              
-              {dado ? (
-                <>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
-                    <div>
-                      <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Média:</span>
-                      <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: "2px 0" }}>
-                        {dado.estatisticas?.media_segundos}s
-                      </p>
-                    </div>
-                    <div>
-                      <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Desvio:</span>
-                      <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: "2px 0" }}>
-                        {dado.estatisticas?.desvio_padrao}s
-                      </p>
-                    </div>
-                    <div>
-                      <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>CV:</span>
-                      <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: "2px 0" }}>
-                        {dado.estatisticas?.coeficiente_variacao}
-                      </p>
-                    </div>
-                    <div>
-                      <span style={{ color: "#666", fontSize: "clamp(11px, 1.3vw, 12px)" }}>Medições:</span>
-                      <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: "2px 0" }}>
-                        {dado.metadados?.total_amostras}
-                      </p>
-                    </div>
-                  </div>
-                  <div style={{ 
-                    marginTop: "8px", 
-                    padding: "4px", 
-                    backgroundColor: getClassificacaoCor(dado.diagnostico?.classificacao) + "20",
-                    borderRadius: "4px",
-                    textAlign: "center"
-                  }}>
-                    <span style={{ color: getClassificacaoCor(dado.diagnostico?.classificacao), fontWeight: "bold", fontSize: "clamp(11px, 1.3vw, 12px)" }}>
-                      {dado.diagnostico?.classificacao}
-                    </span>
-                  </div>
-                </>
-              ) : (
-                <p style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
-                  {postoSelecionado === String(posto.id) && carregando ? "Carregando..." : "Selecione para análise"}
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {postoSelecionado && dadosVariabilidade[postoSelecionado] && (
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 350px), 1fr))", 
-          gap: "clamp(15px, 2vw, 20px)",
-          marginBottom: "clamp(20px, 3vw, 30px)"
-        }}>
-          {valoresHistograma.length > 0 && (
+      {/* Card ÚNICO do posto selecionado - CORRIGIDO: mostra apenas um card */}
+      {postoSelecionado && (
+        <>
+          {carregandoPosto ? (
             <div style={{ 
               backgroundColor: "white", 
-              padding: "clamp(15px, 2vw, 20px)", 
+              padding: "clamp(30px, 5vw, 60px)", 
               borderRadius: "8px", 
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-              width: "100%",
-              boxSizing: "border-box",
-              overflow: "hidden"
+              textAlign: "center",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
             }}>
-              <GraficoBarras 
-                labels={labelsHistograma.slice(0, 8)}
-                valores={valoresHistograma.slice(0, 8)}
-                titulo="Distribuição dos Ciclos"
-                cor={coresNexus.secondary}
-                formato="numero"
-              />
+              <p>Carregando dados do posto...</p>
             </div>
-          )}
-
-          <div style={{ 
-            backgroundColor: "white", 
-            padding: "clamp(15px, 2vw, 20px)", 
-            borderRadius: "8px", 
-            boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            width: "100%",
-            boxSizing: "border-box"
-          }}>
-            <h3 style={{ 
-              color: "#1E3A8A", 
-              marginBottom: "clamp(10px, 1.5vw, 15px)", 
-              fontSize: "clamp(16px, 2.5vw, 18px)" 
-            }}>
-              Análise Estatística
-            </h3>
-            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div>
-                <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Capabilidade:</span>
-                <div style={{ 
-                  marginTop: "5px",
-                  height: "20px",
-                  backgroundColor: "#e5e7eb",
-                  borderRadius: "10px",
-                  overflow: "hidden"
+          ) : dadosVariabilidade ? (
+            <>
+              {/* Card principal do posto */}
+              <div style={{ 
+                backgroundColor: "white", 
+                padding: "clamp(20px, 2vw, 25px)", 
+                borderRadius: "8px", 
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                marginBottom: "clamp(20px, 3vw, 30px)",
+                borderLeft: `6px solid ${getClassificacaoCor(dadosVariabilidade.diagnostico?.classificacao)}`
+              }}>
+                <h3 style={{ 
+                  color: "#1E3A8A", 
+                  marginBottom: "15px", 
+                  fontSize: "clamp(18px, 2.5vw, 22px)" 
                 }}>
-                  <div style={{ 
-                    width: `${Math.min(100, (1 - parseFloat(dadosVariabilidade[postoSelecionado].estatisticas?.coeficiente_variacao || 0) / 100) * 100)}%`,
-                    height: "100%",
-                    backgroundColor: parseFloat(dadosVariabilidade[postoSelecionado].estatisticas?.coeficiente_variacao || 100) < 10 ? "#16a34a" :
-                                   parseFloat(dadosVariabilidade[postoSelecionado].estatisticas?.coeficiente_variacao || 100) < 20 ? "#f59e0b" : "#dc2626"
-                  }} />
+                  {postoSelecionadoObj?.nome}
+                </h3>
+                
+                <div style={{ 
+                  display: "grid", 
+                  gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", 
+                  gap: "clamp(15px, 2vw, 20px)" 
+                }}>
+                  <div>
+                    <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>Média:</span>
+                    <p style={{ fontSize: "clamp(20px, 3vw, 28px)", fontWeight: "bold", margin: "5px 0" }}>
+                      {dadosVariabilidade.estatisticas?.media_segundos}s
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>Desvio Padrão:</span>
+                    <p style={{ fontSize: "clamp(20px, 3vw, 28px)", fontWeight: "bold", margin: "5px 0" }}>
+                      {dadosVariabilidade.estatisticas?.desvio_padrao}s
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>Coeficiente de Variação:</span>
+                    <p style={{ fontSize: "clamp(20px, 3vw, 28px)", fontWeight: "bold", margin: "5px 0" }}>
+                      {dadosVariabilidade.estatisticas?.coeficiente_variacao}
+                    </p>
+                  </div>
+                  <div>
+                    <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>Total de Medições:</span>
+                    <p style={{ fontSize: "clamp(20px, 3vw, 28px)", fontWeight: "bold", margin: "5px 0" }}>
+                      {dadosVariabilidade.metadados?.total_amostras}
+                    </p>
+                  </div>
+                </div>
+                
+                <div style={{ 
+                  marginTop: "15px", 
+                  padding: "10px", 
+                  backgroundColor: getClassificacaoCor(dadosVariabilidade.diagnostico?.classificacao) + "20",
+                  borderRadius: "8px",
+                  textAlign: "center"
+                }}>
+                  <span style={{ 
+                    color: getClassificacaoCor(dadosVariabilidade.diagnostico?.classificacao), 
+                    fontWeight: "bold", 
+                    fontSize: "clamp(14px, 1.8vw, 16px)" 
+                  }}>
+                    📊 {dadosVariabilidade.diagnostico?.classificacao}
+                  </span>
+                  <p style={{ 
+                    fontSize: "clamp(12px, 1.5vw, 13px)", 
+                    marginTop: "5px", 
+                    color: "#666" 
+                  }}>
+                    {dadosVariabilidade.diagnostico?.acao_recomendada}
+                  </p>
                 </div>
               </div>
-              <div>
-                <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>IC 95%:</span>
-                <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold" }}>
-                  {dadosVariabilidade[postoSelecionado].estatisticas?.media_segundos} ± {(parseFloat(dadosVariabilidade[postoSelecionado].estatisticas?.desvio_padrao || 0) * 1.96).toFixed(2)}s
-                </p>
+
+              {/* Gráficos da análise */}
+              <div style={{ 
+                display: "grid", 
+                gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 350px), 1fr))", 
+                gap: "clamp(15px, 2vw, 20px)",
+                marginBottom: "clamp(20px, 3vw, 30px)"
+              }}>
+                {valoresHistograma.length > 0 && (
+                  <div style={{ 
+                    backgroundColor: "white", 
+                    padding: "clamp(15px, 2vw, 20px)", 
+                    borderRadius: "8px", 
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                    width: "100%",
+                    boxSizing: "border-box",
+                    overflow: "hidden"
+                  }}>
+                    <GraficoBarras 
+                      labels={labelsHistograma.slice(0, 8)}
+                      valores={valoresHistograma.slice(0, 8)}
+                      titulo="Distribuição dos Ciclos (segundos)"
+                      cor={coresNexus.secondary}
+                      formato="numero"
+                    />
+                  </div>
+                )}
+
+                <div style={{ 
+                  backgroundColor: "white", 
+                  padding: "clamp(15px, 2vw, 20px)", 
+                  borderRadius: "8px", 
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  width: "100%",
+                  boxSizing: "border-box"
+                }}>
+                  <h3 style={{ 
+                    color: "#1E3A8A", 
+                    marginBottom: "clamp(10px, 1.5vw, 15px)", 
+                    fontSize: "clamp(16px, 2.5vw, 18px)" 
+                  }}>
+                    Análise Estatística
+                  </h3>
+                  
+                  <div style={{ marginBottom: "15px" }}>
+                    <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Capabilidade do Processo:</span>
+                    <div style={{ 
+                      marginTop: "5px",
+                      height: "20px",
+                      backgroundColor: "#e5e7eb",
+                      borderRadius: "10px",
+                      overflow: "hidden"
+                    }}>
+                      <div style={{ 
+                        width: `${Math.min(100, (1 - (parseFloat(dadosVariabilidade.estatisticas?.coeficiente_variacao || 0) / 100)) * 100)}%`,
+                        height: "100%",
+                        backgroundColor: parseFloat(dadosVariabilidade.estatisticas?.coeficiente_variacao || 100) < 10 ? "#16a34a" :
+                                       parseFloat(dadosVariabilidade.estatisticas?.coeficiente_variacao || 100) < 20 ? "#f59e0b" : "#dc2626"
+                      }} />
+                    </div>
+                    <p style={{ fontSize: "clamp(11px, 1.3vw, 12px)", marginTop: "5px", color: "#666" }}>
+                      {parseFloat(dadosVariabilidade.estatisticas?.coeficiente_variacao || 100) < 10 ? "✅ Processo capaz" :
+                       parseFloat(dadosVariabilidade.estatisticas?.coeficiente_variacao || 100) < 20 ? "⚠️ Processo com variação moderada" : "🔴 Processo com alta variação"}
+                    </p>
+                  </div>
+
+                  <div>
+                    <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Intervalo de Confiança (95%):</span>
+                    <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", marginTop: "5px" }}>
+                      {dadosVariabilidade.estatisticas?.media_segundos} ± {(parseFloat(dadosVariabilidade.estatisticas?.desvio_padrao || 0) * 1.96).toFixed(2)}s
+                    </p>
+                  </div>
+
+                  {dadosMedicoes.length > 0 && (
+                    <div style={{ marginTop: "15px" }}>
+                      <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Menor / Maior ciclo:</span>
+                      <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", marginTop: "5px" }}>
+                        {Math.min(...valoresCiclo)}s / {Math.max(...valoresCiclo)}s
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
+
+              {/* Tabela de medições recentes */}
+              {dadosMedicoes.length > 0 && (
+                <div style={{ 
+                  backgroundColor: "white", 
+                  padding: "clamp(15px, 2vw, 20px)", 
+                  borderRadius: "8px", 
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+                }}>
+                  <h3 style={{ 
+                    color: "#1E3A8A", 
+                    marginBottom: "clamp(10px, 1.5vw, 15px)", 
+                    fontSize: "clamp(16px, 2.5vw, 18px)" 
+                  }}>
+                    Últimas Medições
+                  </h3>
+                  <div style={{ overflowX: "auto", width: "100%" }}>
+                    <table style={{ 
+                      width: "100%", 
+                      borderCollapse: "collapse",
+                      minWidth: "500px"
+                    }}>
+                      <thead>
+                        <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+                          <th style={thResponsivo}>Data</th>
+                          <th style={thResponsivo}>Hora</th>
+                          <th style={thResponsivo}>Tempo (s)</th>
+                          <th style={thResponsivo}>Atividade</th>
+                          <th style={thResponsivo}>Método</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {dadosMedicoes.slice(0, 10).map((med, idx) => (
+                          <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                            <td style={tdResponsivo}>{new Date(med.data_medicao).toLocaleDateString('pt-BR')}</td>
+                            <td style={tdResponsivo}>{med.hora_medicao || "-"}</td>
+                            <td style={{ ...tdResponsivo, fontWeight: "bold", color: "#1E3A8A" }}>
+                              {med.tempo_ciclo_segundos}s
+                            </td>
+                            <td style={tdResponsivo} title={med.atividade}>
+                              {truncarTexto(med.atividade, 20)}
+                            </td>
+                            <td style={tdResponsivo}>
+                              <span style={{
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                backgroundColor: med.metodo === "padrao" ? "#16a34a20" : med.metodo === "melhorado" ? "#1E3A8A20" : "#dc262620",
+                                color: med.metodo === "padrao" ? "#16a34a" : med.metodo === "melhorado" ? "#1E3A8A" : "#dc2626"
+                              }}>
+                                {med.metodo === "padrao" ? "Padrão" : med.metodo === "melhorado" ? "Melhorado" : "Fora do padrão"}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <div style={{ 
+              backgroundColor: "#fef3c7", 
+              padding: "clamp(30px, 5vw, 60px)", 
+              borderRadius: "8px", 
+              textAlign: "center",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+            }}>
+              <p style={{ color: "#92400e", fontSize: "clamp(14px, 2vw, 16px)" }}>
+                ⚠️ Nenhuma medição encontrada para este posto.
+              </p>
+              <p style={{ color: "#666", marginTop: "10px" }}>
+                Registre medições de ciclo no posto para gerar a análise de variabilidade.
+              </p>
             </div>
-          </div>
+          )}
+        </>
+      )}
+
+      {/* Mensagem quando nenhum posto está selecionado */}
+      {!postoSelecionado && (
+        <div style={{ 
+          backgroundColor: "#f0f4f8", 
+          padding: "clamp(40px, 8vw, 80px)", 
+          borderRadius: "8px", 
+          textAlign: "center",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+        }}>
+          <p style={{ color: "#1E3A8A", fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: "500" }}>
+            📊 Selecione um posto para visualizar a análise de variabilidade
+          </p>
+          <p style={{ color: "#666", marginTop: "10px" }}>
+            A análise mostra média, desvio padrão, coeficiente de variação e distribuição dos tempos de ciclo.
+          </p>
         </div>
       )}
     </div>
