@@ -2737,57 +2737,37 @@ function EficienciaGlobal({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 11 - PRODUTOS DA LINHA
+// ABA 10 - EFICIÊNCIA GLOBAL (CORRIGIDO)
 // ========================================
-function ProdutosLinha({ linha, linhaId }) {
-  const [produtos, setProdutos] = useState([]);
-  const [perdas, setPerdas] = useState([]);
+function EficienciaGlobal({ linha, linhaId }) {
+  const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
   useEffect(() => {
     if (!linhaId) return;
+    
     carregarDados();
   }, [linhaId]);
 
   async function carregarDados() {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /linha-produto → /line-products
-      const produtosRes = await api.get(`/line-products/${linhaId}`);
-      setProdutos(produtosRes.data.dados || produtosRes.data);
-
-      const perdasRes = await api.get(`/losses/${linhaId}`).catch(() => ({ data: [] }));
-      setPerdas(perdasRes.data);
-
+      const response = await api.get(`/global-efficiency/${linhaId}`);
+      console.log("📊 Eficiência Global:", response.data);
+      setDados(response.data);
       setErro("");
     } catch (error) {
-      console.error("Erro ao carregar produtos:", error);
-      setErro("Erro ao carregar dados de produtos");
-      toast.error("Erro ao carregar dados de produtos");
+      console.error("Erro ao carregar eficiência global:", error);
+      setErro("Erro ao carregar dados de eficiência global");
+      toast.error("Erro ao carregar dados de eficiência global");
     } finally {
       setCarregando(false);
     }
   }
 
-  const formatarMoeda = (valor) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(valor || 0);
-  };
-
-  const calcularPerdasProduto = (produtoId) => {
-    const perdasProduto = perdas.filter(p => p.linha_produto_id === produtoId);
-    return perdasProduto.reduce((acc, p) => ({
-      micro: acc.micro + (p.microparadas_minutos || 0),
-      retrabalho: acc.retrabalho + (p.retrabalho_pecas || 0),
-      refugo: acc.refugo + (p.refugo_pecas || 0)
-    }), { micro: 0, retrabalho: 0, refugo: 0 });
-  };
-
   if (carregando) {
-    return <div style={{ padding: "clamp(20px, 5vw, 40px)", textAlign: "center" }}>Carregando produtos...</div>;
+    return <div style={{ padding: "clamp(20px, 5vw, 40px)", textAlign: "center" }}>Carregando eficiência global...</div>;
   }
 
   if (erro) {
@@ -2804,7 +2784,7 @@ function ProdutosLinha({ linha, linhaId }) {
     );
   }
 
-  if (produtos.length === 0) {
+  if (!dados || dados.alerta) {
     return (
       <div style={{ 
         backgroundColor: "white", 
@@ -2813,17 +2793,23 @@ function ProdutosLinha({ linha, linhaId }) {
         textAlign: "center",
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
       }}>
-        <p style={{ color: "#666", marginBottom: "clamp(15px, 3vw, 20px)" }}>
-          Nenhum produto vinculado a esta linha.
-        </p>
-        <Link to={`/produtos`}>
-          <Botao variant="primary" size="md">
-            Gerenciar Produtos
-          </Botao>
-        </Link>
+        <p style={{ color: "#666" }}>{dados?.mensagem || "Dados não disponíveis"}</p>
+        {dados?.meta_planejada > 0 && (
+          <p style={{ color: "#f59e0b", marginTop: "10px", fontSize: "14px" }}>
+            Meta: {dados.meta_planejada} pç/dia | Takt: {dados.takt_configurado}s | Postos: {dados.postos_encontrados}
+          </p>
+        )}
       </div>
     );
   }
+
+  const metaPlanejada = dados.meta_diaria || 0;
+  const capacidadeReal = dados.capacidade_estimada || 0;
+  const oee = dados.oee || 0;
+  const ocupacaoMedia = dados.detalhes?.total_postos ? 
+    ((dados.detalhes.ritmo_gargalo / dados.takt_time) * 100).toFixed(1) : 85;
+
+  const capacidadeRealPercent = (capacidadeReal / metaPlanejada) * 100;
 
   return (
     <div>
@@ -2832,163 +2818,210 @@ function ProdutosLinha({ linha, linhaId }) {
         marginBottom: "clamp(15px, 2vw, 20px)", 
         fontSize: "clamp(18px, 3vw, 22px)" 
       }}>
-        Produtos da Linha
+        Eficiência Global da Linha
       </h2>
       
       <div style={{ 
         display: "grid", 
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", 
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", 
         gap: "clamp(15px, 2vw, 20px)", 
         marginBottom: "clamp(20px, 3vw, 30px)" 
       }}>
         <Card 
-          titulo="Total de Produtos" 
-          valor={produtos.length}
+          titulo="Meta Planejada" 
+          valor={`${metaPlanejada} pç/dia`}
           cor="#1E3A8A"
         />
         <Card 
-          titulo="Valor Médio" 
-          valor={formatarMoeda(produtos.reduce((acc, p) => acc + (p.valor_unitario || 0), 0) / produtos.length)}
-          cor="#16a34a"
+          titulo="Capacidade Real" 
+          valor={`${capacidadeReal} pç/dia`}
+          cor={capacidadeRealPercent >= 90 ? "#16a34a" : capacidadeRealPercent >= 70 ? "#f59e0b" : "#dc2626"}
         />
         <Card 
-          titulo="Maior Takt" 
-          valor={`${Math.max(...produtos.map(p => p.takt_configurado || 0))}s`}
-          cor="#f59e0b"
+          titulo="Eficiência Global" 
+          valor={`${oee}%`}
+          cor={oee >= 80 ? "#16a34a" : oee >= 60 ? "#f59e0b" : "#dc2626"}
         />
         <Card 
-          titulo="Maior Meta" 
-          valor={`${Math.max(...produtos.map(p => p.meta_diaria || 0))} pç`}
-          cor="#dc2626"
+          titulo="Takt Time" 
+          valor={`${dados.takt_time || 0}s`}
+          cor="#1E3A8A"
         />
       </div>
 
       <div style={{ 
-        backgroundColor: "white", 
-        padding: "clamp(15px, 2vw, 20px)", 
-        borderRadius: "8px", 
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        marginBottom: "clamp(20px, 3vw, 30px)",
-        width: "100%",
-        boxSizing: "border-box",
-        overflow: "hidden"
+        display: "grid", 
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", 
+        gap: "clamp(15px, 2vw, 20px)", 
+        marginBottom: "clamp(20px, 3vw, 30px)" 
       }}>
-        <GraficoBarras 
-          labels={produtos.map(p => truncarTexto(p.produto_nome, 12))}
-          valores={produtos.map(p => p.meta_diaria || 0)}
-          titulo="Meta Diária por Produto"
-          cor={coresNexus.primary}
-          formato="numero"
-        />
-      </div>
-
-      <div style={{ overflowX: "auto", marginBottom: "clamp(20px, 3vw, 30px)", width: "100%" }}>
-        <table style={{ 
-          width: "100%", 
-          borderCollapse: "collapse", 
-          backgroundColor: "white",
-          minWidth: "700px",
-          tableLayout: "fixed"
-        }}>
-          <colgroup>
-            <col style={{ width: "20%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "15%" }} />
-          </colgroup>
-          <thead>
-            <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-              <th style={thResponsivo}>Produto</th>
-              <th style={thResponsivo}>Takt</th>
-              <th style={thResponsivo}>Meta</th>
-              <th style={thResponsivo}>Valor Unit.</th>
-              <th style={thResponsivo}>Faturamento</th>
-              <th style={thResponsivo}>Perdas</th>
-              <th style={thResponsivo}>Refugo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {produtos.map((prod) => {
-              const perdasProd = calcularPerdasProduto(prod.vinculo_id || prod.id);
-              const faturamento = (prod.meta_diaria || 0) * (prod.valor_unitario || 0);
-              
-              return (
-                <tr key={prod.vinculo_id || prod.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td style={tdResponsivo} title={prod.produto_nome}>
-                    {truncarTexto(prod.produto_nome, 15)}
-                  </td>
-                  <td style={tdResponsivo}>{prod.takt_configurado || 0}s</td>
-                  <td style={tdResponsivo}>{prod.meta_diaria || 0}</td>
-                  <td style={tdResponsivo}>{formatarMoeda(prod.valor_unitario)}</td>
-                  <td style={tdResponsivo}>
-                    <span style={{ fontWeight: "bold", color: "#16a34a" }}>
-                      {formatarMoeda(faturamento)}
-                    </span>
-                  </td>
-                  <td style={tdResponsivo}>{perdasProd.micro} min</td>
-                  <td style={tdResponsivo}>{perdasProd.refugo} pç</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {perdas.length > 0 && (
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
           borderRadius: "8px", 
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          width: "100%",
+          boxSizing: "border-box"
         }}>
-          <h3 style={{ 
-            color: "#1E3A8A", 
-            marginBottom: "clamp(10px, 1.5vw, 15px)", 
-            fontSize: "clamp(16px, 2.5vw, 18px)" 
-          }}>
-            Histórico de Perdas
+          <h3 style={{ color: "#1E3A8A", marginBottom: "15px", fontSize: "clamp(16px, 2.5vw, 18px)" }}>
+            Capacidade vs Meta
           </h3>
-          <div style={{ overflowX: "auto", width: "100%" }}>
-            <table style={{ 
-              width: "100%", 
-              borderCollapse: "collapse",
-              minWidth: "500px",
-              tableLayout: "fixed"
-            }}>
-              <colgroup>
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "20%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "15%" }} />
-              </colgroup>
-              <thead>
-                <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-                  <th style={thResponsivo}>Data</th>
-                  <th style={thResponsivo}>Produto</th>
-                  <th style={thResponsivo}>Microparadas</th>
-                  <th style={thResponsivo}>Retrabalho</th>
-                  <th style={thResponsivo}>Refugo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {perdas.slice(0, 5).map((perda, index) => (
-                  <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={tdResponsivo}>{new Date(perda.data_medicao).toLocaleDateString('pt-BR')}</td>
-                    <td style={tdResponsivo} title={perda.produto_nome}>{truncarTexto(perda.produto_nome, 15)}</td>
-                    <td style={tdResponsivo}>{perda.microparadas_minutos || 0} min</td>
-                    <td style={tdResponsivo}>{perda.retrabalho_pecas || 0} pç</td>
-                    <td style={tdResponsivo}>{perda.refugo_pecas || 0} pç</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: "20px", height: "150px" }}>
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ 
+                height: `${(capacidadeReal / metaPlanejada) * 120}px`, 
+                backgroundColor: "#1E3A8A",
+                borderRadius: "4px 4px 0 0",
+                maxHeight: "120px",
+                minHeight: "20px"
+              }} />
+              <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", marginTop: "5px", display: "block" }}>
+                Real: {capacidadeReal}
+              </span>
+            </div>
+            <div style={{ flex: 1, textAlign: "center" }}>
+              <div style={{ 
+                height: "120px", 
+                backgroundColor: "#6b7280",
+                borderRadius: "4px 4px 0 0"
+              }} />
+              <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", marginTop: "5px", display: "block" }}>
+                Meta: {metaPlanejada}
+              </span>
+            </div>
           </div>
         </div>
-      )}
+
+        <div style={{ 
+          backgroundColor: "white", 
+          padding: "clamp(15px, 2vw, 20px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          textAlign: "center",
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
+          <h3 style={{ color: "#1E3A8A", marginBottom: "15px", fontSize: "clamp(16px, 2.5vw, 18px)" }}>
+            Taxa de Ocupação
+          </h3>
+          <div style={{ 
+            width: "120px", 
+            height: "120px", 
+            borderRadius: "50%",
+            background: `conic-gradient(${ocupacaoMedia >= 80 ? "#16a34a" : ocupacaoMedia >= 60 ? "#f59e0b" : "#dc2626"} ${ocupacaoMedia * 3.6}deg, #e5e7eb 0deg)`,
+            margin: "0 auto",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <div style={{ 
+              width: "90px", 
+              height: "90px", 
+              borderRadius: "50%", 
+              backgroundColor: "white",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <span style={{ fontSize: "18px", fontWeight: "bold", color: "#1E3A8A" }}>
+                {ocupacaoMedia}%
+              </span>
+            </div>
+          </div>
+          <p style={{ marginTop: "15px", color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
+            {ocupacaoMedia >= 80 ? "✅ Excelente" : 
+             ocupacaoMedia >= 60 ? "🟡 Regular" : "🔴 Crítico"}
+          </p>
+        </div>
+      </div>
+
+      <div style={{ 
+        display: "grid", 
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", 
+        gap: "clamp(15px, 2vw, 20px)",
+        marginTop: "clamp(15px, 2vw, 20px)"
+      }}>
+        <div style={{ 
+          backgroundColor: "white", 
+          padding: "clamp(12px, 1.5vw, 15px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          borderLeft: "4px solid #dc2626",
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
+          <h4 style={{ color: "#666", marginBottom: "5px", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
+            Perda de Capacidade
+          </h4>
+          <p style={{ fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: "bold", color: "#dc2626", margin: "5px 0" }}>
+            {metaPlanejada - capacidadeReal} pç/dia
+          </p>
+          <p style={{ color: "#999", fontSize: "clamp(10px, 1.3vw, 12px)", margin: 0 }}>
+            Diferença entre meta e real
+          </p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: "white", 
+          padding: "clamp(12px, 1.5vw, 15px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          borderLeft: "4px solid #16a34a",
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
+          <h4 style={{ color: "#666", marginBottom: "5px", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
+            Oportunidade Mensal
+          </h4>
+          <p style={{ fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: "bold", color: "#16a34a", margin: "5px 0" }}>
+            +{(metaPlanejada - capacidadeReal) * 22} pç
+          </p>
+          <p style={{ color: "#999", fontSize: "clamp(10px, 1.3vw, 12px)", margin: 0 }}>
+            Produção adicional possível
+          </p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: "white", 
+          padding: "clamp(12px, 1.5vw, 15px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          borderLeft: "4px solid #1E3A8A",
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
+          <h4 style={{ color: "#666", marginBottom: "5px", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
+            Índice de Utilização
+          </h4>
+          <p style={{ fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: "bold", color: "#1E3A8A", margin: "5px 0" }}>
+            {((capacidadeReal / metaPlanejada) * 100).toFixed(1)}%
+          </p>
+          <p style={{ color: "#999", fontSize: "clamp(10px, 1.3vw, 12px)", margin: 0 }}>
+            vs meta planejada
+          </p>
+        </div>
+
+        <div style={{ 
+          backgroundColor: "white", 
+          padding: "clamp(12px, 1.5vw, 15px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          borderLeft: "4px solid #f59e0b",
+          width: "100%",
+          boxSizing: "border-box"
+        }}>
+          <h4 style={{ color: "#666", marginBottom: "5px", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
+            Gargalo
+          </h4>
+          <p style={{ fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: "bold", color: "#f59e0b", margin: "5px 0" }}>
+            {dados.gargalo_identificado || 0}s
+          </p>
+          <p style={{ color: "#999", fontSize: "clamp(10px, 1.3vw, 12px)", margin: 0 }}>
+            Tempo do posto gargalo
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
