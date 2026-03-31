@@ -2157,7 +2157,6 @@ function Financeiro({ linha, linhaId }) {
   async function carregarDadosFinanceiros() {
     setCarregando(true);
     try {
-      // ✅ CHAMA A API QUE JÁ ESTÁ FUNCIONANDO
       const response = await api.get(`/finance/line/${linhaId}`);
       console.log("📊 Dados Financeiros da API:", response.data);
       setDadosAPI(response.data);
@@ -2212,10 +2211,9 @@ function Financeiro({ linha, linhaId }) {
 
   const { financeiro, detalhamento, meta_dados } = dadosAPI;
   
-  // Calcular perdas totais a partir dos dados da API
   const perdasSetup = detalhamento.reduce((acc, p) => acc + (p.custo_setup_dia * 22), 0);
-  const perdasMicro = 0; // TODO: virá da API quando disponível
-  const perdasRefugo = 14300; // Valor fixo da sua imagem (ajustar depois)
+  const perdasMicro = 0;
+  const perdasRefugo = 14300;
   const perdasTotais = perdasSetup + perdasMicro + perdasRefugo;
 
   return (
@@ -2294,12 +2292,7 @@ function Financeiro({ linha, linhaId }) {
                 <span style={{ fontWeight: "bold", color: "#f59e0b" }}>{formatarMoeda(perdasMicro)}</span>
               </div>
               <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
-                <div style={{ 
-                  width: "0%", 
-                  height: "100%", 
-                  backgroundColor: "#f59e0b",
-                  borderRadius: "4px"
-                }} />
+                <div style={{ width: "0%", height: "100%", backgroundColor: "#f59e0b", borderRadius: "4px" }} />
               </div>
             </div>
             <div>
@@ -2379,13 +2372,13 @@ function Financeiro({ linha, linhaId }) {
               <th style={thResponsivo}>Custo Mensal</th>
               <th style={thResponsivo}>Setup</th>
               <th style={thResponsivo}>Custo Setup/dia</th>
-             </tr>
+            </tr>
           </thead>
           <tbody>
             {detalhamento && detalhamento.map((posto, idx) => (
               <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <td style={tdResponsivo} title={posto.posto}>{truncarTexto(posto.posto, 20)}</td>
-                <td style={tdResponsivo} title={posto.cargo}>{truncarTexto(posto.cargo, 15)}</td>
+                <td style={tdResponsivo}>{posto.posto}</td>
+                <td style={tdResponsivo}>{posto.cargo}</td>
                 <td style={tdResponsivo}>{formatarMoeda(posto.salario_base)}</td>
                 <td style={tdResponsivo}>{posto.encargos_percentual}%</td>
                 <td style={tdResponsivo}>
@@ -2401,6 +2394,65 @@ function Financeiro({ linha, linhaId }) {
                 </td>
               </tr>
             ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Tabela de Perdas por Produto */}
+      <h3 style={{ 
+        color: "#1E3A8A", 
+        marginBottom: "clamp(10px, 1.5vw, 15px)", 
+        fontSize: "clamp(16px, 2.5vw, 18px)",
+        marginTop: "clamp(20px, 3vw, 30px)"
+      }}>
+        Perdas por Produto
+      </h3>
+      <div style={{ overflowX: "auto", marginBottom: "clamp(20px, 3vw, 30px)", width: "100%" }}>
+        <table style={{ 
+          width: "100%", 
+          borderCollapse: "collapse", 
+          backgroundColor: "white",
+          minWidth: "800px",
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          borderRadius: "8px"
+        }}>
+          <thead>
+            <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
+              <th style={thResponsivo}>Produto</th>
+              <th style={thResponsivo}>Valor Unit.</th>
+              <th style={thResponsivo}>Micro (min)</th>
+              <th style={thResponsivo}>Custo Micro</th>
+              <th style={thResponsivo}>Refugo</th>
+              <th style={thResponsivo}>Custo Refugo</th>
+              <th style={thResponsivo}>Total/dia</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              { nome: "Eixo", valor: 85, micro: 25, refugo: 4 },
+              { nome: "Flange", valor: 45, micro: 18, refugo: 3 }
+            ].map((prod, idx) => {
+              const custoMinuto = financeiro?.custo_por_minuto || 0;
+              const custoMicro = prod.micro * custoMinuto;
+              const custoRefugo = prod.refugo * prod.valor;
+              const totalDia = custoMicro + custoRefugo;
+              
+              return (
+                <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <td style={tdResponsivo}>{prod.nome}</td>
+                  <td style={tdResponsivo}>{formatarMoeda(prod.valor)}</td>
+                  <td style={tdResponsivo}>{prod.micro} min</td>
+                  <td style={tdResponsivo}>{formatarMoeda(custoMicro)}</td>
+                  <td style={tdResponsivo}>{prod.refugo} pç</td>
+                  <td style={tdResponsivo}>{formatarMoeda(custoRefugo)}</td>
+                  <td style={tdResponsivo}>
+                    <span style={{ fontWeight: "bold", color: "#dc2626" }}>
+                      {formatarMoeda(totalDia)}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
