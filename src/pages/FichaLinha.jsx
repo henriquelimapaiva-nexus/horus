@@ -3221,9 +3221,9 @@ function ProdutosLinha({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 12 - COLABORADORES DA LINHA
+// ABA 12 - COLABORADORES DA LINHA (CORRIGIDO)
 // ========================================
-function ColaboradoresLinha({ linha, linhaId }) {
+function ColaboradoresLinha({ linha, linhaId, clienteAtual }) {
   const [colaboradores, setColaboradores] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [postos, setPostos] = useState([]);
@@ -3242,31 +3242,31 @@ function ColaboradoresLinha({ linha, linhaId }) {
   async function carregarDados() {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /linhas → /lines
-      const linhaRes = await api.get(`/lines/${linhaId}`);
-      if (linhaRes.data && linhaRes.data.empresa_id) {
-        const empresaId = linhaRes.data.empresa_id;
+      // 🔥 CORREÇÃO: Buscar linhas da empresa e encontrar a linha atual
+      const linhasRes = await api.get(`/lines/${clienteAtual}`);
+      const linhaEncontrada = linhasRes.data.find(l => l.id === parseInt(linhaId));
+      
+      if (linhaEncontrada && linhaEncontrada.empresa_id) {
+        const empresaId = linhaEncontrada.empresa_id;
         setEmpresaId(empresaId);
 
-        // ✅ CORRIGIDO: /colaboradores → /employees
         const colaboradoresRes = await api.get(`/employees/${empresaId}`);
         setColaboradores(colaboradoresRes.data);
 
-        // ✅ CORRIGIDO: /cargos → /roles
         const cargosRes = await api.get(`/roles/${empresaId}`);
         setCargos(cargosRes.data);
 
-        // ✅ CORRIGIDO: /postos → /work-stations
         const postosRes = await api.get(`/work-stations/${linhaId}`);
         setPostos(postosRes.data);
 
-        // ✅ CORRIGIDO: /alocacoes/posto/ → endpoint precisa existir no backend
         const alocacoesPromises = postosRes.data.map(posto => 
           api.get(`/allocations/station/${posto.id}?ativo=true`).catch(() => ({ data: [] }))
         );
         const alocacoesResults = await Promise.all(alocacoesPromises);
         const todasAlocacoes = alocacoesResults.flatMap(res => res.data);
         setAlocacoes(todasAlocacoes);
+      } else {
+        console.error("Linha não encontrada");
       }
 
       setErro("");
@@ -3314,7 +3314,6 @@ function ColaboradoresLinha({ linha, linhaId }) {
     if (!window.confirm("Remover esta alocação?")) return;
     
     try {
-      // ✅ CORRIGIDO: /alocacoes → /allocations (PUT para desativar)
       await api.put(`/allocations/${alocacaoId}`, { ativo: false });
       carregarDados();
       toast.success("Colaborador desalocado com sucesso!");
@@ -3501,38 +3500,6 @@ function ColaboradoresLinha({ linha, linhaId }) {
     </div>
   );
 }
-
-// Estilos responsivos da tabela
-const thResponsivo = {
-  padding: "clamp(8px, 1vw, 12px) clamp(4px, 0.8vw, 8px)",
-  border: "1px solid #e5e7eb",
-  textAlign: "center",
-  fontSize: "clamp(11px, 1.5vw, 13px)",
-  fontWeight: "500",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap"
-};
-
-const tdResponsivo = {
-  padding: "clamp(6px, 0.8vw, 10px) clamp(4px, 0.6vw, 8px)",
-  border: "1px solid #e5e7eb",
-  textAlign: "center",
-  fontSize: "clamp(11px, 1.5vw, 13px)",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap"
-};
-
-const badgeStyle = {
-  padding: "4px 8px",
-  borderRadius: "4px",
-  fontSize: "clamp(10px, 1.2vw, 12px)",
-  fontWeight: "500",
-  backgroundColor: "#dc2626",
-  color: "white",
-  display: "inline-block"
-};
 
 // ========================================
 // COMPONENTE PRINCIPAL
