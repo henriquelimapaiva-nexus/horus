@@ -2142,15 +2142,12 @@ function Historico({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 9 - FINANCEIRO
+// ABA 9 - FINANCEIRO (CORRIGIDO - USANDO API)
 // ========================================
 function Financeiro({ linha, linhaId }) {
-  const [postos, setPostos] = useState([]);
-  const [cargos, setCargos] = useState([]);
-  const [produtos, setProdutos] = useState([]);
-  const [perdas, setPerdas] = useState([]);
+  const [dadosAPI, setDadosAPI] = useState(null);
   const [carregando, setCarregando] = useState(true);
-  const [empresaId, setEmpresaId] = useState(null);
+  const [erro, setErro] = useState("");
 
   useEffect(() => {
     if (!linhaId) return;
@@ -2160,91 +2157,19 @@ function Financeiro({ linha, linhaId }) {
   async function carregarDadosFinanceiros() {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /postos → /work-stations
-      const postosRes = await api.get(`/work-stations/${linhaId}`);
-      setPostos(postosRes.data);
-
-      if (postosRes.data.length > 0) {
-        // ✅ CORRIGIDO: /linhas → /lines
-        const linhaRes = await api.get(`/lines/${linhaId}`);
-        if (linhaRes.data && linhaRes.data.empresa_id) {
-          const empresaId = linhaRes.data.empresa_id;
-          setEmpresaId(empresaId);
-          
-          // ✅ CORRIGIDO: /cargos → /roles
-          const cargosRes = await api.get(`/roles/${empresaId}`);
-          setCargos(cargosRes.data);
-        }
-      }
-
-      // ✅ CORRIGIDO: /linha-produto → /line-products
-      const produtosRes = await api.get(`/line-products/${linhaId}`).catch(() => ({ data: [] }));
-      setProdutos(produtosRes.data.dados || produtosRes.data);
-
-      const perdasRes = await api.get(`/losses/${linhaId}`).catch(() => ({ data: [] }));
-      setPerdas(perdasRes.data);
-
+      // ✅ AGORA CHAMA A API CORRIGIDA
+      const response = await api.get(`/finance/line/${linhaId}`);
+      console.log("📊 Dados Financeiros da API:", response.data);
+      setDadosAPI(response.data);
+      setErro("");
     } catch (error) {
       console.error("Erro ao carregar dados financeiros:", error);
+      setErro("Erro ao carregar dados financeiros");
       toast.error("Erro ao carregar dados financeiros");
     } finally {
       setCarregando(false);
     }
   }
-
-  const getCargo = (cargoId) => {
-    return cargos.find(c => c.id === cargoId);
-  };
-
-  const calcularCustoPosto = (posto) => {
-    if (!posto.cargo_id) return 0;
-    const cargo = getCargo(posto.cargo_id);
-    if (!cargo) return 0;
-    
-    const salario = parseFloat(cargo.salario_base) || 0;
-    const encargos = parseFloat(cargo.encargos_percentual) || 70;
-    return salario * (1 + encargos / 100);
-  };
-
-  const calcularCustoTotalMaoObra = () => {
-    return postos.reduce((acc, posto) => acc + calcularCustoPosto(posto), 0);
-  };
-
-  const calcularCustoPorMinuto = () => {
-    const custoMensal = calcularCustoTotalMaoObra();
-    const minutosMes = 22 * 8 * 60;
-    return minutosMes > 0 ? custoMensal / minutosMes : 0;
-  };
-
-  const calcularPerdasFinanceiras = () => {
-    const custoMinuto = calcularCustoPorMinuto();
-    let perdasSetup = 0;
-    let perdasMicro = 0;
-    let perdasRefugo = 0;
-
-    postos.forEach(posto => {
-      if (posto.tempo_setup_minutos) {
-        perdasSetup += parseFloat(posto.tempo_setup_minutos) * custoMinuto;
-      }
-    });
-
-    produtos.forEach(prod => {
-      const perda = perdas.find(p => p.linha_produto_id === prod.vinculo_id || p.linha_produto_id === prod.id);
-      if (perda) {
-        perdasMicro += (perda.microparadas_minutos || 0) * custoMinuto;
-        
-        const valorPeca = prod.valor_unitario || 50;
-        perdasRefugo += (perda.refugo_pecas || 0) * valorPeca;
-      }
-    });
-
-    return {
-      setup: perdasSetup * 22,
-      microparadas: perdasMicro * 22,
-      refugo: perdasRefugo * 22,
-      total: (perdasSetup + perdasMicro + perdasRefugo) * 22
-    };
-  };
 
   const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -2253,13 +2178,40 @@ function Financeiro({ linha, linhaId }) {
     }).format(valor || 0);
   };
 
-  const perdasFinanceiras = calcularPerdasFinanceiras();
-  const custoTotalMaoObra = calcularCustoTotalMaoObra();
-  const custoMinuto = calcularCustoPorMinuto();
-
   if (carregando) {
     return <div style={{ padding: "clamp(20px, 5vw, 40px)", textAlign: "center" }}>Carregando dados financeiros...</div>;
   }
+
+  if (erro) {
+    return (
+      <div style={{ 
+        backgroundColor: "#fee2e2", 
+        color: "#dc2626", 
+        padding: "clamp(15px, 2vw, 20px)", 
+        borderRadius: "4px",
+        textAlign: "center"
+      }}>
+        {erro}
+      </div>
+    );
+  }
+
+  if (!dadosAPI) {
+    return (
+      <div style={{ 
+        backgroundColor: "white", 
+        padding: "clamp(20px, 5vw, 40px)", 
+        borderRadius: "8px", 
+        textAlign: "center",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+      }}>
+        <p style={{ color: "#666" }}>Nenhum dado financeiro disponível.</p>
+      </div>
+    );
+  }
+
+  const { financeiro, detalhamento, meta_dados } = dadosAPI;
+  const totalPerdas = 0; // TODO: calcular das perdas reais
 
   return (
     <div>
@@ -2271,6 +2223,7 @@ function Financeiro({ linha, linhaId }) {
         Análise Financeira
       </h2>
       
+      {/* Cards principais */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", 
@@ -2279,125 +2232,27 @@ function Financeiro({ linha, linhaId }) {
       }}>
         <Card 
           titulo="Custo Mão de Obra" 
-          valor={formatarMoeda(custoTotalMaoObra)}
+          valor={formatarMoeda(financeiro?.custo_mod_mensal)}
           cor="#1E3A8A"
         />
         <Card 
-          titulo="Custo/minuto" 
-          valor={formatarMoeda(custoMinuto)}
+          titulo="Custo/hora" 
+          valor={formatarMoeda(financeiro?.custo_por_hora)}
           cor="#0f172a"
         />
         <Card 
-          titulo="Perdas Totais" 
-          valor={formatarMoeda(perdasFinanceiras.total)}
-          cor="#dc2626"
+          titulo="Custo/minuto" 
+          valor={formatarMoeda(financeiro?.custo_por_minuto)}
+          cor="#6b7280"
         />
         <Card 
-          titulo="Oportunidade" 
-          valor={formatarMoeda(perdasFinanceiras.total * 0.3)}
+          titulo="Base de Cálculo" 
+          valor={meta_dados?.base_calculo || "22 dias/mês, 8h/dia"}
           cor="#16a34a"
         />
       </div>
 
-      <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", 
-        gap: "clamp(15px, 2vw, 20px)", 
-        marginBottom: "clamp(20px, 3vw, 30px)" 
-      }}>
-        <div style={{ 
-          backgroundColor: "white", 
-          padding: "clamp(15px, 2vw, 20px)", 
-          borderRadius: "8px", 
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          width: "100%",
-          boxSizing: "border-box"
-        }}>
-          <h3 style={{ color: "#1E3A8A", marginBottom: "15px", fontSize: "clamp(16px, 2.5vw, 18px)" }}>
-            Perdas por Tipo
-          </h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span style={{ fontSize: "clamp(12px, 1.5vw, 13px)" }}>Setup</span>
-                <span style={{ fontWeight: "bold", color: "#f59e0b" }}>{formatarMoeda(perdasFinanceiras.setup)}</span>
-              </div>
-              <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
-                <div style={{ 
-                  width: `${(perdasFinanceiras.setup / perdasFinanceiras.total) * 100}%`, 
-                  height: "100%", 
-                  backgroundColor: "#f59e0b",
-                  borderRadius: "4px"
-                }} />
-              </div>
-            </div>
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span style={{ fontSize: "clamp(12px, 1.5vw, 13px)" }}>Microparadas</span>
-                <span style={{ fontWeight: "bold", color: "#f59e0b" }}>{formatarMoeda(perdasFinanceiras.microparadas)}</span>
-              </div>
-              <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
-                <div style={{ 
-                  width: `${(perdasFinanceiras.microparadas / perdasFinanceiras.total) * 100}%`, 
-                  height: "100%", 
-                  backgroundColor: "#f59e0b",
-                  borderRadius: "4px"
-                }} />
-              </div>
-            </div>
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
-                <span style={{ fontSize: "clamp(12px, 1.5vw, 13px)" }}>Refugo</span>
-                <span style={{ fontWeight: "bold", color: "#dc2626" }}>{formatarMoeda(perdasFinanceiras.refugo)}</span>
-              </div>
-              <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
-                <div style={{ 
-                  width: `${(perdasFinanceiras.refugo / perdasFinanceiras.total) * 100}%`, 
-                  height: "100%", 
-                  backgroundColor: "#dc2626",
-                  borderRadius: "4px"
-                }} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ 
-          backgroundColor: "white", 
-          padding: "clamp(15px, 2vw, 20px)", 
-          borderRadius: "8px", 
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          width: "100%",
-          boxSizing: "border-box"
-        }}>
-          <h3 style={{ color: "#1E3A8A", marginBottom: "15px", fontSize: "clamp(16px, 2.5vw, 18px)" }}>
-            Simulação de ROI
-          </h3>
-          <div style={{ marginBottom: "15px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-              <span style={{ fontSize: "clamp(12px, 1.5vw, 13px)" }}>Investimento:</span>
-              <span style={{ fontWeight: "bold" }}>R$ 50.000</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-              <span style={{ fontSize: "clamp(12px, 1.5vw, 13px)" }}>Ganho mensal:</span>
-              <span style={{ fontWeight: "bold", color: "#16a34a" }}>{formatarMoeda(perdasFinanceiras.total * 0.3)}</span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-              <span style={{ fontSize: "clamp(12px, 1.5vw, 13px)" }}>Payback:</span>
-              <span style={{ fontWeight: "bold", color: "#16a34a" }}>
-                {Math.ceil(50000 / (perdasFinanceiras.total * 0.3))} meses
-              </span>
-            </div>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <span style={{ fontSize: "clamp(12px, 1.5vw, 13px)" }}>ROI anual:</span>
-              <span style={{ fontWeight: "bold", color: "#16a34a" }}>
-                {((perdasFinanceiras.total * 0.3 * 12 / 50000) * 100).toFixed(0)}%
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      {/* Tabela de Custos por Posto */}
       <h3 style={{ 
         color: "#1E3A8A", 
         marginBottom: "clamp(10px, 1.5vw, 15px)", 
@@ -2411,17 +2266,9 @@ function Financeiro({ linha, linhaId }) {
           borderCollapse: "collapse", 
           backgroundColor: "white",
           minWidth: "700px",
-          tableLayout: "fixed"
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          borderRadius: "8px"
         }}>
-          <colgroup>
-            <col style={{ width: "20%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "15%" }} />
-          </colgroup>
           <thead>
             <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
               <th style={thResponsivo}>Posto</th>
@@ -2429,101 +2276,35 @@ function Financeiro({ linha, linhaId }) {
               <th style={thResponsivo}>Salário</th>
               <th style={thResponsivo}>Encargos</th>
               <th style={thResponsivo}>Custo Mensal</th>
-              <th style={thResponsivo}>Setup</th>
+              <th style={thResponsivo}>Setup (min)</th>
               <th style={thResponsivo}>Custo Setup/dia</th>
-            </tr>
+             </tr>
           </thead>
           <tbody>
-            {postos.map((posto) => {
-              const cargo = getCargo(posto.cargo_id);
-              const custoMensal = calcularCustoPosto(posto);
-              const custoMinuto = custoMensal / (22 * 8 * 60);
-              const custoSetupDia = (posto.tempo_setup_minutos || 0) * custoMinuto;
-              
-              return (
-                <tr key={posto.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td style={tdResponsivo} title={posto.nome}>{truncarTexto(posto.nome, 15)}</td>
-                  <td style={tdResponsivo} title={cargo?.nome || "-"}>{truncarTexto(cargo?.nome || "-", 12)}</td>
-                  <td style={tdResponsivo}>{cargo ? formatarMoeda(cargo.salario_base) : "-"}</td>
-                  <td style={tdResponsivo}>{cargo ? `${cargo.encargos_percentual}%` : "-"}</td>
-                  <td style={tdResponsivo}>{formatarMoeda(custoMensal)}</td>
-                  <td style={tdResponsivo}>{posto.tempo_setup_minutos || 0} min</td>
-                  <td style={tdResponsivo}>{formatarMoeda(custoSetupDia)}</td>
-                </tr>
-              );
-            })}
+            {detalhamento && detalhamento.map((posto, idx) => (
+              <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                <td style={tdResponsivo} title={posto.posto}>{truncarTexto(posto.posto, 20)}</td>
+                <td style={tdResponsivo} title={posto.cargo}>{truncarTexto(posto.cargo, 15)}</td>
+                <td style={tdResponsivo}>{formatarMoeda(posto.salario_base)}</td>
+                <td style={tdResponsivo}>{posto.encargos_percentual}%</td>
+                <td style={tdResponsivo}>
+                  <span style={{ fontWeight: "bold", color: "#1E3A8A" }}>
+                    {formatarMoeda(posto.custo_mensal)}
+                  </span>
+                </td>
+                <td style={tdResponsivo}>{posto.tempo_setup_minutos || 0} min</td>
+                <td style={tdResponsivo}>
+                  <span style={{ color: "#f59e0b", fontWeight: "bold" }}>
+                    {formatarMoeda(posto.custo_setup_dia)}
+                  </span>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      {produtos.length > 0 && (
-        <>
-          <h3 style={{ 
-            color: "#1E3A8A", 
-            marginBottom: "clamp(10px, 1.5vw, 15px)", 
-            fontSize: "clamp(16px, 2.5vw, 18px)" 
-          }}>
-            Perdas por Produto
-          </h3>
-          <div style={{ overflowX: "auto", marginBottom: "clamp(20px, 3vw, 30px)", width: "100%" }}>
-            <table style={{ 
-              width: "100%", 
-              borderCollapse: "collapse", 
-              backgroundColor: "white",
-              minWidth: "800px",
-              tableLayout: "fixed"
-            }}>
-              <colgroup>
-                <col style={{ width: "20%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "10%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "10%" }} />
-              </colgroup>
-              <thead>
-                <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-                  <th style={thResponsivo}>Produto</th>
-                  <th style={thResponsivo}>Valor Unit.</th>
-                  <th style={thResponsivo}>Micro (min)</th>
-                  <th style={thResponsivo}>Custo Micro</th>
-                  <th style={thResponsivo}>Refugo</th>
-                  <th style={thResponsivo}>Custo Refugo</th>
-                  <th style={thResponsivo}>Total/dia</th>
-                </tr>
-              </thead>
-              <tbody>
-                {produtos.map((prod) => {
-                  const perda = perdas.find(p => p.linha_produto_id === prod.vinculo_id || p.linha_produto_id === prod.id);
-                  const custoMinuto = calcularCustoPorMinuto();
-                  const custoMicro = (perda?.microparadas_minutos || 0) * custoMinuto;
-                  const custoRefugo = (perda?.refugo_pecas || 0) * (prod.valor_unitario || 50);
-                  
-                  return (
-                    <tr key={prod.vinculo_id || prod.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={tdResponsivo} title={prod.produto_nome}>
-                        {truncarTexto(prod.produto_nome, 15)}
-                      </td>
-                      <td style={tdResponsivo}>{formatarMoeda(prod.valor_unitario)}</td>
-                      <td style={tdResponsivo}>{perda?.microparadas_minutos || 0} min</td>
-                      <td style={tdResponsivo}>{formatarMoeda(custoMicro)}</td>
-                      <td style={tdResponsivo}>{perda?.refugo_pecas || 0} pç</td>
-                      <td style={tdResponsivo}>{formatarMoeda(custoRefugo)}</td>
-                      <td style={tdResponsivo}>
-                        <span style={{ fontWeight: "bold", color: "#dc2626" }}>
-                          {formatarMoeda(custoMicro + custoRefugo)}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
+      {/* Informação adicional */}
       <div style={{ 
         marginTop: "clamp(20px, 3vw, 30px)", 
         padding: "clamp(15px, 2vw, 20px)", 
@@ -2539,25 +2320,25 @@ function Financeiro({ linha, linhaId }) {
         </h3>
         <div style={{ 
           display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 150px), 1fr))", 
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", 
           gap: "clamp(15px, 2vw, 20px)" 
         }}>
           <div>
-            <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Custo Operacional</span>
-            <p style={{ fontSize: "clamp(18px, 2.5vw, 20px)", fontWeight: "bold", color: "#1E3A8A", margin: "5px 0" }}>
-              {formatarMoeda(custoTotalMaoObra)}
+            <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Custo Operacional Mensal</span>
+            <p style={{ fontSize: "clamp(20px, 3vw, 24px)", fontWeight: "bold", color: "#1E3A8A", margin: "5px 0" }}>
+              {formatarMoeda(financeiro?.custo_mod_mensal)}
             </p>
           </div>
           <div>
-            <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Perdas Mensais</span>
-            <p style={{ fontSize: "clamp(18px, 2.5vw, 20px)", fontWeight: "bold", color: "#dc2626", margin: "5px 0" }}>
-              {formatarMoeda(perdasFinanceiras.total)}
+            <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Custo por Hora de Operação</span>
+            <p style={{ fontSize: "clamp(18px, 2.5vw, 20px)", fontWeight: "bold", color: "#0f172a", margin: "5px 0" }}>
+              {formatarMoeda(financeiro?.custo_por_hora)}
             </p>
           </div>
           <div>
-            <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Potencial de Ganho</span>
+            <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Total de Postos</span>
             <p style={{ fontSize: "clamp(18px, 2.5vw, 20px)", fontWeight: "bold", color: "#16a34a", margin: "5px 0" }}>
-              {formatarMoeda(perdasFinanceiras.total * 0.3)}
+              {detalhamento?.length || 0}
             </p>
           </div>
         </div>
