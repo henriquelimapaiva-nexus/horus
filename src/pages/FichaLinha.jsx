@@ -2972,7 +2972,7 @@ function EficienciaGlobal({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 11 - PRODUTOS DA LINHA
+// ABA 11 - PRODUTOS DA LINHA (CORRIGIDO)
 // ========================================
 function ProdutosLinha({ linha, linhaId }) {
   const [produtos, setProdutos] = useState([]);
@@ -2988,7 +2988,6 @@ function ProdutosLinha({ linha, linhaId }) {
   async function carregarDados() {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /linha-produto → /line-products
       const produtosRes = await api.get(`/line-products/${linhaId}`);
       setProdutos(produtosRes.data.dados || produtosRes.data);
 
@@ -3006,18 +3005,20 @@ function ProdutosLinha({ linha, linhaId }) {
   }
 
   const formatarMoeda = (valor) => {
+    const num = parseFloat(valor) || 0;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(valor || 0);
+    }).format(num);
   };
 
-  const calcularPerdasProduto = (produtoId) => {
-    const perdasProduto = perdas.filter(p => p.linha_produto_id === produtoId);
+  // 🔥 CORREÇÃO 1: filtrar por nome do produto
+  const calcularPerdasProduto = (produtoNome) => {
+    const perdasProduto = perdas.filter(p => p.produto_nome === produtoNome);
     return perdasProduto.reduce((acc, p) => ({
-      micro: acc.micro + (p.microparadas_minutos || 0),
-      retrabalho: acc.retrabalho + (p.retrabalho_pecas || 0),
-      refugo: acc.refugo + (p.refugo_pecas || 0)
+      micro: acc.micro + (parseFloat(p.microparadas_minutos) || 0),
+      retrabalho: acc.retrabalho + (parseInt(p.retrabalho_pecas) || 0),
+      refugo: acc.refugo + (parseInt(p.refugo_pecas) || 0)
     }), { micro: 0, retrabalho: 0, refugo: 0 });
   };
 
@@ -3060,6 +3061,9 @@ function ProdutosLinha({ linha, linhaId }) {
     );
   }
 
+  // 🔥 CORREÇÃO 4: valor médio com parseFloat
+  const valorMedio = produtos.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 0), 0) / produtos.length;
+
   return (
     <div>
       <h2 style={{ 
@@ -3083,7 +3087,7 @@ function ProdutosLinha({ linha, linhaId }) {
         />
         <Card 
           titulo="Valor Médio" 
-          valor={formatarMoeda(produtos.reduce((acc, p) => acc + (p.valor_unitario || 0), 0) / produtos.length)}
+          valor={formatarMoeda(valorMedio)}
           cor="#16a34a"
         />
         <Card 
@@ -3123,17 +3127,9 @@ function ProdutosLinha({ linha, linhaId }) {
           borderCollapse: "collapse", 
           backgroundColor: "white",
           minWidth: "700px",
-          tableLayout: "fixed"
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          borderRadius: "8px"
         }}>
-          <colgroup>
-            <col style={{ width: "20%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "15%" }} />
-          </colgroup>
           <thead>
             <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
               <th style={thResponsivo}>Produto</th>
@@ -3141,14 +3137,15 @@ function ProdutosLinha({ linha, linhaId }) {
               <th style={thResponsivo}>Meta</th>
               <th style={thResponsivo}>Valor Unit.</th>
               <th style={thResponsivo}>Faturamento</th>
-              <th style={thResponsivo}>Perdas</th>
-              <th style={thResponsivo}>Refugo</th>
-            </tr>
+              <th style={thResponsivo}>Perdas (min)</th>
+              <th style={thResponsivo}>Refugo (pç)</th>
+             </tr>
           </thead>
           <tbody>
             {produtos.map((prod) => {
-              const perdasProd = calcularPerdasProduto(prod.vinculo_id || prod.id);
-              const faturamento = (prod.meta_diaria || 0) * (prod.valor_unitario || 0);
+              // 🔥 CORREÇÃO 2: passar nome do produto
+              const perdasProd = calcularPerdasProduto(prod.produto_nome);
+              const faturamento = (prod.meta_diaria || 0) * (parseFloat(prod.valor_unitario) || 0);
               
               return (
                 <tr key={prod.vinculo_id || prod.id} style={{ borderBottom: "1px solid #e5e7eb" }}>
@@ -3190,16 +3187,8 @@ function ProdutosLinha({ linha, linhaId }) {
             <table style={{ 
               width: "100%", 
               borderCollapse: "collapse",
-              minWidth: "500px",
-              tableLayout: "fixed"
+              minWidth: "500px"
             }}>
-              <colgroup>
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "25%" }} />
-                <col style={{ width: "20%" }} />
-                <col style={{ width: "15%" }} />
-                <col style={{ width: "15%" }} />
-              </colgroup>
               <thead>
                 <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
                   <th style={thResponsivo}>Data</th>
@@ -3212,8 +3201,11 @@ function ProdutosLinha({ linha, linhaId }) {
               <tbody>
                 {perdas.slice(0, 5).map((perda, index) => (
                   <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                    <td style={tdResponsivo}>{new Date(perda.data_medicao).toLocaleDateString('pt-BR')}</td>
-                    <td style={tdResponsivo} title={perda.produto_nome}>{truncarTexto(perda.produto_nome, 15)}</td>
+                    {/* 🔥 CORREÇÃO 3: usar data_perda */}
+                    <td style={tdResponsivo}>{perda.data_perda || "-"}</td>
+                    <td style={tdResponsivo} title={perda.produto_nome}>
+                      {truncarTexto(perda.produto_nome, 15)}
+                    </td>
                     <td style={tdResponsivo}>{perda.microparadas_minutos || 0} min</td>
                     <td style={tdResponsivo}>{perda.retrabalho_pecas || 0} pç</td>
                     <td style={tdResponsivo}>{perda.refugo_pecas || 0} pç</td>
