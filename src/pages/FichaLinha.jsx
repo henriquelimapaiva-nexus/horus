@@ -2501,17 +2501,18 @@ function Financeiro({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 10 - EFICIÊNCIA GLOBAL (CORRIGIDO)
+// ABA 10 - EFICIÊNCIA GLOBAL (COMPLETA)
 // ========================================
 function EficienciaGlobal({ linha, linhaId }) {
   const [dados, setDados] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+  const [postos, setPostos] = useState([]);
 
   useEffect(() => {
     if (!linhaId) return;
-    
     carregarDados();
+    carregarPostos();
   }, [linhaId]);
 
   async function carregarDados() {
@@ -2529,6 +2530,88 @@ function EficienciaGlobal({ linha, linhaId }) {
       setCarregando(false);
     }
   }
+
+  async function carregarPostos() {
+    try {
+      const response = await api.get(`/work-stations/${linhaId}`);
+      setPostos(response.data);
+    } catch (error) {
+      console.error("Erro ao carregar postos:", error);
+    }
+  }
+
+  // 🔥 Função para gerar recomendações automáticas
+  const gerarRecomendacoes = () => {
+    const recomendacoes = [];
+    
+    if (!dados) return recomendacoes;
+    
+    const oee = dados.oee || 0;
+    const metaPlanejada = dados.meta_diaria || 0;
+    const capacidadeReal = dados.capacidade_estimada || 0;
+    const perdaCapacidade = metaPlanejada - capacidadeReal;
+    
+    // 1. Análise do OEE
+    if (oee < 60) {
+      recomendacoes.push({
+        tipo: "crítico",
+        titulo: "OEE Crítico",
+        descricao: `OEE de ${oee}% está muito abaixo do ideal (mínimo 85%). Priorize ações imediatas.`,
+        acao: "Realizar diagnóstico completo e plano de ação emergencial"
+      });
+    } else if (oee < 75) {
+      recomendacoes.push({
+        tipo: "alerta",
+        titulo: "OEE Regular",
+        descricao: `OEE de ${oee}% abaixo do benchmark. Há espaço significativo para melhoria.`,
+        acao: "Focar na redução de perdas identificadas"
+      });
+    } else if (oee < 85) {
+      recomendacoes.push({
+        tipo: "melhoria",
+        titulo: "Bom desempenho",
+        descricao: `OEE de ${oee}% próximo do benchmark. Pequenos ajustes podem trazer excelência.`,
+        acao: "Otimizar gargalo e reduzir variabilidade"
+      });
+    } else {
+      recomendacoes.push({
+        tipo: "excelente",
+        titulo: "Excelência Operacional",
+        descricao: `OEE de ${oee}% atingindo padrão World Class!`,
+        acao: "Manter monitoramento e buscar inovações"
+      });
+    }
+    
+    // 2. Análise de perda de capacidade
+    if (perdaCapacidade > 0) {
+      const percentualPerda = (perdaCapacidade / metaPlanejada) * 100;
+      recomendacoes.push({
+        tipo: "oportunidade",
+        titulo: "Capacidade não realizada",
+        descricao: `Perda de ${perdaCapacidade} pç/dia (${percentualPerda.toFixed(1)}% da meta)`,
+        acao: "Atacar gargalo e reduzir setup/microparadas"
+      });
+    }
+    
+    // 3. Recomendação baseada no gargalo
+    if (dados.gargalo_identificado && postos.length > 0) {
+      const postoGargalo = postos.find(p => p.tempo_ciclo_segundos === dados.gargalo_identificado);
+      if (postoGargalo) {
+        recomendacoes.push({
+          tipo: "gargalo",
+          titulo: `Gargalo identificado: ${postoGargalo.nome}`,
+          descricao: `Tempo de ciclo de ${dados.gargalo_identificado}s dita o ritmo da linha.`,
+          acao: postoGargalo.tempo_setup_minutos > 15 
+            ? "Aplicar SMED para reduzir setup e aumentar disponibilidade"
+            : "Balancear carga e otimizar método de trabalho"
+        });
+      }
+    }
+    
+    return recomendacoes;
+  };
+
+  const recomendacoes = gerarRecomendacoes();
 
   if (carregando) {
     return <div style={{ padding: "clamp(20px, 5vw, 40px)", textAlign: "center" }}>Carregando eficiência global...</div>;
@@ -2570,10 +2653,18 @@ function EficienciaGlobal({ linha, linhaId }) {
   const metaPlanejada = dados.meta_diaria || 0;
   const capacidadeReal = dados.capacidade_estimada || 0;
   const oee = dados.oee || 0;
-  const ocupacaoMedia = dados.detalhes?.total_postos ? 
-    ((dados.detalhes.ritmo_gargalo / dados.takt_time) * 100).toFixed(1) : 85;
-
+  const taktTime = dados.takt_time || 0;
+  
+  // 🔥 Cálculo dos pilares OEE (estimados)
+  const disponibilidade = Math.min(100, Math.max(0, (capacidadeReal / metaPlanejada) * 100));
+  const performance = Math.min(100, Math.max(0, (taktTime / (dados.gargalo_identificado || taktTime)) * 100));
+  const qualidade = Math.min(100, Math.max(0, (oee / (disponibilidade * performance / 100)) * 100)) || 95;
+  
   const capacidadeRealPercent = (capacidadeReal / metaPlanejada) * 100;
+  
+  // Encontrar nome do gargalo
+  const postoGargalo = postos.find(p => p.tempo_ciclo_segundos === dados.gargalo_identificado);
+  const nomeGargalo = postoGargalo?.nome || `${dados.gargalo_identificado || 0}s`;
 
   return (
     <div>
@@ -2585,6 +2676,7 @@ function EficienciaGlobal({ linha, linhaId }) {
         Eficiência Global da Linha
       </h2>
       
+      {/* Cards principais */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", 
@@ -2608,11 +2700,36 @@ function EficienciaGlobal({ linha, linhaId }) {
         />
         <Card 
           titulo="Takt Time" 
-          valor={`${dados.takt_time || 0}s`}
+          valor={`${taktTime}s`}
           cor="#1E3A8A"
         />
       </div>
 
+      {/* 🔥 NOVO: 3 Pilares do OEE */}
+      <div style={{ 
+        display: "grid", 
+        gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", 
+        gap: "clamp(15px, 2vw, 20px)", 
+        marginBottom: "clamp(20px, 3vw, 30px)" 
+      }}>
+        <Card 
+          titulo="Disponibilidade" 
+          valor={`${disponibilidade.toFixed(1)}%`}
+          cor={disponibilidade >= 90 ? "#16a34a" : disponibilidade >= 80 ? "#f59e0b" : "#dc2626"}
+        />
+        <Card 
+          titulo="Performance" 
+          valor={`${performance.toFixed(1)}%`}
+          cor={performance >= 90 ? "#16a34a" : performance >= 80 ? "#f59e0b" : "#dc2626"}
+        />
+        <Card 
+          titulo="Qualidade" 
+          valor={`${qualidade.toFixed(1)}%`}
+          cor={qualidade >= 98 ? "#16a34a" : qualidade >= 95 ? "#f59e0b" : "#dc2626"}
+        />
+      </div>
+
+      {/* Capacidade vs Meta */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))", 
@@ -2672,7 +2789,7 @@ function EficienciaGlobal({ linha, linhaId }) {
             width: "120px", 
             height: "120px", 
             borderRadius: "50%",
-            background: `conic-gradient(${ocupacaoMedia >= 80 ? "#16a34a" : ocupacaoMedia >= 60 ? "#f59e0b" : "#dc2626"} ${ocupacaoMedia * 3.6}deg, #e5e7eb 0deg)`,
+            background: `conic-gradient(${capacidadeRealPercent >= 80 ? "#16a34a" : capacidadeRealPercent >= 60 ? "#f59e0b" : "#dc2626"} ${capacidadeRealPercent * 3.6}deg, #e5e7eb 0deg)`,
             margin: "0 auto",
             display: "flex",
             alignItems: "center",
@@ -2689,22 +2806,23 @@ function EficienciaGlobal({ linha, linhaId }) {
               justifyContent: "center"
             }}>
               <span style={{ fontSize: "18px", fontWeight: "bold", color: "#1E3A8A" }}>
-                {ocupacaoMedia}%
+                {capacidadeRealPercent.toFixed(1)}%
               </span>
             </div>
           </div>
           <p style={{ marginTop: "15px", color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
-            {ocupacaoMedia >= 80 ? "✅ Excelente" : 
-             ocupacaoMedia >= 60 ? "🟡 Regular" : "🔴 Crítico"}
+            {capacidadeRealPercent >= 80 ? "✅ Excelente" : 
+             capacidadeRealPercent >= 60 ? "🟡 Regular" : "🔴 Crítico"}
           </p>
         </div>
       </div>
 
+      {/* Cards de análise */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 180px), 1fr))", 
         gap: "clamp(15px, 2vw, 20px)",
-        marginTop: "clamp(15px, 2vw, 20px)"
+        marginBottom: "clamp(20px, 3vw, 30px)"
       }}>
         <div style={{ 
           backgroundColor: "white", 
@@ -2766,6 +2884,7 @@ function EficienciaGlobal({ linha, linhaId }) {
           </p>
         </div>
 
+        {/* 🔥 NOVO: Gargalo com NOME */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(12px, 1.5vw, 15px)", 
@@ -2779,13 +2898,75 @@ function EficienciaGlobal({ linha, linhaId }) {
             Gargalo
           </h4>
           <p style={{ fontSize: "clamp(16px, 2.5vw, 20px)", fontWeight: "bold", color: "#f59e0b", margin: "5px 0" }}>
-            {dados.gargalo_identificado || 0}s
+            {nomeGargalo}
           </p>
           <p style={{ color: "#999", fontSize: "clamp(10px, 1.3vw, 12px)", margin: 0 }}>
-            Tempo do posto gargalo
+            {dados.gargalo_identificado}s de ciclo
           </p>
         </div>
       </div>
+
+      {/* 🔥 NOVO: Recomendações Automáticas */}
+      {recomendacoes.length > 0 && (
+        <div style={{ 
+          backgroundColor: "white", 
+          padding: "clamp(15px, 2vw, 20px)", 
+          borderRadius: "8px", 
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          marginTop: "clamp(20px, 3vw, 30px)"
+        }}>
+          <h3 style={{ 
+            color: "#1E3A8A", 
+            marginBottom: "clamp(15px, 2vw, 20px)", 
+            fontSize: "clamp(18px, 2.5vw, 20px)",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}>
+            🤖 Recomendações do Sistema
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            {recomendacoes.map((rec, idx) => {
+              const cores = {
+                crítico: { bg: "#fee2e2", borda: "#dc2626", icone: "🔴" },
+                alerta: { bg: "#fff3e0", borda: "#f59e0b", icone: "🟡" },
+                melhoria: { bg: "#e0f2fe", borda: "#0ea5e9", icone: "🔵" },
+                oportunidade: { bg: "#e0f2fe", borda: "#0ea5e9", icone: "💡" },
+                gargalo: { bg: "#fef3c7", borda: "#f59e0b", icone: "⚠️" },
+                excelente: { bg: "#dcfce7", borda: "#16a34a", icone: "✅" }
+              };
+              const estilo = cores[rec.tipo] || cores.melhoria;
+              
+              return (
+                <div key={idx} style={{ 
+                  backgroundColor: estilo.bg,
+                  borderLeft: `4px solid ${estilo.borda}`,
+                  padding: "clamp(12px, 1.5vw, 15px)",
+                  borderRadius: "8px"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "20px" }}>{estilo.icone}</span>
+                    <h4 style={{ margin: 0, color: estilo.borda, fontSize: "clamp(14px, 1.8vw, 16px)" }}>
+                      {rec.titulo}
+                    </h4>
+                  </div>
+                  <p style={{ margin: "5px 0", color: "#374151", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
+                    {rec.descricao}
+                  </p>
+                  <p style={{ 
+                    margin: "8px 0 0 0", 
+                    color: "#1E3A8A", 
+                    fontSize: "clamp(12px, 1.5vw, 13px)",
+                    fontWeight: "500"
+                  }}>
+                    💡 {rec.acao}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
