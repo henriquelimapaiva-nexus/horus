@@ -2923,7 +2923,7 @@ function EficienciaGlobal({ linha, linhaId }) {
             alignItems: "center",
             gap: "8px"
           }}>
-            🤖 Recomendações do Sistema
+            Recomendações do Sistema
           </h3>
           <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
             {recomendacoes.map((rec, idx) => {
