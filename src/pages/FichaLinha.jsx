@@ -2501,7 +2501,7 @@ function Financeiro({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 10 - EFICIÊNCIA GLOBAL
+// ABA 10 - EFICIÊNCIA GLOBAL (CORRIGIDO)
 // ========================================
 function EficienciaGlobal({ linha, linhaId }) {
   const [dados, setDados] = useState(null);
@@ -2517,8 +2517,8 @@ function EficienciaGlobal({ linha, linhaId }) {
   async function carregarDados() {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /eficiencia-global → /global-efficiency
       const response = await api.get(`/global-efficiency/${linhaId}`);
+      console.log("📊 Eficiência Global:", response.data);
       setDados(response.data);
       setErro("");
     } catch (error) {
@@ -2558,12 +2558,23 @@ function EficienciaGlobal({ linha, linhaId }) {
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
       }}>
         <p style={{ color: "#666" }}>{dados?.mensagem || "Dados não disponíveis"}</p>
+        {dados?.meta_planejada > 0 && (
+          <p style={{ color: "#f59e0b", marginTop: "10px", fontSize: "14px" }}>
+            Meta: {dados.meta_planejada} pç/dia | Takt: {dados.takt_configurado}s | Postos: {dados.postos_encontrados}
+          </p>
+        )}
       </div>
     );
   }
 
-  const capacidadeRealPercent = (dados.metas.alcancavel_pelo_gargalo / dados.metas.planejada) * 100;
-  const ocupacaoPercent = parseFloat(dados.kpis.ocupacao_media_recursos || 0);
+  // 🔥 CORREÇÃO: Adaptar os dados do backend para o formato esperado pelo frontend
+  const metaPlanejada = dados.meta_diaria || 0;
+  const capacidadeReal = dados.capacidade_estimada || 0;
+  const oee = dados.oee || 0;
+  const ocupacaoMedia = dados.detalhes?.total_postos ? 
+    ((dados.detalhes.ritmo_gargalo / dados.takt_time) * 100).toFixed(1) : 85;
+
+  const capacidadeRealPercent = (capacidadeReal / metaPlanejada) * 100;
 
   return (
     <div>
@@ -2583,22 +2594,22 @@ function EficienciaGlobal({ linha, linhaId }) {
       }}>
         <Card 
           titulo="Meta Planejada" 
-          valor={`${dados.metas.planejada} pç/dia`}
+          valor={`${metaPlanejada} pç/dia`}
           cor="#1E3A8A"
         />
         <Card 
           titulo="Capacidade Real" 
-          valor={`${dados.metas.alcancavel_pelo_gargalo} pç/dia`}
+          valor={`${capacidadeReal} pç/dia`}
           cor={capacidadeRealPercent >= 90 ? "#16a34a" : capacidadeRealPercent >= 70 ? "#f59e0b" : "#dc2626"}
         />
         <Card 
           titulo="Eficiência Global" 
-          valor={dados.kpis.eficiencia_global}
-          cor={parseFloat(dados.kpis.eficiencia_global) >= 80 ? "#16a34a" : parseFloat(dados.kpis.eficiencia_global) >= 60 ? "#f59e0b" : "#dc2626"}
+          valor={`${oee}%`}
+          cor={oee >= 80 ? "#16a34a" : oee >= 60 ? "#f59e0b" : "#dc2626"}
         />
         <Card 
-          titulo="Ocupação Média" 
-          valor={dados.kpis.ocupacao_media_recursos}
+          titulo="Takt Time" 
+          valor={`${dados.takt_time || 0}s`}
           cor="#1E3A8A"
         />
       </div>
@@ -2623,14 +2634,14 @@ function EficienciaGlobal({ linha, linhaId }) {
           <div style={{ display: "flex", alignItems: "flex-end", gap: "20px", height: "150px" }}>
             <div style={{ flex: 1, textAlign: "center" }}>
               <div style={{ 
-                height: `${(dados.metas.alcancavel_pelo_gargalo / dados.metas.planejada) * 120}px`, 
+                height: `${(capacidadeReal / metaPlanejada) * 120}px`, 
                 backgroundColor: "#1E3A8A",
                 borderRadius: "4px 4px 0 0",
                 maxHeight: "120px",
                 minHeight: "20px"
               }} />
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", marginTop: "5px", display: "block" }}>
-                Real: {dados.metas.alcancavel_pelo_gargalo}
+                Real: {capacidadeReal}
               </span>
             </div>
             <div style={{ flex: 1, textAlign: "center" }}>
@@ -2640,7 +2651,7 @@ function EficienciaGlobal({ linha, linhaId }) {
                 borderRadius: "4px 4px 0 0"
               }} />
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", marginTop: "5px", display: "block" }}>
-                Meta: {dados.metas.planejada}
+                Meta: {metaPlanejada}
               </span>
             </div>
           </div>
@@ -2662,7 +2673,7 @@ function EficienciaGlobal({ linha, linhaId }) {
             width: "120px", 
             height: "120px", 
             borderRadius: "50%",
-            background: `conic-gradient(${ocupacaoPercent >= 80 ? "#16a34a" : ocupacaoPercent >= 60 ? "#f59e0b" : "#dc2626"} ${ocupacaoPercent * 3.6}deg, #e5e7eb 0deg)`,
+            background: `conic-gradient(${ocupacaoMedia >= 80 ? "#16a34a" : ocupacaoMedia >= 60 ? "#f59e0b" : "#dc2626"} ${ocupacaoMedia * 3.6}deg, #e5e7eb 0deg)`,
             margin: "0 auto",
             display: "flex",
             alignItems: "center",
@@ -2679,13 +2690,13 @@ function EficienciaGlobal({ linha, linhaId }) {
               justifyContent: "center"
             }}>
               <span style={{ fontSize: "18px", fontWeight: "bold", color: "#1E3A8A" }}>
-                {dados.kpis.ocupacao_media_recursos}
+                {ocupacaoMedia}%
               </span>
             </div>
           </div>
           <p style={{ marginTop: "15px", color: "#666", fontSize: "clamp(12px, 1.5vw, 14px)" }}>
-            {ocupacaoPercent >= 80 ? "✅ Excelente" : 
-             ocupacaoPercent >= 60 ? "🟡 Regular" : "🔴 Crítico"}
+            {ocupacaoMedia >= 80 ? "✅ Excelente" : 
+             ocupacaoMedia >= 60 ? "🟡 Regular" : "🔴 Crítico"}
           </p>
         </div>
       </div>
@@ -2698,71 +2709,29 @@ function EficienciaGlobal({ linha, linhaId }) {
       }}>
         <DetalheCard 
           titulo="Perda de Capacidade"
-          valor={`${dados.metas.planejada - dados.metas.alcancavel_pelo_gargalo} pç/dia`}
+          valor={`${metaPlanejada - capacidadeReal} pç/dia`}
           descricao="Diferença entre meta e real"
           cor="#dc2626"
         />
         <DetalheCard 
           titulo="Oportunidade Mensal"
-          valor={`+${(dados.metas.planejada - dados.metas.alcancavel_pelo_gargalo) * 22} pç`}
+          valor={`+${(metaPlanejada - capacidadeReal) * 22} pç`}
           descricao="Produção adicional possível"
           cor="#16a34a"
         />
         <DetalheCard 
           titulo="Índice de Utilização"
-          valor={`${((dados.metas.alcancavel_pelo_gargalo / dados.metas.planejada) * 100).toFixed(1)}%`}
+          valor={`${((capacidadeReal / metaPlanejada) * 100).toFixed(1)}%`}
           descricao="vs meta planejada"
           cor="#1E3A8A"
         />
+        <DetalheCard 
+          titulo="Gargalo"
+          valor={`${dados.gargalo_identificado || 0}s`}
+          descricao="Tempo do posto gargalo"
+          cor="#f59e0b"
+        />
       </div>
-    </div>
-  );
-}
-
-// Componente de card de detalhamento responsivo
-function DetalheCard({ titulo, valor, descricao, cor }) {
-  return (
-    <div style={{ 
-      backgroundColor: "white", 
-      padding: "clamp(12px, 1.5vw, 15px)", 
-      borderRadius: "8px", 
-      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-      borderLeft: `4px solid ${cor}`,
-      width: "100%",
-      boxSizing: "border-box",
-      minWidth: 0
-    }}>
-      <h4 style={{ 
-        color: "#666", 
-        marginBottom: "5px", 
-        fontSize: "clamp(12px, 1.5vw, 14px)",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis"
-      }} title={titulo}>
-        {titulo}
-      </h4>
-      <p style={{ 
-        fontSize: "clamp(16px, 2.5vw, 20px)", 
-        fontWeight: "bold", 
-        color: cor, 
-        margin: "5px 0",
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis"
-      }} title={valor}>
-        {valor}
-      </p>
-      <p style={{ 
-        color: "#999", 
-        fontSize: "clamp(10px, 1.3vw, 12px)", 
-        margin: 0,
-        whiteSpace: "nowrap",
-        overflow: "hidden",
-        textOverflow: "ellipsis"
-      }} title={descricao}>
-        {descricao}
-      </p>
     </div>
   );
 }
