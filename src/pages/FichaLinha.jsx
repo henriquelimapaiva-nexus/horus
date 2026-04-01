@@ -3234,17 +3234,27 @@ function ColaboradoresLinha({ linha, linhaId, clienteAtual }) {
   const [modalAberto, setModalAberto] = useState(false);
   const [postoSelecionado, setPostoSelecionado] = useState(null);
 
+  // 🔥 CORREÇÃO: useEffect só executa quando linhaId E clienteAtual existirem
   useEffect(() => {
-    if (!linhaId) return;
+    if (!linhaId || !clienteAtual) {
+      console.log('⏳ Aguardando dados:', { linhaId, clienteAtual });
+      return;
+    }
+    console.log('✅ Carregando colaboradores para linha:', linhaId, 'empresa:', clienteAtual);
     carregarDados();
-  }, [linhaId]);
+  }, [linhaId, clienteAtual]); // 🔥 Adicionado clienteAtual como dependência
 
   async function carregarDados() {
     setCarregando(true);
     try {
-      // 🔥 CORREÇÃO: Buscar linhas da empresa e encontrar a linha atual
+      // Buscar linhas da empresa usando o clienteAtual (ID da empresa)
+      console.log('🔍 Buscando linhas para empresa:', clienteAtual);
       const linhasRes = await api.get(`/lines/${clienteAtual}`);
+      console.log('🔍 Linhas encontradas:', linhasRes.data);
+      
+      // Encontrar a linha específica pelo ID
       const linhaEncontrada = linhasRes.data.find(l => l.id === parseInt(linhaId));
+      console.log('🔍 Linha atual:', linhaEncontrada);
       
       if (linhaEncontrada && linhaEncontrada.empresa_id) {
         const empresaId = linhaEncontrada.empresa_id;
