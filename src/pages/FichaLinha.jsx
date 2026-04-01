@@ -3242,7 +3242,7 @@ function ColaboradoresLinha({ linha, linhaId, clienteAtual }) {
     }
     console.log('✅ Carregando colaboradores para linha:', linhaId, 'empresa:', clienteAtual);
     carregarDados();
-  }, [linhaId, clienteAtual]); // 🔥 Adicionado clienteAtual como dependência
+  }, [linhaId, clienteAtual]);
 
   async function carregarDados() {
     setCarregando(true);
@@ -3313,11 +3313,13 @@ function ColaboradoresLinha({ linha, linhaId, clienteAtual }) {
     }).format(valor || 0);
   };
 
+  // 🔥 CORREÇÃO: Retorna as alocações diretamente (já contêm o nome do colaborador)
   const getColaboradoresAlocados = (postoId, turno) => {
-    return alocacoes
-      .filter(a => a.posto_id === postoId && a.turno === turno && a.ativo)
-      .map(a => colaboradores.find(c => c.id === a.colaborador_id))
-      .filter(c => c);
+    return alocacoes.filter(a => 
+      a.posto_id === postoId && 
+      a.turno === turno && 
+      a.ativo === true
+    );
   };
 
   const desalocar = async (alocacaoId) => {
@@ -3436,6 +3438,7 @@ function ColaboradoresLinha({ linha, linhaId, clienteAtual }) {
             gap: "clamp(10px, 1.5vw, 15px)" 
           }}>
             {[1, 2, 3].map(turno => {
+              // 🔥 CORREÇÃO: alocados agora são as alocações diretamente
               const alocados = getColaboradoresAlocados(posto.id, turno);
               
               return (
@@ -3460,34 +3463,24 @@ function ColaboradoresLinha({ linha, linhaId, clienteAtual }) {
                     </p>
                   ) : (
                     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                      {alocados.map(col => {
-                        const aloc = alocacoes.find(a => 
-                          a.colaborador_id === col.id && 
-                          a.posto_id === posto.id && 
-                          a.turno === turno
-                        );
-                        
-                        return (
-                          <div key={col.id} style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "center",
-                            fontSize: "clamp(12px, 1.5vw, 13px)"
-                          }}>
-                            <span title={col.nome}>{truncarTexto(col.nome, 12)}</span>
-                            {aloc && (
-                              <Botao
-                                variant="danger"
-                                size="sm"
-                                onClick={() => desalocar(aloc.id)}
-                                style={{ padding: "2px 4px", fontSize: "10px" }}
-                              >
-                                ✕
-                              </Botao>
-                            )}
-                          </div>
-                        );
-                      })}
+                      {alocados.map(aloc => (
+                        <div key={aloc.id} style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          fontSize: "clamp(12px, 1.5vw, 13px)"
+                        }}>
+                          <span title={aloc.colaborador}>{truncarTexto(aloc.colaborador, 12)}</span>
+                          <Botao
+                            variant="danger"
+                            size="sm"
+                            onClick={() => desalocar(aloc.id)}
+                            style={{ padding: "2px 4px", fontSize: "10px" }}
+                          >
+                            ✕
+                          </Botao>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
