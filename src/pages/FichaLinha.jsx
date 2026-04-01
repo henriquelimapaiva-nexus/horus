@@ -3512,6 +3512,8 @@ export default function FichaLinha() {
   const [abaAtiva, setAbaAtiva] = useState("visao");
   const [carregando, setCarregando] = useState(true);
   const [nomeLinha, setNomeLinha] = useState("");
+  console.log('🔍 FichaLinha - clienteAtual:', clienteAtual);
+  console.log('🔍 FichaLinha - nomeCliente:', nomeCliente);
 
   useEffect(() => {
     setCarregando(true);
