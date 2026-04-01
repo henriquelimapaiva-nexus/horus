@@ -19,6 +19,38 @@ const truncarTexto = (texto, maxLength = 20) => {
   return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
 };
 
+// Estilos responsivos da tabela
+const thResponsivo = {
+  padding: "clamp(8px, 1vw, 12px) clamp(4px, 0.8vw, 8px)",
+  border: "1px solid #e5e7eb",
+  textAlign: "center",
+  fontSize: "clamp(11px, 1.5vw, 13px)",
+  fontWeight: "500",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
+};
+
+const tdResponsivo = {
+  padding: "clamp(6px, 0.8vw, 10px) clamp(4px, 0.6vw, 8px)",
+  border: "1px solid #e5e7eb",
+  textAlign: "center",
+  fontSize: "clamp(11px, 1.5vw, 13px)",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap"
+};
+
+const badgeStyle = {
+  padding: "4px 8px",
+  borderRadius: "4px",
+  fontSize: "clamp(10px, 1.2vw, 12px)",
+  fontWeight: "500",
+  backgroundColor: "#dc2626",
+  color: "white",
+  display: "inline-block"
+};
+
 // ========================================
 // ABA 1 - VISÃO GERAL (COM GRÁFICOS)
 // ========================================
