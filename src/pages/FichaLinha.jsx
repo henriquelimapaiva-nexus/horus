@@ -3706,7 +3706,7 @@ export default function FichaLinha() {
 
       {/* Conteúdo da aba ativa */}
       <div style={{ minHeight: "400px", width: "100%" }}>
-        <ComponenteAtivo linha={linha} linhaId={id} />
+        <ComponenteAtivo linha={linha} linhaId={id} clienteAtual={clienteAtual} />
       </div>
     </div>
   );
