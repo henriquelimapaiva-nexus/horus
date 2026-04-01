@@ -3470,7 +3470,7 @@ function ColaboradoresLinha({ linha, linhaId, clienteAtual }) {
                           alignItems: "center",
                           fontSize: "clamp(12px, 1.5vw, 13px)"
                         }}>
-                          <span title={aloc.colaborador}>{truncarTexto(aloc.colaborador, 12)}</span>
+                          <span title={aloc.colaborador} style={{ whiteSpace: "normal", wordBreak: "break-word" }}>{aloc.colaborador}</span>
                           <Botao
                             variant="danger"
                             size="sm"
