@@ -2210,6 +2210,8 @@ function Financeiro({ linha, linhaId }) {
   const [produtosAPI, setProdutosAPI] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
+
+  console.log("🔥 FINANCEIRO NOVO V2 🔥");
   
   useEffect(() => {
     if (!linhaId) return;
