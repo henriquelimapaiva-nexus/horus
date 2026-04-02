@@ -2210,7 +2210,7 @@ function Financeiro({ linha, linhaId }) {
   const [produtosAPI, setProdutosAPI] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
-
+  
   useEffect(() => {
     if (!linhaId) return;
     carregarDadosFinanceiros();
