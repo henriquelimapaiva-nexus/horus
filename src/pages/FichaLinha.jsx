@@ -2202,10 +2202,12 @@ function Historico({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 9 - FINANCEIRO (USANDO API)
+// ABA 9 - FINANCEIRO (USANDO API) - CORRIGIDO
 // ========================================
 function Financeiro({ linha, linhaId }) {
   const [dadosAPI, setDadosAPI] = useState(null);
+  const [perdasAPI, setPerdasAPI] = useState([]);
+  const [produtosAPI, setProdutosAPI] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
 
@@ -2220,6 +2222,18 @@ function Financeiro({ linha, linhaId }) {
       const response = await api.get(`/finance/line/${linhaId}`);
       console.log("📊 Dados Financeiros da API:", response.data);
       setDadosAPI(response.data);
+      
+      // 🔥 Buscar perdas reais
+      const perdasRes = await api.get(`/losses/${linhaId}`).catch(() => ({ data: [] }));
+      console.log("📉 Perdas registradas:", perdasRes.data);
+      setPerdasAPI(perdasRes.data);
+      
+      // 🔥 Buscar produtos da linha
+      const produtosRes = await api.get(`/line-products/${linhaId}`).catch(() => ({ data: [] }));
+      const produtosData = produtosRes.data.dados || produtosRes.data;
+      console.log("📦 Produtos:", produtosData);
+      setProdutosAPI(produtosData);
+      
       setErro("");
     } catch (error) {
       console.error("Erro ao carregar dados financeiros:", error);
@@ -2270,11 +2284,43 @@ function Financeiro({ linha, linhaId }) {
   }
 
   const { financeiro, detalhamento, meta_dados } = dadosAPI;
+  const custoMinuto = financeiro?.custo_por_minuto || 0;
   
+  // 🔥 CORREÇÃO: Calcular perdas reais a partir dos dados da API
+  // 1. Perdas de Setup (já calculadas por posto)
   const perdasSetup = detalhamento.reduce((acc, p) => acc + (p.custo_setup_dia * 22), 0);
-  const perdasMicro = 0;
-  const perdasRefugo = 14300;
+  
+  // 2. Perdas de Microparadas (das perdas registradas)
+  const totalMicroparadasMin = perdasAPI.reduce((acc, p) => acc + (parseFloat(p.microparadas_minutos) || 0), 0);
+  const perdasMicro = totalMicroparadasMin * custoMinuto * 22;
+  
+  // 3. Perdas de Refugo (das perdas registradas)
+  const perdasRefugo = perdasAPI.reduce((acc, p) => {
+    const refugoPecas = parseInt(p.refugo_pecas) || 0;
+    // Buscar o valor do produto pelo nome
+    const produto = produtosAPI.find(prod => prod.produto_nome === p.produto_nome);
+    const valorUnitario = produto ? parseFloat(produto.valor_unitario) : 50;
+    return acc + (refugoPecas * valorUnitario);
+  }, 0) * 22;
+  
   const perdasTotais = perdasSetup + perdasMicro + perdasRefugo;
+
+  // 🔥 Dados para a tabela de Perdas por Produto
+  const perdasPorProduto = produtosAPI.map(prod => {
+    const perdasProd = perdasAPI.filter(p => p.produto_nome === prod.produto_nome);
+    const totalMicro = perdasProd.reduce((acc, p) => acc + (parseFloat(p.microparadas_minutos) || 0), 0);
+    const totalRefugo = perdasProd.reduce((acc, p) => acc + (parseInt(p.refugo_pecas) || 0), 0);
+    const valorUnitario = parseFloat(prod.valor_unitario) || 0;
+    
+    return {
+      nome: prod.produto_nome,
+      valor: valorUnitario,
+      micro: totalMicro,
+      refugo: totalRefugo,
+      custoMicro: totalMicro * custoMinuto,
+      custoRefugo: totalRefugo * valorUnitario
+    };
+  });
 
   return (
     <div>
@@ -2339,7 +2385,7 @@ function Financeiro({ linha, linhaId }) {
               </div>
               <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
                 <div style={{ 
-                  width: `${(perdasSetup / perdasTotais) * 100}%`, 
+                  width: `${perdasTotais > 0 ? (perdasSetup / perdasTotais) * 100 : 0}%`, 
                   height: "100%", 
                   backgroundColor: "#f59e0b",
                   borderRadius: "4px"
@@ -2352,7 +2398,12 @@ function Financeiro({ linha, linhaId }) {
                 <span style={{ fontWeight: "bold", color: "#f59e0b" }}>{formatarMoeda(perdasMicro)}</span>
               </div>
               <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
-                <div style={{ width: "0%", height: "100%", backgroundColor: "#f59e0b", borderRadius: "4px" }} />
+                <div style={{ 
+                  width: `${perdasTotais > 0 ? (perdasMicro / perdasTotais) * 100 : 0}%`, 
+                  height: "100%", 
+                  backgroundColor: "#f59e0b",
+                  borderRadius: "4px"
+                }} />
               </div>
             </div>
             <div>
@@ -2362,7 +2413,7 @@ function Financeiro({ linha, linhaId }) {
               </div>
               <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
                 <div style={{ 
-                  width: `${(perdasRefugo / perdasTotais) * 100}%`, 
+                  width: `${perdasTotais > 0 ? (perdasRefugo / perdasTotais) * 100 : 0}%`, 
                   height: "100%", 
                   backgroundColor: "#dc2626",
                   borderRadius: "4px"
@@ -2393,13 +2444,13 @@ function Financeiro({ linha, linhaId }) {
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
               <span>Payback:</span>
               <span style={{ fontWeight: "bold", color: "#16a34a" }}>
-                {Math.ceil(50000 / (perdasTotais * 0.3))} meses
+                {perdasTotais * 0.3 > 0 ? Math.ceil(50000 / (perdasTotais * 0.3)) : "N/A"} meses
               </span>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span>ROI anual:</span>
               <span style={{ fontWeight: "bold", color: "#16a34a" }}>
-                {((perdasTotais * 0.3 * 12 / 50000) * 100).toFixed(0)}%
+                {perdasTotais * 0.3 > 0 ? ((perdasTotais * 0.3 * 12 / 50000) * 100).toFixed(0) : 0}%
               </span>
             </div>
           </div>
@@ -2488,23 +2539,16 @@ function Financeiro({ linha, linhaId }) {
             </tr>
           </thead>
           <tbody>
-            {[
-              { nome: "Eixo", valor: 85, micro: 25, refugo: 4 },
-              { nome: "Flange", valor: 45, micro: 18, refugo: 3 }
-            ].map((prod, idx) => {
-              const custoMinuto = financeiro?.custo_por_minuto || 0;
-              const custoMicro = prod.micro * custoMinuto;
-              const custoRefugo = prod.refugo * prod.valor;
-              const totalDia = custoMicro + custoRefugo;
-              
+            {perdasPorProduto.map((prod, idx) => {
+              const totalDia = prod.custoMicro + prod.custoRefugo;
               return (
                 <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
                   <td style={tdResponsivo}>{prod.nome}</td>
                   <td style={tdResponsivo}>{formatarMoeda(prod.valor)}</td>
                   <td style={tdResponsivo}>{prod.micro} min</td>
-                  <td style={tdResponsivo}>{formatarMoeda(custoMicro)}</td>
+                  <td style={tdResponsivo}>{formatarMoeda(prod.custoMicro)}</td>
                   <td style={tdResponsivo}>{prod.refugo} pç</td>
-                  <td style={tdResponsivo}>{formatarMoeda(custoRefugo)}</td>
+                  <td style={tdResponsivo}>{formatarMoeda(prod.custoRefugo)}</td>
                   <td style={tdResponsivo}>
                     <span style={{ fontWeight: "bold", color: "#dc2626" }}>
                       {formatarMoeda(totalDia)}
