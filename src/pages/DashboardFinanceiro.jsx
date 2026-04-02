@@ -81,12 +81,41 @@ export default function DashboardFinanceiro() {
           const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
 
-          // Buscar análise da linha (OEE real)
-          const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
-          const oeePercentual = analiseRes.data.eficiencia_percentual || 27;
-          const oeeReal = oeePercentual / 100;
-          const capacidadeTeorica = analiseRes.data.capacidade_estimada_dia || 520;
-          const producaoReal = Math.round(capacidadeTeorica * oeeReal);
+          // 🔥 FATURAMENTO BASEADO NA PRODUÇÃO REAL (CORRETO)
+          let faturamentoLinha = 0;
+          
+          // Buscar produção real da linha (dados de produção registrados)
+          const producaoRealRes = await api.get(`/oee/history/${linha.id}`).catch(() => ({ data: [] }));
+          const producoesReais = producaoRealRes.data;
+          
+          if (producoesReais.length > 0) {
+            // Calcular produção real média DIÁRIA da linha
+            const totalPecasBoas = producoesReais.reduce((acc, p) => acc + (p.pecas_boas || 0), 0);
+            const producaoMediaDiaReal = totalPecasBoas / producoesReais.length;
+            
+            // Distribuir baseado na meta de cada produto
+            const metaTotal = produtos.reduce((acc, p) => acc + (p.meta_diaria || 0), 0);
+            
+            for (const prod of produtos) {
+              const valorUnitario = parseFloat(prod.valor_unitario) || 0;
+              const metaProduto = prod.meta_diaria || 0;
+              const proporcao = metaTotal > 0 ? metaProduto / metaTotal : 1 / produtos.length;
+              const producaoRealProduto = producaoMediaDiaReal * proporcao;
+              faturamentoLinha += producaoRealProduto * valorUnitario * 22;
+            }
+          } else {
+            // Fallback: estimativa baseada no OEE de 27%
+            const oeeReal = 0.27;
+            const capacidadeTeorica = 520;
+            const producaoRealDia = capacidadeTeorica * oeeReal;
+            
+            for (const prod of produtos) {
+              const valorUnitario = parseFloat(prod.valor_unitario) || 0;
+              faturamentoLinha += (producaoRealDia / produtos.length) * valorUnitario * 22;
+            }
+          }
+          
+          faturamentoTotal += faturamentoLinha;
 
           // Calcular custo da linha
           let custoLinha = 0;
@@ -113,7 +142,7 @@ export default function DashboardFinanceiro() {
           });
           perdasSetup += setupLinha;
 
-          // Cálculo de Microparadas e Refugo por produto
+          // Cálculo de Microparadas e Refugo por produto (dados reais)
           let microLinha = 0;
           let refugoLinha = 0;
           
@@ -132,18 +161,6 @@ export default function DashboardFinanceiro() {
           perdasMicro += microLinha;
           perdasRefugo += refugoLinha;
 
-          // Faturamento baseado na PRODUÇÃO REAL (OEE aplicado)
-          let faturamentoLinha = 0;
-          for (const prod of produtos) {
-            const valorUnitario = parseFloat(prod.valor_unitario) || 0;
-            const metaProduto = prod.meta_diaria || 0;
-            const metaTotal = produtos.reduce((acc, p) => acc + (p.meta_diaria || 0), 0);
-            const participacao = metaTotal > 0 ? metaProduto / metaTotal : 1 / produtos.length;
-            const producaoRealProduto = Math.round(producaoReal * participacao);
-            faturamentoLinha += producaoRealProduto * valorUnitario * 22;
-          }
-          faturamentoTotal += faturamentoLinha;
-
           // Perda total da linha
           const perdaTotalLinha = setupLinha + microLinha + refugoLinha;
           perdasPorLinha.push(perdaTotalLinha);
@@ -156,9 +173,9 @@ export default function DashboardFinanceiro() {
       }
 
       // Valores reais baseados nos dados da linha 8
-      const setupReal = 442.64;
-      const microReal = 193.60;
-      const refugoReal = 8690.00;
+      const setupReal = perdasSetup;
+      const microReal = perdasMicro;
+      const refugoReal = perdasRefugo;
       const perdasTotalReal = setupReal + microReal + refugoReal;
 
       const meses = ['Out/23', 'Nov/23', 'Dez/23', 'Jan/24', 'Fev/24', 'Mar/24'];
@@ -353,7 +370,7 @@ export default function DashboardFinanceiro() {
           titulo="Faturamento" 
           valor={formatarMoeda(dadosFinanceiros.faturamento)}
           cor={coresNexus.success}
-          descricao="Produção real × valor produtos"
+          descricao="Produção real por produto"
         />
         <CardFinanceiro 
           titulo="Oportunidade" 
@@ -582,7 +599,7 @@ export default function DashboardFinanceiro() {
                 <th style={thStyle}>Mensal</th>
                 <th style={thStyle}>%</th>
                 <th style={thStyle}>Anual</th>
-               </tr>
+              </tr>
             </thead>
             <tbody>
               <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
