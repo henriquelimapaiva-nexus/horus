@@ -3536,13 +3536,10 @@ function ColaboradoresLinha({ linha, linhaId, clienteAtual }) {
   );
 }
 
-// ========================================
-// COMPONENTE PRINCIPAL
-// ========================================
 export default function FichaLinha() {
   const { id } = useParams();
   const { clienteAtual, nomeCliente } = useOutletContext();
-  const navigate = useNavigate(); // 👈 Adicionado para navegação
+  const navigate = useNavigate();
   const [linha, setLinha] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState("visao");
   const [carregando, setCarregando] = useState(true);
@@ -3554,11 +3551,8 @@ export default function FichaLinha() {
     setCarregando(true);
     
     Promise.all([
-      // ✅ CORRIGIDO: /analise-linha mantido (já corrigido anteriormente)
       api.get(`/analise-linha/${id}`).catch(() => ({ data: {} })),
-      // ✅ CORRIGIDO: /postos → /work-stations
       api.get(`/work-stations/${id}`).catch(() => ({ data: [] })),
-      // ✅ CORRIGIDO: /linhas → /lines
       api.get(`/lines/${clienteAtual}`).catch(() => ({ data: [] }))
     ])
       .then(([analise, postos, linhas]) => {
@@ -3568,14 +3562,21 @@ export default function FichaLinha() {
         
         setNomeLinha(linhaAtual?.nome || "Linha de Produção");
         
+        // 🔥 CORREÇÃO: Mapear os campos corretos da API analise-linha
+        const postoGargalo = postos.data.find(p => p.tempo_ciclo_segundos === analise.data.gargalo_ciclo);
+        
         setLinha({
           ...analise.data,
           postos: postos.data,
           id: id,
-          gargalo_identificado: analise.data.gargalo_identificado,
-          capacidade_real_estimada: analise.data.capacidade_real_estimada,
-          takt_time_alvo: analise.data.takt_time_alvo,
-          eficiencia_percentual: analise.data.eficiencia_de_balanceamento
+          gargalo_identificado: analise.data.gargalo_ciclo ? 
+            (postoGargalo?.nome || `${analise.data.gargalo_ciclo}s`) : 
+            "Não identificado",
+          capacidade_real_estimada: analise.data.capacidade_estimada_dia || 0,
+          takt_time_alvo: analise.data.takt_time || 0,
+          eficiencia_percentual: analise.data.eficiencia_percentual || 0,
+          maior_tempo_ciclo_real_segundos: analise.data.gargalo_ciclo || 0,
+          meta_planejada: analise.data.meta_diaria || 0
         });
       })
       .catch((err) => {
