@@ -67,6 +67,10 @@ export default function DashboardFinanceiro() {
       const perdasPorLinha = [];
       const nomesLinhas = [];
 
+      // 🔥 CORREÇÃO: Buscar cargos uma única vez fora do loop
+      const cargosRes = await api.get(`/roles/${empresaAtual.id}`).catch(() => ({ data: [] }));
+      const cargos = cargosRes.data;
+
       for (const linha of linhasData) {
         try {
           const postosRes = await api.get(`/work-stations/${linha.id}`);
@@ -78,11 +82,11 @@ export default function DashboardFinanceiro() {
           const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
 
+          // 🔥 CORREÇÃO: Calcular custo da linha baseado nos cargos
           let custoLinha = 0;
           for (const posto of postos) {
             if (posto.cargo_id) {
-              const cargosRes = await api.get(`/roles/${empresaAtual.id}`).catch(() => ({ data: [] }));
-              const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
+              const cargo = cargos.find(c => c.id === posto.cargo_id);
               if (cargo) {
                 const salario = parseFloat(cargo.salario_base) || 0;
                 const encargos = parseFloat(cargo.encargos_percentual) || 70;
@@ -94,22 +98,36 @@ export default function DashboardFinanceiro() {
 
           const custoMinuto = custoLinha / (22 * 8 * 60);
           
+          // 🔥 CORREÇÃO: Setup por linha
+          let setupLinha = 0;
           postos.forEach(posto => {
             if (posto.tempo_setup_minutos) {
-              perdasSetup += parseFloat(posto.tempo_setup_minutos) * custoMinuto * 22;
+              setupLinha += parseFloat(posto.tempo_setup_minutos) * custoMinuto * 22;
             }
           });
+          perdasSetup += setupLinha;
 
+          // 🔥 CORREÇÃO: Microparadas e Refugo por linha (usando dados reais das perdas)
+          let microLinha = 0;
+          let refugoLinha = 0;
+          
           produtos.forEach(prod => {
-            const perda = perdas.find(p => p.linha_produto_id === (prod.vinculo_id || prod.id));
+            // Buscar perda pelo nome do produto
+            const perda = perdas.find(p => p.produto_nome === prod.produto_nome);
             if (perda) {
-              perdasMicro += (perda.microparadas_minutos || 0) * custoMinuto * 22;
+              const microMin = parseFloat(perda.microparadas_minutos) || 0;
+              microLinha += microMin * custoMinuto * 22;
               
+              const refugoPecas = parseInt(perda.refugo_pecas) || 0;
               const valorPeca = parseFloat(prod.valor_unitario) || 50;
-              perdasRefugo += (perda.refugo_pecas || 0) * valorPeca * 22;
+              refugoLinha += refugoPecas * valorPeca * 22;
             }
           });
+          
+          perdasMicro += microLinha;
+          perdasRefugo += refugoLinha;
 
+          // Buscar análise da linha para faturamento
           const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
           if (analiseRes.data.capacidade_estimada_dia) {
             producaoTotal += analiseRes.data.capacidade_estimada_dia * 22;
@@ -120,11 +138,8 @@ export default function DashboardFinanceiro() {
             }
           }
 
-          const perdaTotalLinha = 
-            postos.reduce((acc, p) => acc + (p.tempo_setup_minutos || 0), 0) * custoMinuto * 22 +
-            (perdasMicro / (linhasData.length || 1)) + 
-            (perdasRefugo / (linhasData.length || 1));
-          
+          // Perda total da linha para o gráfico
+          const perdaTotalLinha = setupLinha + microLinha + refugoLinha;
           perdasPorLinha.push(perdaTotalLinha);
           nomesLinhas.push(linha.nome);
 
@@ -135,16 +150,18 @@ export default function DashboardFinanceiro() {
       }
 
       const meses = ['Out/23', 'Nov/23', 'Dez/23', 'Jan/24', 'Fev/24', 'Mar/24'];
+      const basePerdas = perdasSetup + perdasMicro + perdasRefugo;
       const evolucaoPerdas = meses.map((_, i) => {
-        const base = perdasSetup + perdasMicro + perdasRefugo;
-        return base * (0.7 + (i * 0.05));
+        // Simular evolução baseada nos dados reais
+        const fator = 0.7 + (i * 0.06);
+        return basePerdas * Math.min(fator, 1.1);
       });
 
-      // ✅ CORREÇÃO: Oportunidades agora usam os valores corretos de perdas
+      // 🔥 CORREÇÃO: Oportunidades com valores corretos
       const oportunidades = [
         { nome: "Redução de Setup", ganho: perdasSetup * 0.3, tipo: "setup" },
-        { nome: "Eliminação de Refugo", ganho: perdasRefugo * 0.2, tipo: "refugo" },
-        { nome: "Redução de Microparadas", ganho: perdasMicro * 0.25, tipo: "micro" }
+        { nome: "Redução de Microparadas", ganho: perdasMicro * 0.25, tipo: "micro" },
+        { nome: "Eliminação de Refugo", ganho: perdasRefugo * 0.2, tipo: "refugo" }
       ].sort((a, b) => b.ganho - a.ganho);
 
       setDadosFinanceiros({
@@ -344,7 +361,7 @@ export default function DashboardFinanceiro() {
         gap: "clamp(15px, 2vw, 20px)", 
         marginBottom: "clamp(20px, 4vw, 30px)" 
       }}>
-        {/* Perdas por Tipo - CORRIGIDO: agora usa os valores corretos */}
+        {/* Perdas por Tipo */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
@@ -366,7 +383,7 @@ export default function DashboardFinanceiro() {
           />
         </div>
 
-        {/* Perdas por Linha - SEM TRUNCATE */}
+        {/* Perdas por Linha */}
         <div style={{ 
           backgroundColor: "white", 
           padding: "clamp(15px, 2vw, 20px)", 
