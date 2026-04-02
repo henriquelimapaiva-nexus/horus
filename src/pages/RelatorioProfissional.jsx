@@ -115,7 +115,6 @@ export default function RelatorioProfissional() {
 
   // ========================================
   // ✅ FUNÇÃO CORRIGIDA: Calcular perdas financeiras REAIS
-  // Agora usa a mesma lógica do DashboardFinanceiro
   // ========================================
   const calcularPerdasFinanceiras = async (linhaId, custoMinuto, produtos, perdas) => {
     try {
@@ -123,20 +122,18 @@ export default function RelatorioProfissional() {
       let perdasMicro = 0;
       let perdasRefugo = 0;
 
-      // Buscar postos para calcular Setup (mantido como estava)
       const postosRes = await api.get(`/work-stations/${linhaId}`).catch(() => ({ data: [] }));
       const postos = postosRes.data;
 
-      // ✅ Cálculo do Setup - multiplica por 22 dias (custoMinuto já é por minuto)
+      // Cálculo do Setup
       postos.forEach(posto => {
         if (posto.tempo_setup_minutos) {
           perdasSetup += parseFloat(posto.tempo_setup_minutos) * custoMinuto * 22;
         }
       });
 
-      // ✅ Cálculo de Microparadas e Refugo - usando produto_nome (CORRETO)
+      // Cálculo de Microparadas e Refugo - usando produto_nome
       for (const prod of produtos) {
-        // Buscar perda pelo nome do produto (como no DashboardFinanceiro)
         const perda = perdas.find(p => p.produto_nome === prod.produto_nome);
         if (perda) {
           const microMin = parseFloat(perda.microparadas_minutos) || 0;
@@ -151,10 +148,10 @@ export default function RelatorioProfissional() {
       const total = perdasSetup + perdasMicro + perdasRefugo;
 
       return {
-        setup: perdasSetup,
-        micro: perdasMicro,
-        refugo: perdasRefugo,
-        total: total
+        setup: Math.round(perdasSetup * 100) / 100,
+        micro: Math.round(perdasMicro * 100) / 100,
+        refugo: Math.round(perdasRefugo * 100) / 100,
+        total: Math.round(total * 100) / 100
       };
     } catch (error) {
       console.error("Erro ao calcular perdas:", error);
@@ -167,21 +164,16 @@ export default function RelatorioProfissional() {
   // ========================================
   const calcularOEEReal = async (linhaId) => {
     try {
-      // Buscar dados reais de produção da tabela producao_oee
       const producaoRes = await api.get(`/oee/history/${linhaId}`).catch(() => ({ data: [] }));
       const producoes = producaoRes.data;
       
       if (producoes.length > 0) {
-        // Calcular OEE médio real
-        const oeeTotal = producoes.reduce((acc, p) => acc + (parseFloat(p.oee_percentual) || 0), 0);
+        const oeeTotal = producoes.reduce((acc, p) => acc + (parseFloat(p.oee) || parseFloat(p.oee_percentual) || 0), 0);
         const oeeMedio = oeeTotal / producoes.length;
         return Math.round(oeeMedio * 100) / 100;
       }
       
-      // Se não tiver dados, buscar da linha ou retornar 0
-      const linhaRes = await api.get(`/lines/${linhaId}`).catch(() => ({ data: {} }));
-      return parseFloat(linhaRes.data.oee_atual) || 0;
-      
+      return 0;
     } catch (error) {
       console.error("Erro ao calcular OEE real:", error);
       return 0;
@@ -198,24 +190,14 @@ export default function RelatorioProfissional() {
       
       if (postos.length === 0) return "Não identificado";
       
-      // Buscar eficiência de cada posto
       let piorPosto = null;
-      let piorEficiencia = 100;
+      let maiorTempoCiclo = 0;
       
       for (const posto of postos) {
-        try {
-          const eficienciaRes = await api.get(`/station-efficiency/${posto.id}`).catch(() => ({ data: {} }));
-          const eficiencia = parseFloat(eficienciaRes.data.eficiencia_percentual) || 100;
-          
-          if (eficiencia < piorEficiencia) {
-            piorEficiencia = eficiencia;
-            piorPosto = posto;
-          }
-        } catch (e) {
-          // Se não conseguir, usa o posto com maior tempo de ciclo
-          if (!piorPosto || (posto.tempo_ciclo_segundos || 0) > (piorPosto.tempo_ciclo_segundos || 0)) {
-            piorPosto = posto;
-          }
+        const tempoCiclo = parseFloat(posto.tempo_ciclo_segundos) || 0;
+        if (tempoCiclo > maiorTempoCiclo) {
+          maiorTempoCiclo = tempoCiclo;
+          piorPosto = posto;
         }
       }
       
@@ -295,7 +277,7 @@ export default function RelatorioProfissional() {
     };
   };
 
-  // ✅ FUNÇÃO: Gerar análise técnica detalhada (com dados REAIS)
+  // ✅ FUNÇÃO: Gerar análise técnica detalhada
   const gerarAnaliseTecnicaDetalhada = (dados) => {
     let analise = "";
     
@@ -650,7 +632,7 @@ export default function RelatorioProfissional() {
   };
 
   // ========================================
-  // ✅ FUNÇÃO CORRIGIDA: Calcular ROI com dados REAIS
+  // ✅ FUNÇÃO CORRIGIDA: Calcular ROI
   // ========================================
   const calcularROI = (perdasTotais) => {
     const investimentoSugerido = 50000;
@@ -767,7 +749,7 @@ export default function RelatorioProfissional() {
   };
 
   // ========================================
-  // ✅ FUNÇÃO PRINCIPAL CORRIGIDA: Gerar relatório com dados REAIS
+  // ✅ FUNÇÃO PRINCIPAL CORRIGIDA
   // ========================================
   async function gerarRelatorio() {
     if (!filtros.empresaId && !usarSimulacao) {
@@ -798,60 +780,45 @@ export default function RelatorioProfissional() {
           const linhasRes = await api.get(`/lines/${filtros.empresaId}`);
           const linhasData = linhasRes.data;
           
-          // Calcular custo total
           const { custoTotal, custosPorLinha } = await calcularCustosMaoObra(filtros.empresaId, linhasData);
-          
-          // Calcular custo por minuto (22 dias, 8 horas/dia)
           const custoMinuto = custoTotal / (22 * 8 * 60);
           
-          // Buscar perdas de todas as linhas
           let perdasTotais = { setup: 0, micro: 0, refugo: 0, total: 0 };
           const perdasPorLinha = [];
+          const dadosLinhas = [];
           
-          // Buscar dados de cada linha
-          const dadosLinhas = await Promise.all(
-            linhasData.map(async (linha) => {
-              // Buscar produtos da linha
-              const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
-              const produtos = produtosRes.data.dados || produtosRes.data || [];
-              
-              // Buscar perdas da linha
-              const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
-              const perdas = perdasRes.data;
-              
-              // Calcular perdas da linha (usando a função corrigida)
-              const perdasLinha = await calcularPerdasFinanceiras(linha.id, custoMinuto, produtos, perdas);
-              
-              perdasTotais.setup += perdasLinha.setup;
-              perdasTotais.micro += perdasLinha.micro;
-              perdasTotais.refugo += perdasLinha.refugo;
-              perdasTotais.total += perdasLinha.total;
-              
-              perdasPorLinha.push({
-                linha: linha.nome,
-                ...perdasLinha
-              });
-              
-              // Buscar OEE real
-              const oeeReal = await calcularOEEReal(linha.id);
-              
-              // Buscar gargalo real
-              const gargaloReal = await calcularGargaloReal(linha.id);
-              
-              return {
-                ...linha,
-                oeeReal,
-                gargaloReal,
-                produtos,
-                perdas: perdasLinha
-              };
-            })
-          );
+          for (const linha of linhasData) {
+            const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
+            const produtos = produtosRes.data.dados || produtosRes.data || [];
+            
+            const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
+            const perdas = perdasRes.data;
+            
+            const perdasLinha = await calcularPerdasFinanceiras(linha.id, custoMinuto, produtos, perdas);
+            
+            perdasTotais.setup += perdasLinha.setup;
+            perdasTotais.micro += perdasLinha.micro;
+            perdasTotais.refugo += perdasLinha.refugo;
+            perdasTotais.total += perdasLinha.total;
+            
+            perdasPorLinha.push({
+              linha: linha.nome,
+              ...perdasLinha
+            });
+            
+            const oeeReal = await calcularOEEReal(linha.id);
+            const gargaloReal = await calcularGargaloReal(linha.id);
+            
+            dadosLinhas.push({
+              ...linha,
+              oeeReal,
+              gargaloReal,
+              produtos,
+              perdas: perdasLinha
+            });
+          }
           
-          // Calcular OEE médio
           const oeeMedio = dadosLinhas.reduce((acc, l) => acc + l.oeeReal, 0) / dadosLinhas.length;
-          
-          // Calcular ROI
           const roi = calcularROI(perdasTotais.total);
           
           dadosCompletos = {
@@ -871,7 +838,6 @@ export default function RelatorioProfissional() {
           };
 
         } else {
-          // Relatório específico de uma linha
           const linha = linhas.find(l => l.id === parseInt(filtros.linhaId));
           
           if (!linha) {
@@ -880,35 +846,22 @@ export default function RelatorioProfissional() {
             return;
           }
           
-          // Buscar produtos da linha
           const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
           const produtos = produtosRes.data.dados || produtosRes.data || [];
           
-          // Buscar perdas da linha
           const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
           
-          // Buscar postos
           const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
           const postos = postosRes.data;
           
-          // Calcular custo da linha
           const { custoTotal } = await calcularCustosMaoObra(filtros.empresaId, [linha]);
           const custoMinuto = custoTotal / (22 * 8 * 60);
           
-          // Calcular perdas financeiras (função corrigida)
           const perdasFinanceiras = await calcularPerdasFinanceiras(linha.id, custoMinuto, produtos, perdas);
-          
-          // Calcular OEE real
           const oeeReal = await calcularOEEReal(linha.id);
-          
-          // Calcular gargalo real
           const gargaloReal = await calcularGargaloReal(linha.id);
-          
-          // Calcular variabilidade
           const analiseVariabilidade = await calcularVariabilidadePostos(postos, linha.id);
-          
-          // Calcular ROI
           const roi = calcularROI(perdasFinanceiras.total);
           
           dadosCompletos = {
@@ -953,7 +906,7 @@ export default function RelatorioProfissional() {
     if (tipo === "geral") {
       return {
         tipo: "geral",
-        empresa: "Empresa Teste (Dados Reais)",
+        empresa: "Metalúrgica Nova Era (Dados Reais)",
         linhas: [
           { nome: "Linha de Montagem", oeeReal: 27, gargaloReal: "Acabamento", produtos: [], perdas: { setup: 442.64, micro: 193.60, refugo: 8690, total: 9326.24 } },
           { nome: "Linha de Usinagem", oeeReal: 27, gargaloReal: "Montagem Final", produtos: [], perdas: { setup: 442.64, micro: 193.60, refugo: 8690, total: 9326.24 } }
