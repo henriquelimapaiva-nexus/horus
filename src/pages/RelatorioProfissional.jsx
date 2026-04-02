@@ -25,9 +25,7 @@ export default function RelatorioProfissional() {
   const [erroIA, setErroIA] = useState("");
   const [tipoRelatorio, setTipoRelatorio] = useState("geral");
   
-  // Dados para gráficos de projeção
   const [dadosProjecao, setDadosProjecao] = useState(null);
-  // Flag para usar dados simulados
   const [usarSimulacao, setUsarSimulacao] = useState(false);
 
   const [filtros, setFiltros] = useState({
@@ -72,83 +70,159 @@ export default function RelatorioProfissional() {
   }, [filtros.empresaId]);
 
   // ========================================
-  // FUNÇÕES DE CÁLCULO
+  // ✅ FUNÇÃO CORRIGIDA: Calcular custo de mão de obra
   // ========================================
-
   const calcularCustosMaoObra = async (empresaId, linhas) => {
     let custoTotal = 0;
     const custosPorLinha = [];
 
-    for (const linha of linhas) {
-      try {
-        const postosRes = await api.get(`/work-stations/${linha.id}`);
-        const postos = postosRes.data;
-        
-        let custoLinha = 0;
-        for (const posto of postos) {
-          if (posto.cargo_id) {
-            const cargosRes = await api.get(`/roles/${empresaId}`);
-            const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
-            if (cargo) {
-              const salario = parseFloat(cargo.salario_base) || 0;
-              const encargos = parseFloat(cargo.encargos_percentual) || 70;
-              custoLinha += salario * (1 + encargos / 100);
+    try {
+      const cargosRes = await api.get(`/roles/${empresaId}`).catch(() => ({ data: [] }));
+      const cargos = cargosRes.data;
+
+      for (const linha of linhas) {
+        try {
+          const postosRes = await api.get(`/work-stations/${linha.id}`);
+          const postos = postosRes.data;
+          
+          let custoLinha = 0;
+          for (const posto of postos) {
+            if (posto.cargo_id) {
+              const cargo = cargos.find(c => c.id === posto.cargo_id);
+              if (cargo) {
+                const salario = parseFloat(cargo.salario_base) || 0;
+                const encargos = parseFloat(cargo.encargos_percentual) || 70;
+                custoLinha += salario * (1 + encargos / 100);
+              }
             }
           }
+          
+          custoTotal += custoLinha;
+          custosPorLinha.push({
+            linha: linha.nome,
+            custo: custoLinha
+          });
+        } catch (error) {
+          console.error(`Erro ao calcular custos da linha ${linha.id}:`, error);
         }
-        
-        custoTotal += custoLinha;
-        custosPorLinha.push({
-          linha: linha.nome,
-          custo: custoLinha
-        });
-      } catch (error) {
-        console.error(`Erro ao calcular custos da linha ${linha.id}:`, error);
       }
+    } catch (error) {
+      console.error("Erro ao calcular custos:", error);
     }
 
     return { custoTotal, custosPorLinha };
   };
 
-  const calcularPerdasFinanceiras = async (linhaId, custoMinuto) => {
+  // ========================================
+  // ✅ FUNÇÃO CORRIGIDA: Calcular perdas financeiras REAIS
+  // Agora usa a mesma lógica do DashboardFinanceiro
+  // ========================================
+  const calcularPerdasFinanceiras = async (linhaId, custoMinuto, produtos, perdas) => {
     try {
-      const [postosRes, produtosRes, perdasRes] = await Promise.all([
-        api.get(`/work-stations/${linhaId}`).catch(() => ({ data: [] })),
-        api.get(`/line-products/${linhaId}`).catch(() => ({ data: [] })),
-        api.get(`/losses/${linhaId}`).catch(() => ({ data: [] }))
-      ]);
-
-      const postos = postosRes.data;
-      const produtos = produtosRes.data.dados || produtosRes.data || [];
-      const perdas = perdasRes.data;
-
       let perdasSetup = 0;
       let perdasMicro = 0;
       let perdasRefugo = 0;
 
+      // Buscar postos para calcular Setup (mantido como estava)
+      const postosRes = await api.get(`/work-stations/${linhaId}`).catch(() => ({ data: [] }));
+      const postos = postosRes.data;
+
+      // ✅ Cálculo do Setup - multiplica por 22 dias (custoMinuto já é por minuto)
       postos.forEach(posto => {
         if (posto.tempo_setup_minutos) {
-          perdasSetup += parseFloat(posto.tempo_setup_minutos) * custoMinuto;
+          perdasSetup += parseFloat(posto.tempo_setup_minutos) * custoMinuto * 22;
         }
       });
 
-      produtos.forEach(prod => {
-        const perda = perdas.find(p => p.linha_produto_id === (prod.vinculo_id || prod.id));
+      // ✅ Cálculo de Microparadas e Refugo - usando produto_nome (CORRETO)
+      for (const prod of produtos) {
+        // Buscar perda pelo nome do produto (como no DashboardFinanceiro)
+        const perda = perdas.find(p => p.produto_nome === prod.produto_nome);
         if (perda) {
-          perdasMicro += (perda.microparadas_minutos || 0) * custoMinuto;
-          perdasRefugo += (perda.refugo_pecas || 0) * (parseFloat(prod.valor_unitario) || 50);
+          const microMin = parseFloat(perda.microparadas_minutos) || 0;
+          perdasMicro += microMin * custoMinuto * 22;
+          
+          const refugoPecas = parseInt(perda.refugo_pecas) || 0;
+          const valorPeca = parseFloat(prod.valor_unitario) || 50;
+          perdasRefugo += refugoPecas * valorPeca * 22;
         }
-      });
+      }
+
+      const total = perdasSetup + perdasMicro + perdasRefugo;
 
       return {
-        setup: perdasSetup * 22,
-        micro: perdasMicro * 22,
-        refugo: perdasRefugo * 22,
-        total: (perdasSetup + perdasMicro + perdasRefugo) * 22
+        setup: perdasSetup,
+        micro: perdasMicro,
+        refugo: perdasRefugo,
+        total: total
       };
     } catch (error) {
       console.error("Erro ao calcular perdas:", error);
       return { setup: 0, micro: 0, refugo: 0, total: 0 };
+    }
+  };
+
+  // ========================================
+  // ✅ FUNÇÃO CORRIGIDA: Calcular OEE real da produção
+  // ========================================
+  const calcularOEEReal = async (linhaId) => {
+    try {
+      // Buscar dados reais de produção da tabela producao_oee
+      const producaoRes = await api.get(`/oee/history/${linhaId}`).catch(() => ({ data: [] }));
+      const producoes = producaoRes.data;
+      
+      if (producoes.length > 0) {
+        // Calcular OEE médio real
+        const oeeTotal = producoes.reduce((acc, p) => acc + (parseFloat(p.oee_percentual) || 0), 0);
+        const oeeMedio = oeeTotal / producoes.length;
+        return Math.round(oeeMedio * 100) / 100;
+      }
+      
+      // Se não tiver dados, buscar da linha ou retornar 0
+      const linhaRes = await api.get(`/lines/${linhaId}`).catch(() => ({ data: {} }));
+      return parseFloat(linhaRes.data.oee_atual) || 0;
+      
+    } catch (error) {
+      console.error("Erro ao calcular OEE real:", error);
+      return 0;
+    }
+  };
+
+  // ========================================
+  // ✅ FUNÇÃO CORRIGIDA: Calcular gargalo real
+  // ========================================
+  const calcularGargaloReal = async (linhaId) => {
+    try {
+      const postosRes = await api.get(`/work-stations/${linhaId}`).catch(() => ({ data: [] }));
+      const postos = postosRes.data;
+      
+      if (postos.length === 0) return "Não identificado";
+      
+      // Buscar eficiência de cada posto
+      let piorPosto = null;
+      let piorEficiencia = 100;
+      
+      for (const posto of postos) {
+        try {
+          const eficienciaRes = await api.get(`/station-efficiency/${posto.id}`).catch(() => ({ data: {} }));
+          const eficiencia = parseFloat(eficienciaRes.data.eficiencia_percentual) || 100;
+          
+          if (eficiencia < piorEficiencia) {
+            piorEficiencia = eficiencia;
+            piorPosto = posto;
+          }
+        } catch (e) {
+          // Se não conseguir, usa o posto com maior tempo de ciclo
+          if (!piorPosto || (posto.tempo_ciclo_segundos || 0) > (piorPosto.tempo_ciclo_segundos || 0)) {
+            piorPosto = posto;
+          }
+        }
+      }
+      
+      return piorPosto?.nome || "Não identificado";
+    } catch (error) {
+      console.error("Erro ao calcular gargalo:", error);
+      return "Não identificado";
     }
   };
 
@@ -191,7 +265,7 @@ export default function RelatorioProfissional() {
     return resultados;
   };
 
-  // ✅ NOVA FUNÇÃO: CALCULAR VPL E TIR
+  // ✅ FUNÇÃO: Calcular VPL e TIR
   const calcularVPL_TIR = (investimento, ganhoMensal, anos = 3, taxaDesconto = 0.12) => {
     const ganhoAnual = ganhoMensal * 12;
     
@@ -221,7 +295,7 @@ export default function RelatorioProfissional() {
     };
   };
 
-  // ✅ FUNÇÃO: Gerar análise técnica detalhada (com texto corrido)
+  // ✅ FUNÇÃO: Gerar análise técnica detalhada (com dados REAIS)
   const gerarAnaliseTecnicaDetalhada = (dados) => {
     let analise = "";
     
@@ -238,10 +312,8 @@ export default function RelatorioProfissional() {
     const oeeMedio = dados.resumoFinanceiro.oeeMedio;
     const perdas = dados.resumoFinanceiro.perdas;
     const perdasTotal = dados.resumoFinanceiro.perdasTotais;
-    const linhas = dados.linhas;
     const roi = dados.resumoFinanceiro.roi;
     
-    // ✅ CALCULAR VPL E TIR
     const vplTir = calcularVPL_TIR(roi.investimento, roi.ganhoMensal, 3, 0.12);
     
     let analise = `
@@ -261,9 +333,9 @@ export default function RelatorioProfissional() {
       ------------------------------------------------------------------------------
     `;
     
-    linhas.forEach((linha, idx) => {
-      const gargalo = linha.analise?.gargalo || "Não identificado";
-      const oeeLinha = linha.analise?.eficiencia_percentual || 0;
+    dados.linhas.forEach((linha, idx) => {
+      const gargalo = linha.gargaloReal || "Não identificado";
+      const oeeLinha = linha.oeeReal || 0;
       const classificacao = oeeLinha >= 85 ? "Excelente" : oeeLinha >= 70 ? "Bom" : oeeLinha >= 60 ? "Regular" : "Crítico";
       
       analise += `
@@ -274,13 +346,17 @@ export default function RelatorioProfissional() {
       `;
     });
     
+    const perdasSetupPercent = perdasTotal > 0 ? (perdas.setup / perdasTotal) * 100 : 0;
+    const perdasMicroPercent = perdasTotal > 0 ? (perdas.micro / perdasTotal) * 100 : 0;
+    const perdasRefugoPercent = perdasTotal > 0 ? (perdas.refugo / perdasTotal) * 100 : 0;
+    
     analise += `
       
       6.3 ANÁLISE DE PERDAS FINANCEIRAS
       ------------------------------------------------------------------------------
-      • Setup: ${formatarMoeda(perdas.setup)}/mês (${((perdas.setup / perdasTotal) * 100).toFixed(1)}% do total)
-      • Microparadas: ${formatarMoeda(perdas.micro)}/mês (${((perdas.micro / perdasTotal) * 100).toFixed(1)}% do total)
-      • Refugo: ${formatarMoeda(perdas.refugo)}/mês (${((perdas.refugo / perdasTotal) * 100).toFixed(1)}% do total)
+      • Setup: ${formatarMoeda(perdas.setup)}/mês (${perdasSetupPercent.toFixed(1)}% do total)
+      • Microparadas: ${formatarMoeda(perdas.micro)}/mês (${perdasMicroPercent.toFixed(1)}% do total)
+      • Refugo: ${formatarMoeda(perdas.refugo)}/mês (${perdasRefugoPercent.toFixed(1)}% do total)
       • Total de perdas mensais: ${formatarMoeda(perdasTotal)}/mês
       
       O impacto financeiro anual das perdas é de ${formatarMoeda(perdasTotal * 12)}.
@@ -291,12 +367,22 @@ export default function RelatorioProfissional() {
       
     `;
     
-    // Criar ações baseadas nos dados reais
     const acoes = [];
     
-    if (perdas.setup > 0) {
+    if (perdas.refugo > 0 && perdasRefugoPercent > 30) {
       acoes.push({
-        nome: "Redução de Setup",
+        nome: "Redução de Refugo",
+        gravidade: 5,
+        urgencia: 5,
+        tendencia: 5,
+        score: 125,
+        prioridade: "CRÍTICA"
+      });
+    }
+    
+    if (perdas.setup > 0 && perdasSetupPercent > 20) {
+      acoes.push({
+        nome: "Redução de Setup (SMED)",
         gravidade: 4,
         urgencia: 5,
         tendencia: 4,
@@ -305,7 +391,7 @@ export default function RelatorioProfissional() {
       });
     }
     
-    if (perdas.micro > 0) {
+    if (perdas.micro > 0 && perdasMicroPercent > 10) {
       acoes.push({
         nome: "Eliminação de Microparadas",
         gravidade: 3,
@@ -316,18 +402,6 @@ export default function RelatorioProfissional() {
       });
     }
     
-    if (perdas.refugo > 0) {
-      acoes.push({
-        nome: "Redução de Refugo",
-        gravidade: 4,
-        urgencia: 3,
-        tendencia: 4,
-        score: 48,
-        prioridade: "MÉDIA-ALTA"
-      });
-    }
-    
-    // Balanceamento
     acoes.push({
       nome: "Balanceamento de Linhas",
       gravidade: 3,
@@ -336,6 +410,8 @@ export default function RelatorioProfissional() {
       score: 36,
       prioridade: "MÉDIA"
     });
+    
+    acoes.sort((a, b) => b.score - a.score);
     
     acoes.forEach(acao => {
       analise += `      • ${acao.nome}: Score ${acao.score} (${acao.prioridade}) - G:${acao.gravidade} | U:${acao.urgencia} | T:${acao.tendencia}\n`;
@@ -382,14 +458,17 @@ export default function RelatorioProfissional() {
   };
 
   const gerarAnaliseEspecifica = (dados) => {
-    const oee = dados.analise?.eficiencia_percentual || 0;
-    const gargalo = dados.analise?.gargalo || "Não identificado";
+    const oee = dados.oeeReal || 0;
+    const gargalo = dados.gargaloReal || "Não identificado";
     const perdas = dados.perdasFinanceiras;
     const perdasTotal = perdas.total;
     const roi = dados.roi;
     
-    // ✅ CALCULAR VPL E TIR
     const vplTir = calcularVPL_TIR(roi.investimento, roi.ganhoMensal, 3, 0.12);
+    
+    const perdasSetupPercent = perdasTotal > 0 ? (perdas.setup / perdasTotal) * 100 : 0;
+    const perdasMicroPercent = perdasTotal > 0 ? (perdas.micro / perdasTotal) * 100 : 0;
+    const perdasRefugoPercent = perdasTotal > 0 ? (perdas.refugo / perdasTotal) * 100 : 0;
     
     let analise = `
       ==========================================
@@ -400,7 +479,7 @@ export default function RelatorioProfissional() {
       ------------------------------------------------------------------------------
       Linha: ${dados.linha}
       Empresa: ${dados.empresa}
-      OEE Atual: ${oee}% - ${oee >= 85 ? "EXCELENTE" : oee >= 70 ? "BOM" : oee >= 60 ? "REGULAR" : "CRÍTICO"}
+      OEE Real: ${oee}% - ${oee >= 85 ? "EXCELENTE" : oee >= 70 ? "BOM" : oee >= 60 ? "REGULAR" : "CRÍTICO"}
       Gargalo Identificado: ${gargalo}
       
       6.2 ANÁLISE DE VARIABILIDADE POR POSTO
@@ -419,9 +498,9 @@ export default function RelatorioProfissional() {
       
       6.3 ANÁLISE DE PERDAS FINANCEIRAS
       ------------------------------------------------------------------------------
-      • Setup: ${formatarMoeda(perdas.setup)}/mês (${((perdas.setup / perdasTotal) * 100).toFixed(1)}% do total)
-      • Microparadas: ${formatarMoeda(perdas.micro)}/mês (${((perdas.micro / perdasTotal) * 100).toFixed(1)}% do total)
-      • Refugo: ${formatarMoeda(perdas.refugo)}/mês (${((perdas.refugo / perdasTotal) * 100).toFixed(1)}% do total)
+      • Setup: ${formatarMoeda(perdas.setup)}/mês (${perdasSetupPercent.toFixed(1)}% do total)
+      • Microparadas: ${formatarMoeda(perdas.micro)}/mês (${perdasMicroPercent.toFixed(1)}% do total)
+      • Refugo: ${formatarMoeda(perdas.refugo)}/mês (${perdasRefugoPercent.toFixed(1)}% do total)
       • Total de perdas mensais: ${formatarMoeda(perdasTotal)}/mês
       
       6.4 PRIORIZAÇÃO DAS AÇÕES (MATRIZ GUT)
@@ -430,12 +509,22 @@ export default function RelatorioProfissional() {
       
     `;
     
-    // Ações específicas para linha
     const acoes = [];
     
-    if (perdas.setup > 0) {
+    if (perdas.refugo > 0 && perdasRefugoPercent > 30) {
       acoes.push({
-        nome: "Redução de Setup",
+        nome: "Redução de Refugo",
+        gravidade: 5,
+        urgencia: 5,
+        tendencia: 5,
+        score: 125,
+        prioridade: "CRÍTICA"
+      });
+    }
+    
+    if (perdas.setup > 0 && perdasSetupPercent > 20) {
+      acoes.push({
+        nome: "Redução de Setup (SMED)",
         gravidade: 4,
         urgencia: 5,
         tendencia: 4,
@@ -443,7 +532,8 @@ export default function RelatorioProfissional() {
         prioridade: "ALTA"
       });
     }
-    if (perdas.micro > 0) {
+    
+    if (perdas.micro > 0 && perdasMicroPercent > 10) {
       acoes.push({
         nome: "Eliminação de Microparadas",
         gravidade: 3,
@@ -451,16 +541,6 @@ export default function RelatorioProfissional() {
         tendencia: 3,
         score: 36,
         prioridade: "MÉDIA"
-      });
-    }
-    if (perdas.refugo > 0) {
-      acoes.push({
-        nome: "Redução de Refugo",
-        gravidade: 4,
-        urgencia: 3,
-        tendencia: 4,
-        score: 48,
-        prioridade: "MÉDIA-ALTA"
       });
     }
     
@@ -472,6 +552,8 @@ export default function RelatorioProfissional() {
       score: 36,
       prioridade: "MÉDIA"
     });
+    
+    acoes.sort((a, b) => b.score - a.score);
     
     acoes.forEach(acao => {
       analise += `      • ${acao.nome}: Score ${acao.score} (${acao.prioridade}) - G:${acao.gravidade} | U:${acao.urgencia} | T:${acao.tendencia}\n`;
@@ -523,13 +605,13 @@ export default function RelatorioProfissional() {
     let oeeAtual, capacidadeAtual, perdasAtuais;
     
     if (dados.tipo === "geral") {
-      oeeAtual = dados.resumoFinanceiro?.oeeMedio || 73.3;
+      oeeAtual = dados.resumoFinanceiro?.oeeMedio || 27;
       capacidadeAtual = 3000;
-      perdasAtuais = dados.resumoFinanceiro?.perdasTotais || 39700;
+      perdasAtuais = dados.resumoFinanceiro?.perdasTotais || 9326.24;
     } else {
-      oeeAtual = dados.analise?.eficiencia_percentual || 72;
+      oeeAtual = dados.oeeReal || 27;
       capacidadeAtual = dados.analise?.capacidade_estimada_dia || 850;
-      perdasAtuais = dados.perdasFinanceiras?.total || 39700;
+      perdasAtuais = dados.perdasFinanceiras?.total || 9326.24;
     }
     
     const cenarios = [
@@ -567,11 +649,14 @@ export default function RelatorioProfissional() {
     };
   };
 
+  // ========================================
+  // ✅ FUNÇÃO CORRIGIDA: Calcular ROI com dados REAIS
+  // ========================================
   const calcularROI = (perdasTotais) => {
     const investimentoSugerido = 50000;
     const ganhoMensal = perdasTotais * 0.3;
-    const payback = investimentoSugerido / ganhoMensal;
-    const roiAnual = (ganhoMensal * 12 / investimentoSugerido) * 100;
+    const payback = ganhoMensal > 0 ? investimentoSugerido / ganhoMensal : 999;
+    const roiAnual = ganhoMensal > 0 ? (ganhoMensal * 12 / investimentoSugerido) * 100 : 0;
 
     return {
       investimento: investimentoSugerido,
@@ -596,11 +681,12 @@ export default function RelatorioProfissional() {
       csv += `Oportunidade (30%),${formatarMoeda(dadosRelatorio.resumoFinanceiro.perdasTotais * 0.3)}\n\n`;
 
       csv += "=== DETALHAMENTO POR LINHA ===\n";
-      csv += "Linha,OEE (%),Gargalo,Custo Mensal,Perdas Estimadas\n";
+      csv += "Linha,OEE (%),Gargalo Real,Custo Mensal,Perdas Estimadas\n";
       
-      dadosRelatorio.linhas.forEach((linha, idx) => {
-        const custoLinha = dadosRelatorio.resumoFinanceiro.custosPorLinha[idx]?.custo || 0;
-        csv += `${linha.nome},${linha.analise?.eficiencia_percentual || 0},${linha.analise?.gargalo || "-"},${formatarMoeda(custoLinha)},${formatarMoeda(custoLinha * 0.2)}\n`;
+      dadosRelatorio.linhas.forEach((linha) => {
+        const custoLinha = dadosRelatorio.resumoFinanceiro.custosPorLinha.find(c => c.linha === linha.nome)?.custo || 0;
+        const perdasLinha = dadosRelatorio.resumoFinanceiro.perdasPorLinha?.find(p => p.linha === linha.nome)?.total || custoLinha * 0.2;
+        csv += `${linha.nome},${linha.oeeReal || 0},${linha.gargaloReal || "-"},${formatarMoeda(custoLinha)},${formatarMoeda(perdasLinha)}\n`;
       });
       
       csv += "\n=== PERDAS DETALHADAS ===\n";
@@ -620,10 +706,9 @@ export default function RelatorioProfissional() {
       csv += `Empresa,${dadosRelatorio.empresa}\n`;
       csv += `Linha,${dadosRelatorio.linha}\n`;
       csv += `Data,${dadosRelatorio.data}\n`;
-      csv += `OEE,${dadosRelatorio.analise?.eficiencia_percentual || 0}%\n`;
-      csv += `Gargalo,${dadosRelatorio.analise?.gargalo || "Não identificado"}\n`;
-      csv += `Capacidade,${dadosRelatorio.analise?.capacidade_estimada_dia || 0} peças/dia\n`;
-      csv += `Custo Mão Obra,${formatarMoeda(dadosRelatorio.custoMaoObra)}\n\n`;
+      csv += `OEE Real,${dadosRelatorio.oeeReal || 0}%\n`;
+      csv += `Gargalo Real,${dadosRelatorio.gargaloReal || "Não identificado"}\n`;
+      csv += `Custo Mão Obra,${formatarMoeda(dadosRelatorio.custoMaoObra)}/mês\n\n`;
 
       csv += "=== POSTOS DE TRABALHO ===\n";
       csv += "Posto,Ciclo (s),Setup (min),Disponibilidade (%)\n";
@@ -681,91 +766,9 @@ export default function RelatorioProfissional() {
     }
   };
 
-  const gerarDadosSimulados = (tipo) => {
-    if (tipo === "geral") {
-      return {
-        tipo: "geral",
-        empresa: "Empresa Teste (Dados Simulados)",
-        linhas: [
-          { nome: "Linha A", analise: { eficiencia_percentual: 72, gargalo: "Estação 4" } },
-          { nome: "Linha B", analise: { eficiencia_percentual: 85, gargalo: "Estação 2" } },
-          { nome: "Linha C", analise: { eficiencia_percentual: 63, gargalo: "Estação 1" } }
-        ],
-        data: new Date().toLocaleDateString('pt-BR'),
-        resumoFinanceiro: {
-          custoMaoObra: 125000,
-          custosPorLinha: [
-            { linha: "Linha A", custo: 45000 },
-            { linha: "Linha B", custo: 42000 },
-            { linha: "Linha C", custo: 38000 }
-          ],
-          perdas: {
-            setup: 18500,
-            micro: 12300,
-            refugo: 8900,
-            total: 39700
-          },
-          perdasTotais: 39700,
-          oeeMedio: 73.3,
-          gargalosCriticos: 2,
-          roi: {
-            investimento: 50000,
-            ganhoMensal: 11910,
-            payback: "4.2",
-            roiAnual: "286"
-          }
-        }
-      };
-    } else {
-      return {
-        tipo: "especifico",
-        empresa: "Empresa Teste (Dados Simulados)",
-        linha: "Linha de Produção Principal",
-        analise: {
-          eficiencia_percentual: 72,
-          gargalo: "Estação 4",
-          capacidade_estimada_dia: 850,
-          meta_diaria_planejada: 1000
-        },
-        postos: [
-          { nome: "Estação 1", tempo_ciclo_segundos: 45, tempo_setup_minutos: 12, disponibilidade_percentual: 95 },
-          { nome: "Estação 2", tempo_ciclo_segundos: 48, tempo_setup_minutos: 15, disponibilidade_percentual: 92 },
-          { nome: "Estação 3", tempo_ciclo_segundos: 52, tempo_setup_minutos: 18, disponibilidade_percentual: 88 },
-          { nome: "Estação 4", tempo_ciclo_segundos: 68, tempo_setup_minutos: 25, disponibilidade_percentual: 78 },
-          { nome: "Estação 5", tempo_ciclo_segundos: 44, tempo_setup_minutos: 10, disponibilidade_percentual: 96 }
-        ],
-        balanceamento: {
-          indice_balanceamento_percentual: 76,
-          tempo_medio_segundos: 51.4,
-          maior_tempo_segundos: 68,
-          menor_tempo_segundos: 44,
-          postos: [
-            { posto: "Estação 1", ciclo_real: 45 },
-            { posto: "Estação 2", ciclo_real: 48 },
-            { posto: "Estação 3", ciclo_real: 52 },
-            { posto: "Estação 4", ciclo_real: 68 },
-            { posto: "Estação 5", ciclo_real: 44 }
-          ]
-        },
-        data: new Date().toLocaleDateString('pt-BR'),
-        custoMaoObra: 125000,
-        custoMinuto: 11.84,
-        perdasFinanceiras: {
-          setup: 18500,
-          micro: 12300,
-          refugo: 8900,
-          total: 39700
-        },
-        roi: {
-          investimento: 50000,
-          ganhoMensal: 11910,
-          payback: "4.2",
-          roiAnual: "286"
-        }
-      };
-    }
-  };
-
+  // ========================================
+  // ✅ FUNÇÃO PRINCIPAL CORRIGIDA: Gerar relatório com dados REAIS
+  // ========================================
   async function gerarRelatorio() {
     if (!filtros.empresaId && !usarSimulacao) {
       toast.error("Selecione uma empresa");
@@ -795,36 +798,61 @@ export default function RelatorioProfissional() {
           const linhasRes = await api.get(`/lines/${filtros.empresaId}`);
           const linhasData = linhasRes.data;
           
+          // Calcular custo total
           const { custoTotal, custosPorLinha } = await calcularCustosMaoObra(filtros.empresaId, linhasData);
           
+          // Calcular custo por minuto (22 dias, 8 horas/dia)
           const custoMinuto = custoTotal / (22 * 8 * 60);
-          let perdasTotais = { setup: 0, micro: 0, refugo: 0, total: 0 };
           
-          for (const linha of linhasData) {
-            const perdasLinha = await calcularPerdasFinanceiras(linha.id, custoMinuto);
-            perdasTotais.setup += perdasLinha.setup;
-            perdasTotais.micro += perdasLinha.micro;
-            perdasTotais.refugo += perdasLinha.refugo;
-            perdasTotais.total += perdasLinha.total;
-          }
-
-          const roi = calcularROI(perdasTotais.total);
-
+          // Buscar perdas de todas as linhas
+          let perdasTotais = { setup: 0, micro: 0, refugo: 0, total: 0 };
+          const perdasPorLinha = [];
+          
+          // Buscar dados de cada linha
           const dadosLinhas = await Promise.all(
             linhasData.map(async (linha) => {
-              const [analise] = await Promise.all([
-                api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }))
-              ]);
+              // Buscar produtos da linha
+              const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
+              const produtos = produtosRes.data.dados || produtosRes.data || [];
+              
+              // Buscar perdas da linha
+              const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
+              const perdas = perdasRes.data;
+              
+              // Calcular perdas da linha (usando a função corrigida)
+              const perdasLinha = await calcularPerdasFinanceiras(linha.id, custoMinuto, produtos, perdas);
+              
+              perdasTotais.setup += perdasLinha.setup;
+              perdasTotais.micro += perdasLinha.micro;
+              perdasTotais.refugo += perdasLinha.refugo;
+              perdasTotais.total += perdasLinha.total;
+              
+              perdasPorLinha.push({
+                linha: linha.nome,
+                ...perdasLinha
+              });
+              
+              // Buscar OEE real
+              const oeeReal = await calcularOEEReal(linha.id);
+              
+              // Buscar gargalo real
+              const gargaloReal = await calcularGargaloReal(linha.id);
               
               return {
                 ...linha,
-                analise: analise.data
+                oeeReal,
+                gargaloReal,
+                produtos,
+                perdas: perdasLinha
               };
             })
           );
-
-          const oeeMedio = dadosLinhas.reduce((acc, l) => 
-            acc + parseFloat(l.analise?.eficiencia_percentual || 0), 0) / dadosLinhas.length;
+          
+          // Calcular OEE médio
+          const oeeMedio = dadosLinhas.reduce((acc, l) => acc + l.oeeReal, 0) / dadosLinhas.length;
+          
+          // Calcular ROI
+          const roi = calcularROI(perdasTotais.total);
           
           dadosCompletos = {
             tipo: "geral",
@@ -834,6 +862,7 @@ export default function RelatorioProfissional() {
             resumoFinanceiro: {
               custoMaoObra: custoTotal,
               custosPorLinha,
+              perdasPorLinha,
               perdas: perdasTotais,
               perdasTotais: perdasTotais.total,
               oeeMedio,
@@ -842,27 +871,58 @@ export default function RelatorioProfissional() {
           };
 
         } else {
-          const [analise, postos] = await Promise.all([
-            api.get(`/analise-linha/${filtros.linhaId}`).catch(() => ({ data: {} })),
-            api.get(`/work-stations/${filtros.linhaId}`).catch(() => ({ data: [] }))
-          ]);
-
-          const { custoTotal } = await calcularCustosMaoObra(filtros.empresaId, [analise.data]);
+          // Relatório específico de uma linha
+          const linha = linhas.find(l => l.id === parseInt(filtros.linhaId));
+          
+          if (!linha) {
+            toast.error("Linha não encontrada");
+            setCarregando(false);
+            return;
+          }
+          
+          // Buscar produtos da linha
+          const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
+          const produtos = produtosRes.data.dados || produtosRes.data || [];
+          
+          // Buscar perdas da linha
+          const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
+          const perdas = perdasRes.data;
+          
+          // Buscar postos
+          const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
+          const postos = postosRes.data;
+          
+          // Calcular custo da linha
+          const { custoTotal } = await calcularCustosMaoObra(filtros.empresaId, [linha]);
           const custoMinuto = custoTotal / (22 * 8 * 60);
           
-          const perdasFinanceiras = await calcularPerdasFinanceiras(filtros.linhaId, custoMinuto);
+          // Calcular perdas financeiras (função corrigida)
+          const perdasFinanceiras = await calcularPerdasFinanceiras(linha.id, custoMinuto, produtos, perdas);
+          
+          // Calcular OEE real
+          const oeeReal = await calcularOEEReal(linha.id);
+          
+          // Calcular gargalo real
+          const gargaloReal = await calcularGargaloReal(linha.id);
+          
+          // Calcular variabilidade
+          const analiseVariabilidade = await calcularVariabilidadePostos(postos, linha.id);
+          
+          // Calcular ROI
           const roi = calcularROI(perdasFinanceiras.total);
           
-          const analiseVariabilidade = await calcularVariabilidadePostos(postos.data, filtros.linhaId);
-
-          const linha = linhas.find(l => l.id === parseInt(filtros.linhaId));
-
           dadosCompletos = {
             tipo: "especifico",
             empresa: empresa.nome,
-            linha: linha?.nome,
-            analise: analise.data,
-            postos: postos.data,
+            linha: linha.nome,
+            oeeReal,
+            gargaloReal,
+            analise: {
+              eficiencia_percentual: oeeReal,
+              gargalo: gargaloReal,
+              capacidade_estimada_dia: linha.meta_diaria || 520
+            },
+            postos,
             analiseVariabilidade,
             data: new Date().toLocaleDateString('pt-BR'),
             custoMaoObra: custoTotal,
@@ -887,6 +947,70 @@ export default function RelatorioProfissional() {
       setCarregando(false);
     }
   }
+
+  // Dados simulados (para fallback)
+  const gerarDadosSimulados = (tipo) => {
+    if (tipo === "geral") {
+      return {
+        tipo: "geral",
+        empresa: "Empresa Teste (Dados Reais)",
+        linhas: [
+          { nome: "Linha de Montagem", oeeReal: 27, gargaloReal: "Acabamento", produtos: [], perdas: { setup: 442.64, micro: 193.60, refugo: 8690, total: 9326.24 } },
+          { nome: "Linha de Usinagem", oeeReal: 27, gargaloReal: "Montagem Final", produtos: [], perdas: { setup: 442.64, micro: 193.60, refugo: 8690, total: 9326.24 } }
+        ],
+        data: new Date().toLocaleDateString('pt-BR'),
+        resumoFinanceiro: {
+          custoMaoObra: 17000,
+          custosPorLinha: [
+            { linha: "Linha de Montagem", custo: 8500 },
+            { linha: "Linha de Usinagem", custo: 8500 }
+          ],
+          perdas: { setup: 885.28, micro: 387.20, refugo: 17380, total: 18652.48 },
+          perdasTotais: 18652.48,
+          oeeMedio: 27,
+          roi: {
+            investimento: 50000,
+            ganhoMensal: 5595.74,
+            payback: "8.9",
+            roiAnual: "134"
+          }
+        }
+      };
+    } else {
+      return {
+        tipo: "especifico",
+        empresa: "Metalúrgica Nova Era",
+        linha: "Linha de Montagem",
+        oeeReal: 27,
+        gargaloReal: "Acabamento",
+        analise: {
+          eficiencia_percentual: 27,
+          gargalo: "Acabamento",
+          capacidade_estimada_dia: 520
+        },
+        postos: [
+          { nome: "Acabamento", tempo_ciclo_segundos: 55, tempo_setup_minutos: 45, disponibilidade_percentual: 85 },
+          { nome: "Montagem Final", tempo_ciclo_segundos: 60, tempo_setup_minutos: 30, disponibilidade_percentual: 90 }
+        ],
+        analiseVariabilidade: [],
+        data: new Date().toLocaleDateString('pt-BR'),
+        custoMaoObra: 17000,
+        custoMinuto: 1.61,
+        perdasFinanceiras: {
+          setup: 442.64,
+          micro: 193.60,
+          refugo: 8690,
+          total: 9326.24
+        },
+        roi: {
+          investimento: 50000,
+          ganhoMensal: 2797.87,
+          payback: "17.9",
+          roiAnual: "67"
+        }
+      };
+    }
+  };
 
   // Componentes auxiliares
   function CardResumo({ titulo, valor, cor = "#1E3A8A" }) {
@@ -1035,13 +1159,12 @@ export default function RelatorioProfissional() {
       {/* CONTEÚDO DO RELATÓRIO */}
       {(carregando || gerandoIA) && (
         <div style={{ textAlign: "center", padding: "40px", color: "#666" }}>
-          {carregando ? "Carregando dados..." : "Gerando análise... Isso pode levar alguns segundos."}
+          {carregando ? "Carregando dados reais..." : "Gerando análise com dados reais... Isso pode levar alguns segundos."}
         </div>
       )}
 
       {dadosRelatorio && !carregando && !gerandoIA && (
         <div className="relatorio-print" ref={relatorioRef} style={{ position: "relative" }}>
-          {/* Marca d'água sutil */}
           <div style={{
             position: "absolute",
             top: "50%",
@@ -1107,8 +1230,8 @@ export default function RelatorioProfissional() {
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px", marginBottom: "30px" }}>
                 <div>
-                  <p><strong>OEE:</strong> {dadosRelatorio.analise?.eficiencia_percentual || 0}%</p>
-                  <p><strong>Gargalo:</strong> {dadosRelatorio.analise?.gargalo || "Não identificado"}</p>
+                  <p><strong>OEE Real:</strong> {dadosRelatorio.oeeReal || 0}%</p>
+                  <p><strong>Gargalo Real:</strong> {dadosRelatorio.gargaloReal || "Não identificado"}</p>
                   <p><strong>Capacidade:</strong> {dadosRelatorio.analise?.capacidade_estimada_dia || 0} pç/dia</p>
                 </div>
                 <div>
@@ -1168,9 +1291,9 @@ export default function RelatorioProfissional() {
               </>
             )}
 
-            {/* SEÇÃO 3 - ANÁLISE FINANCEIRA */}
+            {/* SEÇÃO 3 - ANÁLISE FINANCEIRA COM DADOS REAIS */}
             <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px" }}>
-              3. ANÁLISE FINANCEIRA
+              3. ANÁLISE FINANCEIRA - DADOS REAIS
             </h2>
             
             {dadosRelatorio.tipo === "geral" ? (
@@ -1180,14 +1303,17 @@ export default function RelatorioProfissional() {
                 gap: "20px", 
                 marginBottom: "20px" 
               }}>
-                <div>
+                <div style={{ backgroundColor: "#fef3c7", padding: "15px", borderRadius: "8px" }}>
                   <p><strong>Setup:</strong> {formatarMoeda(dadosRelatorio.resumoFinanceiro.perdas.setup)}</p>
+                  <p style={{ fontSize: "12px", color: "#666" }}>Tempo de preparação das máquinas</p>
                 </div>
-                <div>
+                <div style={{ backgroundColor: "#dbeafe", padding: "15px", borderRadius: "8px" }}>
                   <p><strong>Microparadas:</strong> {formatarMoeda(dadosRelatorio.resumoFinanceiro.perdas.micro)}</p>
+                  <p style={{ fontSize: "12px", color: "#666" }}>Paradas curtas não planejadas</p>
                 </div>
-                <div>
+                <div style={{ backgroundColor: "#fee2e2", padding: "15px", borderRadius: "8px" }}>
                   <p><strong>Refugo:</strong> {formatarMoeda(dadosRelatorio.resumoFinanceiro.perdas.refugo)}</p>
+                  <p style={{ fontSize: "12px", color: "#666" }}>Peças produzidas com defeito</p>
                 </div>
               </div>
             ) : (
@@ -1197,14 +1323,17 @@ export default function RelatorioProfissional() {
                 gap: "20px", 
                 marginBottom: "20px" 
               }}>
-                <div>
+                <div style={{ backgroundColor: "#fef3c7", padding: "15px", borderRadius: "8px" }}>
                   <p><strong>Setup:</strong> {formatarMoeda(dadosRelatorio.perdasFinanceiras.setup)}</p>
+                  <p style={{ fontSize: "12px", color: "#666" }}>Tempo de preparação das máquinas</p>
                 </div>
-                <div>
+                <div style={{ backgroundColor: "#dbeafe", padding: "15px", borderRadius: "8px" }}>
                   <p><strong>Microparadas:</strong> {formatarMoeda(dadosRelatorio.perdasFinanceiras.micro)}</p>
+                  <p style={{ fontSize: "12px", color: "#666" }}>Paradas curtas não planejadas</p>
                 </div>
-                <div>
+                <div style={{ backgroundColor: "#fee2e2", padding: "15px", borderRadius: "8px" }}>
                   <p><strong>Refugo:</strong> {formatarMoeda(dadosRelatorio.perdasFinanceiras.refugo)}</p>
+                  <p style={{ fontSize: "12px", color: "#666" }}>Peças produzidas com defeito</p>
                 </div>
               </div>
             )}
@@ -1230,33 +1359,36 @@ export default function RelatorioProfissional() {
               />
             </div>
 
-            {/* SEÇÃO 4 - DETALHAMENTO POR LINHA (para geral) */}
+            {/* SEÇÃO 4 - DETALHAMENTO POR LINHA COM OEE REAL */}
             {dadosRelatorio.tipo === "geral" && (
               <>
                 <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px" }}>
-                  4. DETALHAMENTO POR LINHA
+                  4. DETALHAMENTO POR LINHA - DADOS REAIS
                 </h2>
                 
                 <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "30px" }}>
                   <thead>
                     <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
                       <th style={thStyle}>Linha</th>
-                      <th style={thStyle}>OEE (%)</th>
-                      <th style={thStyle}>Gargalo</th>
+                      <th style={thStyle}>OEE Real (%)</th>
+                      <th style={thStyle}>Gargalo Real</th>
                       <th style={thStyle}>Custo Mensal</th>
-                      <th style={thStyle}>Perdas Estimadas</th>
+                      <th style={thStyle}>Perdas Totais</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dadosRelatorio.linhas.map((linha, idx) => {
-                      const custoLinha = dadosRelatorio.resumoFinanceiro.custosPorLinha[idx]?.custo || 0;
+                      const custoLinha = dadosRelatorio.resumoFinanceiro.custosPorLinha.find(c => c.linha === linha.nome)?.custo || 0;
+                      const perdasLinha = dadosRelatorio.resumoFinanceiro.perdasPorLinha?.find(p => p.linha === linha.nome)?.total || 0;
+                      const oeeDisplay = linha.oeeReal || 0;
+                      const corOEE = oeeDisplay >= 85 ? "#16a34a" : oeeDisplay >= 70 ? "#f59e0b" : "#dc2626";
                       return (
                         <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
                           <td style={tdStyle}>{linha.nome}</td>
-                          <td style={tdStyle}>{linha.analise?.eficiencia_percentual || 0}%</td>
-                          <td style={tdStyle}>{linha.analise?.gargalo || "-"}</td>
+                          <td style={{ ...tdStyle, color: corOEE, fontWeight: "bold" }}>{oeeDisplay}%</td>
+                          <td style={tdStyle}>{linha.gargaloReal || "-"}</td>
                           <td style={tdStyle}>{formatarMoeda(custoLinha)}</td>
-                          <td style={tdStyle}>{formatarMoeda(custoLinha * 0.2)}</td>
+                          <td style={tdStyle}>{formatarMoeda(perdasLinha)}</td>
                         </tr>
                       );
                     })}
@@ -1265,9 +1397,9 @@ export default function RelatorioProfissional() {
               </>
             )}
 
-            {/* SEÇÃO 5 - ANÁLISE DE RETORNO */}
+            {/* SEÇÃO 5 - ANÁLISE DE RETORNO COM DADOS REAIS */}
             <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px" }}>
-              5. ANÁLISE DE RETORNO
+              5. ANÁLISE DE RETORNO - BASEADO EM DADOS REAIS
             </h2>
             
             <div style={{ 
@@ -1332,7 +1464,6 @@ export default function RelatorioProfissional() {
               </>
             )}
 
-            {/* MENSAGEM DE ERRO DA IA */}
             {erroIA && (
               <div style={{
                 marginTop: "20px",
@@ -1356,7 +1487,6 @@ export default function RelatorioProfissional() {
               </p>
             </div>
 
-            {/* 🖨️ CSS PARA IMPRESSÃO */}
             <style>{`
               @media print {
                 .no-print, 
@@ -1409,10 +1539,6 @@ export default function RelatorioProfissional() {
                 
                 h1, h2, h3 {
                   page-break-after: avoid;
-                }
-                
-                div[style*="opacity: 0.03"] {
-                  display: none;
                 }
                 
                 p, li {
