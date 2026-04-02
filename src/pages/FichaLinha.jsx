@@ -1818,7 +1818,7 @@ function Acoes({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 8 - HISTÓRICO (COM GRÁFICOS)
+// ABA 8 - HISTÓRICO (COM GRÁFICOS) - CORRIGIDO
 // ========================================
 function Historico({ linha, linhaId }) {
   const [dados, setDados] = useState([]);
@@ -1834,9 +1834,20 @@ function Historico({ linha, linhaId }) {
   async function carregarHistorico() {
     setCarregando(true);
     try {
-      // ✅ CORRIGIDO: /historico-linha → /history/line
       const response = await api.get(`/history/line/${linhaId}`);
-      setDados(response.data.historico || []);
+      // 🔥 CORREÇÃO: Converter strings para números
+      const historicoFormatado = (response.data.historico || []).map(item => ({
+        ...item,
+        oee_performance: parseFloat(item.oee_performance) || 0,
+        disponibilidade: parseFloat(item.disponibilidade) || 0,
+        performance: parseFloat(item.performance) || 0,
+        qualidade: parseFloat(item.qualidade) || 0,
+        medicoes: parseInt(item.medicoes) || 0,
+        media_ciclo: parseFloat(item.media_ciclo) || 0,
+        desvio_padrao: parseFloat(item.desvio_padrao) || 0,
+        mes: item.periodo || item.mes
+      }));
+      setDados(historicoFormatado);
       setErro("");
     } catch (error) {
       console.error("Erro ao carregar histórico:", error);
@@ -1855,15 +1866,24 @@ function Historico({ linha, linhaId }) {
 
   const formatarMes = (dataString) => {
     if (!dataString) return "";
+    // Se for string no formato "YYYY-MM"
+    if (typeof dataString === 'string' && dataString.includes('-')) {
+      const [ano, mes] = dataString.split('-');
+      const data = new Date(parseInt(ano), parseInt(mes) - 1);
+      return data.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+    }
     const data = new Date(dataString);
-    return data.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+    if (!isNaN(data.getTime())) {
+      return data.toLocaleDateString('pt-BR', { month: 'short', year: 'numeric' });
+    }
+    return dataString;
   };
 
   const calcularTendencia = () => {
     if (dados.length < 2) return { direcao: "estavel", valor: 0 };
     
-    const primeiro = dados[dados.length - 1]?.oee_performance || 0;
-    const ultimo = dados[0]?.oee_performance || 0;
+    const primeiro = parseFloat(dados[dados.length - 1]?.oee_performance) || 0;
+    const ultimo = parseFloat(dados[0]?.oee_performance) || 0;
     const variacao = ultimo - primeiro;
     
     return {
@@ -1875,11 +1895,16 @@ function Historico({ linha, linhaId }) {
   const tendencia = calcularTendencia();
 
   const meses = dados.map(d => {
-    const data = new Date(d.mes);
-    return data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+    if (d.periodo) {
+      const [ano, mes] = d.periodo.split('-');
+      const data = new Date(parseInt(ano), parseInt(mes) - 1);
+      return data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
+    }
+    return formatarMes(d.mes);
   });
-  const valoresOEE = dados.map(d => d.oee_performance || 0);
-  const valoresDesvio = dados.map(d => parseFloat(d.desvio_padrao || 0));
+  
+  const valoresOEE = dados.map(d => parseFloat(d.oee_performance) || 0);
+  const valoresDesvio = dados.map(d => parseFloat(d.desvio_padrao) || 0);
 
   if (carregando) {
     return <div style={{ padding: "clamp(20px, 5vw, 40px)", textAlign: "center" }}>Carregando histórico...</div>;
@@ -1974,19 +1999,19 @@ function Historico({ linha, linhaId }) {
             <div>
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", color: "#666" }}>Melhor:</span>
               <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", color: "#16a34a", margin: 0 }}>
-                {Math.max(...dados.map(d => d.oee_performance || 0))}%
+                {Math.max(...valoresOEE)}%
               </p>
             </div>
             <div>
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", color: "#666" }}>Pior:</span>
               <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", color: "#dc2626", margin: 0 }}>
-                {Math.min(...dados.map(d => d.oee_performance || 0))}%
+                {Math.min(...valoresOEE)}%
               </p>
             </div>
             <div>
               <span style={{ fontSize: "clamp(11px, 1.3vw, 12px)", color: "#666" }}>Média:</span>
               <p style={{ fontSize: "clamp(14px, 1.8vw, 16px)", fontWeight: "bold", margin: 0 }}>
-                {(dados.reduce((acc, d) => acc + (d.oee_performance || 0), 0) / dados.length).toFixed(1)}%
+                {(valoresOEE.reduce((acc, d) => acc + d, 0) / dados.length).toFixed(1)}%
               </p>
             </div>
           </div>
@@ -2050,8 +2075,8 @@ function Historico({ linha, linhaId }) {
           <GraficoBarras 
             labels={['Ano Anterior', 'Ano Atual']}
             valores={[
-              dados.slice(-6, -3).reduce((acc, d) => acc + (d.oee_performance || 0), 0) / 3,
-              dados.slice(-3).reduce((acc, d) => acc + (d.oee_performance || 0), 0) / 3
+              valoresOEE.slice(-6, -3).reduce((acc, d) => acc + d, 0) / 3,
+              valoresOEE.slice(-3).reduce((acc, d) => acc + d, 0) / 3
             ]}
             titulo="Comparativo Semestral"
             cor={[coresNexus.secondary, coresNexus.primary]}
@@ -2087,34 +2112,37 @@ function Historico({ linha, linhaId }) {
             </tr>
           </thead>
           <tbody>
-            {dados.slice(0, 5).map((item, index) => (
-              <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <td style={tdResponsivo}>{formatarMes(item.mes)}</td>
-                <td style={tdResponsivo}>
-                  <span style={{ 
-                    color: getOEECor(item.oee_performance || 0),
-                    fontWeight: "bold"
-                  }}>
-                    {(item.oee_performance || 0).toFixed(1)}%
-                  </span>
-                </td>
-                <td style={tdResponsivo}>{item.media_ciclo || 0}s</td>
-                <td style={tdResponsivo}>{item.desvio_padrao || 0}s</td>
-                <td style={tdResponsivo}>{item.medicoes || 0}</td>
-                <td style={tdResponsivo}>
-                  <span style={{
-                    padding: "4px 8px",
-                    borderRadius: "4px",
-                    fontSize: "clamp(10px, 1.2vw, 12px)",
-                    backgroundColor: getOEECor(item.oee_performance || 0) + "20",
-                    color: getOEECor(item.oee_performance || 0)
-                  }}>
-                    {(item.oee_performance || 0) >= 80 ? "Excelente" :
-                     (item.oee_performance || 0) >= 60 ? "Regular" : "Crítico"}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {dados.slice(0, 5).map((item, index) => {
+              const oeeValue = parseFloat(item.oee_performance) || 0;
+              return (
+                <tr key={index} style={{ borderBottom: "1px solid #e5e7eb" }}>
+                  <td style={tdResponsivo}>{formatarMes(item.periodo || item.mes)}</td>
+                  <td style={tdResponsivo}>
+                    <span style={{ 
+                      color: getOEECor(oeeValue),
+                      fontWeight: "bold"
+                    }}>
+                      {oeeValue.toFixed(1)}%
+                    </span>
+                  </td>
+                  <td style={tdResponsivo}>{item.media_ciclo || 0}s</td>
+                  <td style={tdResponsivo}>{item.desvio_padrao || 0}s</td>
+                  <td style={tdResponsivo}>{item.medicoes || 0}</td>
+                  <td style={tdResponsivo}>
+                    <span style={{
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      fontSize: "clamp(10px, 1.2vw, 12px)",
+                      backgroundColor: getOEECor(oeeValue) + "20",
+                      color: getOEECor(oeeValue)
+                    }}>
+                      {oeeValue >= 80 ? "Excelente" :
+                       oeeValue >= 60 ? "Regular" : "Crítico"}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -2137,16 +2165,16 @@ function Historico({ linha, linhaId }) {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: "15px" }}>
             <div>
               <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>
-                {formatarMes(dados[dados.length - 1]?.mes)} vs {formatarMes(dados[0]?.mes)}
+                {formatarMes(dados[dados.length - 1]?.periodo || dados[dados.length - 1]?.mes)} vs {formatarMes(dados[0]?.periodo || dados[0]?.mes)}
               </span>
               <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", marginTop: "5px" }}>
-                {(dados[0]?.oee_performance || 0) > (dados[dados.length - 1]?.oee_performance || 0) ? (
+                {(valoresOEE[0] || 0) > (valoresOEE[valoresOEE.length - 1] || 0) ? (
                   <span style={{ color: "#16a34a" }}>
-                    ↑ +{((dados[0]?.oee_performance || 0) - (dados[dados.length - 1]?.oee_performance || 0)).toFixed(1)}%
+                    ↑ +{((valoresOEE[0] || 0) - (valoresOEE[valoresOEE.length - 1] || 0)).toFixed(1)}%
                   </span>
                 ) : (
                   <span style={{ color: "#dc2626" }}>
-                    ↓ -{((dados[dados.length - 1]?.oee_performance || 0) - (dados[0]?.oee_performance || 0)).toFixed(1)}%
+                    ↓ -{((valoresOEE[valoresOEE.length - 1] || 0) - (valoresOEE[0] || 0)).toFixed(1)}%
                   </span>
                 )}
               </p>
@@ -2155,13 +2183,13 @@ function Historico({ linha, linhaId }) {
             <div>
               <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Melhoria acumulada</span>
               <p style={{ fontSize: "clamp(16px, 2vw, 18px)", fontWeight: "bold", marginTop: "5px" }}>
-                {(dados[0]?.oee_performance || 0) - (dados[dados.length - 1]?.oee_performance || 0) > 0 ? (
+                {((valoresOEE[0] || 0) - (valoresOEE[valoresOEE.length - 1] || 0)) > 0 ? (
                   <span style={{ color: "#16a34a" }}>
-                    +{((dados[0]?.oee_performance || 0) - (dados[dados.length - 1]?.oee_performance || 0)).toFixed(1)}%
+                    +{((valoresOEE[0] || 0) - (valoresOEE[valoresOEE.length - 1] || 0)).toFixed(1)}%
                   </span>
                 ) : (
                   <span style={{ color: "#666" }}>
-                    {((dados[0]?.oee_performance || 0) - (dados[dados.length - 1]?.oee_performance || 0)).toFixed(1)}%
+                    {((valoresOEE[0] || 0) - (valoresOEE[valoresOEE.length - 1] || 0)).toFixed(1)}%
                   </span>
                 )}
               </p>
