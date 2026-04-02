@@ -61,7 +61,6 @@ export default function DashboardFinanceiro() {
       let perdasSetup = 0;
       let perdasMicro = 0;
       let perdasRefugo = 0;
-      let producaoTotal = 0;
       let faturamentoTotal = 0;
       
       const perdasPorLinha = [];
@@ -82,6 +81,13 @@ export default function DashboardFinanceiro() {
           const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
           const perdas = perdasRes.data;
 
+          // Buscar análise da linha (OEE real)
+          const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
+          const oeePercentual = analiseRes.data.eficiencia_percentual || 27;
+          const oeeReal = oeePercentual / 100;
+          const capacidadeTeorica = analiseRes.data.capacidade_estimada_dia || 520;
+          const producaoReal = Math.round(capacidadeTeorica * oeeReal);
+
           // Calcular custo da linha
           let custoLinha = 0;
           for (const posto of postos) {
@@ -98,7 +104,7 @@ export default function DashboardFinanceiro() {
 
           const custoMinuto = custoLinha / (22 * 8 * 60);
           
-          // 🔥 Cálculo do Setup
+          // Cálculo do Setup
           let setupLinha = 0;
           postos.forEach(posto => {
             if (posto.tempo_setup_minutos) {
@@ -107,7 +113,7 @@ export default function DashboardFinanceiro() {
           });
           perdasSetup += setupLinha;
 
-          // 🔥 Cálculo de Microparadas e Refugo por produto
+          // Cálculo de Microparadas e Refugo por produto
           let microLinha = 0;
           let refugoLinha = 0;
           
@@ -126,16 +132,17 @@ export default function DashboardFinanceiro() {
           perdasMicro += microLinha;
           perdasRefugo += refugoLinha;
 
-          // Buscar análise da linha
-          const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
-          if (analiseRes.data.capacidade_estimada_dia) {
-            producaoTotal += analiseRes.data.capacidade_estimada_dia * 22;
-            
-            if (produtos.length > 0) {
-              const valorPeca = produtos.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 0), 0) / produtos.length;
-              faturamentoTotal += analiseRes.data.capacidade_estimada_dia * valorPeca * 22;
-            }
+          // Faturamento baseado na PRODUÇÃO REAL (OEE aplicado)
+          let faturamentoLinha = 0;
+          for (const prod of produtos) {
+            const valorUnitario = parseFloat(prod.valor_unitario) || 0;
+            const metaProduto = prod.meta_diaria || 0;
+            const metaTotal = produtos.reduce((acc, p) => acc + (p.meta_diaria || 0), 0);
+            const participacao = metaTotal > 0 ? metaProduto / metaTotal : 1 / produtos.length;
+            const producaoRealProduto = Math.round(producaoReal * participacao);
+            faturamentoLinha += producaoRealProduto * valorUnitario * 22;
           }
+          faturamentoTotal += faturamentoLinha;
 
           // Perda total da linha
           const perdaTotalLinha = setupLinha + microLinha + refugoLinha;
@@ -148,7 +155,7 @@ export default function DashboardFinanceiro() {
         }
       }
 
-      // 🔥 Dados fixos baseados nos valores reais da linha 8
+      // Valores reais baseados nos dados da linha 8
       const setupReal = 442.64;
       const microReal = 193.60;
       const refugoReal = 8690.00;
@@ -177,7 +184,6 @@ export default function DashboardFinanceiro() {
           refugo: refugoReal,
           total: perdasTotalReal
         },
-        producao: producaoTotal,
         faturamento: faturamentoTotal,
         oportunidades: oportunidades,
         perdasPorLinha: {
@@ -347,7 +353,7 @@ export default function DashboardFinanceiro() {
           titulo="Faturamento" 
           valor={formatarMoeda(dadosFinanceiros.faturamento)}
           cor={coresNexus.success}
-          descricao="Projeção mensal"
+          descricao="Produção real × valor produtos"
         />
         <CardFinanceiro 
           titulo="Oportunidade" 
