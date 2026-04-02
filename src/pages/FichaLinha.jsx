@@ -1911,7 +1911,7 @@ function Historico({ linha, linhaId }) {
         <p style={{ color: "#666", marginBottom: "clamp(15px, 3vw, 20px)" }}>
           Nenhum dado histórico disponível.
         </p>
-        <Link to={`/coleta/${linhaId}`}>
+        <Link to={`/cronoanalise/${linhaId}`}>
           <Botao variant="success" size="md">
             Iniciar Coleta
           </Botao>
@@ -3687,7 +3687,7 @@ export default function FichaLinha() {
               </p>
             </div>
           </div>
-          <Link to={`/coleta/${id}`}>
+          <Link to={`/cronoanalise/${id}`}>
             <Botao
               variant="success"
               size="md"
