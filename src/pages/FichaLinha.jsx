@@ -2204,6 +2204,7 @@ function Historico({ linha, linhaId }) {
 // ========================================
 // ABA 9 - FINANCEIRO (USANDO API) - CORRIGIDO
 // ========================================
+console.log("🔥 FICHA LINHA RENDERIZANDO 🔥");
 function Financeiro({ linha, linhaId }) {
   const [dadosAPI, setDadosAPI] = useState(null);
   const [perdasAPI, setPerdasAPI] = useState([]);
