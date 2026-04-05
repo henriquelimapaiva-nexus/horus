@@ -12,6 +12,19 @@ import GraficoPizza from "../components/graficos/GraficoPizza";
 import GraficoLinha from "../components/graficos/GraficoLinha";
 import { coresNexus } from "../components/graficos/GraficoBase";
 
+// ========================================
+// 🚀 FUNÇÃO PARA BUSCAR DADOS DA ROTA UNIFICADA
+// ========================================
+async function buscarDadosUnificados(empresaId) {
+  try {
+    const response = await api.get(`/company/${empresaId}/dashboard`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Erro na rota unificada:", error);
+    return null;
+  }
+}
+
 export default function RelatorioProfissional() {
   const { clienteAtual } = useOutletContext();
   const relatorioRef = useRef();
@@ -749,7 +762,7 @@ export default function RelatorioProfissional() {
   };
 
   // ========================================
-  // ✅ FUNÇÃO PRINCIPAL CORRIGIDA
+  // ✅ FUNÇÃO PRINCIPAL CORRIGIDA - USANDO ROTA UNIFICADA
   // ========================================
   async function gerarRelatorio() {
     if (!filtros.empresaId && !usarSimulacao) {
@@ -776,69 +789,63 @@ export default function RelatorioProfissional() {
       } else {
         const empresa = empresas.find(e => e.id === parseInt(filtros.empresaId));
         
+        // 🔥 BUSCAR DADOS DA ROTA UNIFICADA
+        const dadosUnificados = await buscarDadosUnificados(filtros.empresaId);
+        
+        if (!dadosUnificados || !dadosUnificados.linhas || dadosUnificados.linhas.length === 0) {
+          toast.error("Nenhum dado encontrado para esta empresa");
+          setCarregando(false);
+          return;
+        }
+        
         if (tipoRelatorio === "geral") {
-          const linhasRes = await api.get(`/lines/${filtros.empresaId}`);
-          const linhasData = linhasRes.data;
+          // Mapear dados da rota unificada para o formato do relatório
+          const dadosLinhas = dadosUnificados.linhas.map(linha => ({
+            ...linha,
+            oeeReal: linha.oee,
+            gargaloReal: linha.gargalo,
+            perdas: linha.perdas
+          }));
           
-          const { custoTotal, custosPorLinha } = await calcularCustosMaoObra(filtros.empresaId, linhasData);
-          const custoMinuto = custoTotal / (22 * 8 * 60);
+          const perdasTotaisObj = {
+            setup: dadosUnificados.resumo.perdas.setup,
+            micro: dadosUnificados.resumo.perdas.micro,
+            refugo: dadosUnificados.resumo.perdas.refugo,
+            total: dadosUnificados.resumo.perdas.total
+          };
           
-          let perdasTotais = { setup: 0, micro: 0, refugo: 0, total: 0 };
-          const perdasPorLinha = [];
-          const dadosLinhas = [];
-          
-          for (const linha of linhasData) {
-            const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
-            const produtos = produtosRes.data.dados || produtosRes.data || [];
-            
-            const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
-            const perdas = perdasRes.data;
-            
-            const perdasLinha = await calcularPerdasFinanceiras(linha.id, custoMinuto, produtos, perdas);
-            
-            perdasTotais.setup += perdasLinha.setup;
-            perdasTotais.micro += perdasLinha.micro;
-            perdasTotais.refugo += perdasLinha.refugo;
-            perdasTotais.total += perdasLinha.total;
-            
-            perdasPorLinha.push({
-              linha: linha.nome,
-              ...perdasLinha
-            });
-            
-            const oeeReal = await calcularOEEReal(linha.id);
-            const gargaloReal = await calcularGargaloReal(linha.id);
-            
-            dadosLinhas.push({
-              ...linha,
-              oeeReal,
-              gargaloReal,
-              produtos,
-              perdas: perdasLinha
-            });
-          }
-          
-          const oeeMedio = dadosLinhas.reduce((acc, l) => acc + l.oeeReal, 0) / dadosLinhas.length;
-          const roi = calcularROI(perdasTotais.total);
+          const roi = dadosUnificados.resumo.roi;
           
           dadosCompletos = {
             tipo: "geral",
-            empresa: empresa.nome,
+            empresa: dadosUnificados.empresa.nome,
             linhas: dadosLinhas,
             data: new Date().toLocaleDateString('pt-BR'),
             resumoFinanceiro: {
-              custoMaoObra: custoTotal,
-              custosPorLinha,
-              perdasPorLinha,
-              perdas: perdasTotais,
-              perdasTotais: perdasTotais.total,
-              oeeMedio,
-              roi
+              custoMaoObra: dadosUnificados.resumo.custoMaoObra,
+              custosPorLinha: dadosUnificados.linhas.map(l => ({ linha: l.nome, custo: l.custoMensal })),
+              perdasPorLinha: dadosUnificados.linhas.map(l => ({ linha: l.nome, total: l.perdas.total })),
+              perdas: perdasTotaisObj,
+              perdasTotais: dadosUnificados.resumo.perdas.total,
+              oeeMedio: dadosUnificados.resumo.oeeMedio,
+              roi: {
+                investimento: parseFloat(roi.investimento),
+                ganhoMensal: roi.ganhoMensal,
+                payback: roi.payback,
+                roiAnual: roi.roiAnual
+              }
             }
           };
+          
+          console.log('📊 Relatório Geral - DADOS DA ROTA UNIFICADA:');
+          console.log(`   Setup: R$ ${dadosUnificados.resumo.perdas.setup}`);
+          console.log(`   Micro: R$ ${dadosUnificados.resumo.perdas.micro}`);
+          console.log(`   Refugo: R$ ${dadosUnificados.resumo.perdas.refugo}`);
+          console.log(`   OEE Médio: ${dadosUnificados.resumo.oeeMedio}%`);
 
         } else {
-          const linha = linhas.find(l => l.id === parseInt(filtros.linhaId));
+          // Relatório específico de uma linha
+          const linha = dadosUnificados.linhas.find(l => l.id === parseInt(filtros.linhaId));
           
           if (!linha) {
             toast.error("Linha não encontrada");
@@ -846,43 +853,31 @@ export default function RelatorioProfissional() {
             return;
           }
           
-          const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
-          const produtos = produtosRes.data.dados || produtosRes.data || [];
-          
-          const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
-          const perdas = perdasRes.data;
-          
-          const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
-          const postos = postosRes.data;
-          
-          const { custoTotal } = await calcularCustosMaoObra(filtros.empresaId, [linha]);
-          const custoMinuto = custoTotal / (22 * 8 * 60);
-          
-          const perdasFinanceiras = await calcularPerdasFinanceiras(linha.id, custoMinuto, produtos, perdas);
-          const oeeReal = await calcularOEEReal(linha.id);
-          const gargaloReal = await calcularGargaloReal(linha.id);
-          const analiseVariabilidade = await calcularVariabilidadePostos(postos, linha.id);
-          const roi = calcularROI(perdasFinanceiras.total);
-          
           dadosCompletos = {
             tipo: "especifico",
-            empresa: empresa.nome,
+            empresa: dadosUnificados.empresa.nome,
             linha: linha.nome,
-            oeeReal,
-            gargaloReal,
+            oeeReal: linha.oee,
+            gargaloReal: linha.gargalo,
             analise: {
-              eficiencia_percentual: oeeReal,
-              gargalo: gargaloReal,
-              capacidade_estimada_dia: linha.meta_diaria || 520
+              eficiencia_percentual: linha.oee,
+              gargalo: linha.gargalo,
+              capacidade_estimada_dia: linha.metaDiaria || 520
             },
-            postos,
-            analiseVariabilidade,
+            postos: linha.postos,
+            analiseVariabilidade: [],
             data: new Date().toLocaleDateString('pt-BR'),
-            custoMaoObra: custoTotal,
-            custoMinuto,
-            perdasFinanceiras,
-            roi
+            custoMaoObra: linha.custoMensal,
+            custoMinuto: linha.custoMensal / (22 * 8 * 60),
+            perdasFinanceiras: linha.perdas,
+            roi: dadosUnificados.resumo.roi
           };
+          
+          console.log(`📊 Relatório Específico - Linha ${linha.nome}:`);
+          console.log(`   Setup: R$ ${linha.perdas.setup}`);
+          console.log(`   Micro: R$ ${linha.perdas.micro}`);
+          console.log(`   Refugo: R$ ${linha.perdas.refugo}`);
+          console.log(`   OEE: ${linha.oee}%`);
         }
       }
 

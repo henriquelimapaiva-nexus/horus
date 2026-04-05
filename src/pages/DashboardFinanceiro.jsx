@@ -11,6 +11,19 @@ import GraficoPizza from "../components/graficos/GraficoPizza";
 import GraficoLinha from "../components/graficos/GraficoLinha";
 import { coresNexus } from "../components/graficos/GraficoBase";
 
+// ========================================
+// 🚀 FUNÇÃO PARA BUSCAR DADOS DA ROTA UNIFICADA
+// ========================================
+async function buscarDadosUnificados(empresaId) {
+  try {
+    const response = await api.get(`/company/${empresaId}/dashboard`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Erro na rota unificada:", error);
+    return null;
+  }
+}
+
 export default function DashboardFinanceiro() {
   const { clienteAtual } = useOutletContext();
 
@@ -32,24 +45,10 @@ export default function DashboardFinanceiro() {
     setCarregando(true);
     
     try {
-      const empresasRes = await api.get("/companies");
-      const empresaId = parseInt(clienteAtual);
-      const empresaAtual = empresasRes.data.find(e => e.id === empresaId);
+      // 🔥 USAR A ROTA UNIFICADA
+      const dadosUnificados = await buscarDadosUnificados(clienteAtual);
       
-      if (!empresaAtual) {
-        console.log("Empresa não encontrada para ID:", clienteAtual);
-        setDadosFinanceiros(null);
-        setCarregando(false);
-        return;
-      }
-
-      setEmpresa(empresaAtual);
-
-      const linhasRes = await api.get(`/lines/${empresaAtual.id}`);
-      const linhasData = linhasRes.data;
-      setLinhas(linhasData);
-
-      if (!linhasData || linhasData.length === 0) {
+      if (!dadosUnificados || !dadosUnificados.linhas || dadosUnificados.linhas.length === 0) {
         setDadosFinanceiros({
           mensagem: "Nenhuma linha cadastrada para esta empresa"
         });
@@ -57,151 +56,44 @@ export default function DashboardFinanceiro() {
         return;
       }
 
-      let custoTotalMaoObra = 0;
-      let perdasSetup = 0;
-      let perdasMicro = 0;
-      let perdasRefugo = 0;
-      let faturamentoTotal = 0;
-      
-      const perdasPorLinha = [];
-      const nomesLinhas = [];
+      setEmpresa({ id: dadosUnificados.empresa.id, nome: dadosUnificados.empresa.nome });
+      setLinhas(dadosUnificados.linhas);
 
-      // Buscar cargos uma única vez
-      const cargosRes = await api.get(`/roles/${empresaAtual.id}`).catch(() => ({ data: [] }));
-      const cargos = cargosRes.data;
+      const nomesLinhas = dadosUnificados.linhas.map(l => l.nome);
+      const perdasPorLinha = dadosUnificados.linhas.map(l => l.perdas.total);
 
-      for (const linha of linhasData) {
-        try {
-          const postosRes = await api.get(`/work-stations/${linha.id}`);
-          const postos = postosRes.data;
-
-          const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
-          const produtos = produtosRes.data.dados || produtosRes.data || [];
-
-          const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
-          const perdas = perdasRes.data;
-
-          // 🔥 FATURAMENTO BASEADO NA PRODUÇÃO REAL (CORRETO)
-          let faturamentoLinha = 0;
-          
-          // Buscar produção real da linha (dados de produção registrados)
-          const producaoRealRes = await api.get(`/oee/history/${linha.id}`).catch(() => ({ data: [] }));
-          const producoesReais = producaoRealRes.data;
-          
-          if (producoesReais.length > 0) {
-            // Calcular produção real média DIÁRIA da linha
-            const totalPecasBoas = producoesReais.reduce((acc, p) => acc + (p.pecas_boas || 0), 0);
-            const producaoMediaDiaReal = totalPecasBoas / producoesReais.length;
-            
-            // Distribuir baseado na meta de cada produto
-            const metaTotal = produtos.reduce((acc, p) => acc + (p.meta_diaria || 0), 0);
-            
-            for (const prod of produtos) {
-              const valorUnitario = parseFloat(prod.valor_unitario) || 0;
-              const metaProduto = prod.meta_diaria || 0;
-              const proporcao = metaTotal > 0 ? metaProduto / metaTotal : 1 / produtos.length;
-              const producaoRealProduto = producaoMediaDiaReal * proporcao;
-              faturamentoLinha += producaoRealProduto * valorUnitario * 22;
-            }
-          } else {
-            // Fallback: estimativa baseada no OEE de 27%
-            const oeeReal = 0.27;
-            const capacidadeTeorica = 520;
-            const producaoRealDia = capacidadeTeorica * oeeReal;
-            
-            for (const prod of produtos) {
-              const valorUnitario = parseFloat(prod.valor_unitario) || 0;
-              faturamentoLinha += (producaoRealDia / produtos.length) * valorUnitario * 22;
-            }
-          }
-          
-          faturamentoTotal += faturamentoLinha;
-
-          // Calcular custo da linha
-          let custoLinha = 0;
-          for (const posto of postos) {
-            if (posto.cargo_id) {
-              const cargo = cargos.find(c => c.id === posto.cargo_id);
-              if (cargo) {
-                const salario = parseFloat(cargo.salario_base) || 0;
-                const encargos = parseFloat(cargo.encargos_percentual) || 70;
-                custoLinha += salario * (1 + encargos / 100);
-              }
-            }
-          }
-          custoTotalMaoObra += custoLinha;
-
-          const custoMinuto = custoLinha / (22 * 8 * 60);
-          
-          // Cálculo do Setup
-          let setupLinha = 0;
-          postos.forEach(posto => {
-            if (posto.tempo_setup_minutos) {
-              setupLinha += parseFloat(posto.tempo_setup_minutos) * custoMinuto * 22;
-            }
-          });
-          perdasSetup += setupLinha;
-
-          // Cálculo de Microparadas e Refugo por produto (dados reais)
-          let microLinha = 0;
-          let refugoLinha = 0;
-          
-          for (const prod of produtos) {
-            const perda = perdas.find(p => p.produto_nome === prod.produto_nome);
-            if (perda) {
-              const microMin = parseFloat(perda.microparadas_minutos) || 0;
-              microLinha += microMin * custoMinuto * 22;
-              
-              const refugoPecas = parseInt(perda.refugo_pecas) || 0;
-              const valorPeca = parseFloat(prod.valor_unitario) || 50;
-              refugoLinha += refugoPecas * valorPeca * 22;
-            }
-          }
-          
-          perdasMicro += microLinha;
-          perdasRefugo += refugoLinha;
-
-          // Perda total da linha
-          const perdaTotalLinha = setupLinha + microLinha + refugoLinha;
-          perdasPorLinha.push(perdaTotalLinha);
-          nomesLinhas.push(linha.nome);
-
-        } catch (err) {
-          console.error(`Erro ao processar linha ${linha.id}:`, err);
-          toast.error(`Erro ao processar dados da linha ${linha.nome}`);
-        }
-      }
-
-      // Valores reais baseados nos dados da linha 8
-      const setupReal = perdasSetup;
-      const microReal = perdasMicro;
-      const refugoReal = perdasRefugo;
-      const perdasTotalReal = setupReal + microReal + refugoReal;
-
-      const meses = ['Out/23', 'Nov/23', 'Dez/23', 'Jan/24', 'Fev/24', 'Mar/24'];
-      const evolucaoPerdas = meses.map((_, i) => {
-        const fator = 0.7 + (i * 0.06);
-        return perdasTotalReal * Math.min(fator, 1.05);
+      // Dados para evolução (últimos 6 meses)
+      const meses = dadosUnificados.evolucao.map(e => {
+        const data = new Date(e.mes);
+        return data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
       });
+      const evolucaoPerdas = dadosUnificados.evolucao.map(() => dadosUnificados.resumo.perdas.total);
 
-      // Oportunidades com valores corretos
+      // Oportunidades baseadas nos dados reais
       const oportunidades = [
-        { nome: "Eliminação de Refugo", ganho: refugoReal * 0.3, tipo: "refugo" },
-        { nome: "Redução de Setup", ganho: setupReal * 0.3, tipo: "setup" },
-        { nome: "Redução de Microparadas", ganho: microReal * 0.25, tipo: "micro" }
+        { nome: "Eliminação de Refugo", ganho: dadosUnificados.resumo.perdas.refugo * 0.3, tipo: "refugo" },
+        { nome: "Redução de Setup", ganho: dadosUnificados.resumo.perdas.setup * 0.3, tipo: "setup" },
+        { nome: "Redução de Microparadas", ganho: dadosUnificados.resumo.perdas.micro * 0.25, tipo: "micro" }
       ].sort((a, b) => b.ganho - a.ganho);
 
+      console.log('📊 Dashboard Financeiro - DADOS DA ROTA UNIFICADA:');
+      console.log(`   Setup: R$ ${dadosUnificados.resumo.perdas.setup}`);
+      console.log(`   Micro: R$ ${dadosUnificados.resumo.perdas.micro}`);
+      console.log(`   Refugo: R$ ${dadosUnificados.resumo.perdas.refugo}`);
+      console.log(`   Total Perdas: R$ ${dadosUnificados.resumo.perdas.total}`);
+      console.log(`   Faturamento: R$ ${dadosUnificados.resumo.faturamento}`);
+
       setDadosFinanceiros({
-        empresa: empresaAtual.nome,
-        empresaId: empresaAtual.id,
-        custoMaoObra: custoTotalMaoObra,
+        empresa: dadosUnificados.empresa.nome,
+        empresaId: dadosUnificados.empresa.id,
+        custoMaoObra: dadosUnificados.resumo.custoMaoObra,
         perdas: {
-          setup: setupReal,
-          micro: microReal,
-          refugo: refugoReal,
-          total: perdasTotalReal
+          setup: dadosUnificados.resumo.perdas.setup,
+          micro: dadosUnificados.resumo.perdas.micro,
+          refugo: dadosUnificados.resumo.perdas.refugo,
+          total: dadosUnificados.resumo.perdas.total
         },
-        faturamento: faturamentoTotal,
+        faturamento: dadosUnificados.resumo.faturamento,
         oportunidades: oportunidades,
         perdasPorLinha: {
           labels: nomesLinhas.slice(0, 5),
