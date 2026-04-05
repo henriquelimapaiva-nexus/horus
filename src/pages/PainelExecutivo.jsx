@@ -11,6 +11,19 @@ import GraficoPizza from "../components/graficos/GraficoPizza";
 import GraficoLinha from "../components/graficos/GraficoLinha";
 import { coresNexus } from "../components/graficos/GraficoBase";
 
+// ========================================
+// 🚀 NOVA FUNÇÃO: Buscar dados da rota unificada (FONTE ÚNICA DA VERDADE)
+// ========================================
+async function buscarDadosUnificados(empresaId) {
+  try {
+    const response = await api.get(`/company/${empresaId}/dashboard`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Erro na rota unificada:", error);
+    return null;
+  }
+}
+
 export default function PainelExecutivo() {
   const { clienteAtual } = useOutletContext();
 
@@ -180,6 +193,24 @@ export default function PainelExecutivo() {
     setErro("");
     
     try {
+      // ========================================
+      // 🔥 TESTE DA ROTA UNIFICADA (NOVO CÓDIGO ADICIONADO)
+      // ========================================
+      const dadosUnificados = await buscarDadosUnificados(empresaSelecionada);
+      if (dadosUnificados) {
+        console.log('📊 ROTA UNIFICADA - DADOS CORRETOS DO BANCO:');
+        console.log(`   Setup: R$ ${dadosUnificados.resumo.perdas.setup}`);
+        console.log(`   Micro: R$ ${dadosUnificados.resumo.perdas.micro}`);
+        console.log(`   Refugo: R$ ${dadosUnificados.resumo.perdas.refugo}`);
+        console.log(`   Total Perdas: R$ ${dadosUnificados.resumo.perdas.total}`);
+        console.log(`   Faturamento: R$ ${dadosUnificados.resumo.faturamento}`);
+        console.log(`   OEE Médio: ${dadosUnificados.resumo.oeeMedio}%`);
+        console.log(`   Custo Mão Obra: R$ ${dadosUnificados.resumo.custoMaoObra}`);
+      }
+      // ========================================
+      // FIM DO TESTE
+      // ========================================
+
       const linhasRes = await api.get(`/lines/${empresaSelecionada}`);
       const linhas = linhasRes.data;
 
