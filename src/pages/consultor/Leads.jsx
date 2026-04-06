@@ -218,7 +218,7 @@ export default function Leads() {
             Gerencie empresas em prospecção e acompanhe o funil de vendas
           </p>
         </div>
-        <Botao onClick={() => { setEditandoId(null); setForm({ nome: "", cnpj: "", contato_nome: "", contato_email: "", contato_telefone: "", fonte: "indicação", status: "prospecção", potencial_faturamento: "", probabilidade_fechamento: 30, proximo_contato: "", observacoes: "" }); setModalAberto(true); }}>
+        <Botao onClick={() => { setEditandoId(null); setForm({ nome: "", cnpj: "", contato_nome: "", contato_email: "", contato_telefone: "", fonte: "", status: "", potencial_faturamento: "", probabilidade_fechamento: "", proximo_contato: "", observacoes: "" }); setModalAberto(true); }}>
           + Novo Lead
         </Botao>
       </div>
