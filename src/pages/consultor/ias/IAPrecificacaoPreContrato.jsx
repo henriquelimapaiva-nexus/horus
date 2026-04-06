@@ -57,6 +57,7 @@ export default function IAPrecificacaoPreContrato() {
   });
 
   const setores = [
+    { value: '', label: 'Selecione...' },
     { value: 'automotivo', label: 'Automotivo' },
     { value: 'metalurgico', label: 'Metalúrgico' },
     { value: 'alimenticio', label: 'Alimentício' },
