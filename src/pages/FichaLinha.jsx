@@ -52,6 +52,20 @@ const badgeStyle = {
 };
 
 // ========================================
+// 🚀 FUNÇÃO PARA BUSCAR DADOS DA ROTA UNIFICADA
+// ========================================
+async function buscarDadosUnificados(empresaId) {
+  if (!empresaId) return null;
+  try {
+    const response = await api.get(`/company/${empresaId}/dashboard`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Erro na rota unificada:", error);
+    return null;
+  }
+}
+
+// ========================================
 // ABA 1 - VISÃO GERAL (COM GRÁFICOS)
 // ========================================
 function VisaoGeral({ linha, linhaId }) {
@@ -2202,49 +2216,9 @@ function Historico({ linha, linhaId }) {
 }
 
 // ========================================
-// ABA 9 - FINANCEIRO (COM DADOS REAIS)
+// ABA 9 - FINANCEIRO (COM DADOS REAIS DA ROTA UNIFICADA)
 // ========================================
-function Financeiro({ linha, linhaId }) {
-  const [dadosAPI, setDadosAPI] = useState(null);
-  const [perdasAPI, setPerdasAPI] = useState([]);
-  const [produtosAPI, setProdutosAPI] = useState([]);
-  const [carregando, setCarregando] = useState(true);
-  const [erro, setErro] = useState("");
-
-  useEffect(() => {
-    if (!linhaId) return;
-    carregarDadosFinanceiros();
-  }, [linhaId]);
-
-  async function carregarDadosFinanceiros() {
-    setCarregando(true);
-    try {
-      // 1. Buscar dados financeiros (custos)
-      const response = await api.get(`/finance/line/${linhaId}`);
-      console.log("📊 Dados Financeiros da API:", response.data);
-      setDadosAPI(response.data);
-      
-      // 2. Buscar perdas reais
-      const perdasRes = await api.get(`/losses/${linhaId}`).catch(() => ({ data: [] }));
-      console.log("📉 Perdas registradas:", perdasRes.data);
-      setPerdasAPI(perdasRes.data);
-      
-      // 3. Buscar produtos da linha
-      const produtosRes = await api.get(`/line-products/${linhaId}`).catch(() => ({ data: [] }));
-      const produtosData = produtosRes.data.dados || produtosRes.data;
-      console.log("📦 Produtos:", produtosData);
-      setProdutosAPI(produtosData);
-      
-      setErro("");
-    } catch (error) {
-      console.error("Erro ao carregar dados financeiros:", error);
-      setErro("Erro ao carregar dados financeiros");
-      toast.error("Erro ao carregar dados financeiros");
-    } finally {
-      setCarregando(false);
-    }
-  }
-
+function Financeiro({ linha, linhaId, dadosUnificados }) {
   const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -2252,25 +2226,7 @@ function Financeiro({ linha, linhaId }) {
     }).format(valor || 0);
   };
 
-  if (carregando) {
-    return <div style={{ padding: "clamp(20px, 5vw, 40px)", textAlign: "center" }}>Carregando dados financeiros...</div>;
-  }
-
-  if (erro) {
-    return (
-      <div style={{ 
-        backgroundColor: "#fee2e2", 
-        color: "#dc2626", 
-        padding: "clamp(15px, 2vw, 20px)", 
-        borderRadius: "4px",
-        textAlign: "center"
-      }}>
-        {erro}
-      </div>
-    );
-  }
-
-  if (!dadosAPI) {
+  if (!dadosUnificados || !dadosUnificados.linhas) {
     return (
       <div style={{ 
         backgroundColor: "white", 
@@ -2279,48 +2235,30 @@ function Financeiro({ linha, linhaId }) {
         textAlign: "center",
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
       }}>
-        <p style={{ color: "#666" }}>Nenhum dado financeiro disponível.</p>
+        <p style={{ color: "#666" }}>Carregando dados financeiros...</p>
       </div>
     );
   }
 
-  const { financeiro, detalhamento, meta_dados } = dadosAPI;
-  const custoMinuto = financeiro?.custo_por_minuto || 0;
+  const linhaUnificada = dadosUnificados.linhas.find(l => l.id === parseInt(linhaId));
   
-  // 🔥 Cálculo das perdas REAIS
-  // 1. Perdas de Setup (já calculadas por posto)
-  const perdasSetup = detalhamento.reduce((acc, p) => acc + (p.custo_setup_dia * 22), 0);
-  
-  // 2. Perdas de Microparadas (dos dados reais)
-  const totalMicroparadasMin = perdasAPI.reduce((acc, p) => acc + (parseFloat(p.microparadas_minutos) || 0), 0);
-  const perdasMicro = totalMicroparadasMin * custoMinuto * 22;
-  
-  // 3. Perdas de Refugo (dos dados reais)
-  const perdasRefugo = perdasAPI.reduce((acc, p) => {
-    const refugoPecas = parseInt(p.refugo_pecas) || 0;
-    const produto = produtosAPI.find(prod => prod.produto_nome === p.produto_nome);
-    const valorUnitario = produto ? parseFloat(produto.valor_unitario) : 50;
-    return acc + (refugoPecas * valorUnitario);
-  }, 0) * 22;
-  
-  const perdasTotais = perdasSetup + perdasMicro + perdasRefugo;
+  if (!linhaUnificada) {
+    return (
+      <div style={{ 
+        backgroundColor: "white", 
+        padding: "clamp(20px, 5vw, 40px)", 
+        borderRadius: "8px", 
+        textAlign: "center",
+        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+      }}>
+        <p style={{ color: "#666" }}>Dados financeiros da linha não encontrados.</p>
+      </div>
+    );
+  }
 
-  // 🔥 Perdas por Produto (dos dados reais)
-  const perdasPorProduto = produtosAPI.map(prod => {
-    const perdasProd = perdasAPI.filter(p => p.produto_nome === prod.produto_nome);
-    const totalMicro = perdasProd.reduce((acc, p) => acc + (parseFloat(p.microparadas_minutos) || 0), 0);
-    const totalRefugo = perdasProd.reduce((acc, p) => acc + (parseInt(p.refugo_pecas) || 0), 0);
-    const valorUnitario = parseFloat(prod.valor_unitario) || 0;
-    
-    return {
-      nome: prod.produto_nome,
-      valor: valorUnitario,
-      micro: totalMicro,
-      refugo: totalRefugo,
-      custoMicro: totalMicro * custoMinuto,
-      custoRefugo: totalRefugo * valorUnitario
-    };
-  });
+  const perdasLinha = linhaUnificada.perdas;
+  const perdasTotais = perdasLinha.total;
+  const custoMensal = linhaUnificada.custoMensal;
 
   return (
     <div>
@@ -2341,23 +2279,23 @@ function Financeiro({ linha, linhaId }) {
       }}>
         <Card 
           titulo="Custo Mão de Obra" 
-          valor={formatarMoeda(financeiro?.custo_mod_mensal)}
+          valor={formatarMoeda(custoMensal)}
           cor="#1E3A8A"
         />
         <Card 
-          titulo="Custo/hora" 
-          valor={formatarMoeda(financeiro?.custo_por_hora)}
-          cor="#0f172a"
-        />
-        <Card 
           titulo="Custo/minuto" 
-          valor={formatarMoeda(financeiro?.custo_por_minuto)}
+          valor={formatarMoeda(custoMensal / (22 * 8 * 60))}
           cor="#6b7280"
         />
         <Card 
-          titulo="Base de Cálculo" 
-          valor={meta_dados?.base_calculo || "22 dias/mês, 8h/dia"}
-          cor="#16a34a"
+          titulo="Setup Mensal" 
+          valor={formatarMoeda(perdasLinha.setup)}
+          cor="#f59e0b"
+        />
+        <Card 
+          titulo="Refugo Mensal" 
+          valor={formatarMoeda(perdasLinha.refugo)}
+          cor="#dc2626"
         />
       </div>
 
@@ -2381,11 +2319,11 @@ function Financeiro({ linha, linhaId }) {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                 <span>Setup</span>
-                <span style={{ fontWeight: "bold", color: "#f59e0b" }}>{formatarMoeda(perdasSetup)}</span>
+                <span style={{ fontWeight: "bold", color: "#f59e0b" }}>{formatarMoeda(perdasLinha.setup)}</span>
               </div>
               <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
                 <div style={{ 
-                  width: `${perdasTotais > 0 ? (perdasSetup / perdasTotais) * 100 : 0}%`, 
+                  width: `${perdasTotais > 0 ? (perdasLinha.setup / perdasTotais) * 100 : 0}%`, 
                   height: "100%", 
                   backgroundColor: "#f59e0b",
                   borderRadius: "4px"
@@ -2395,11 +2333,11 @@ function Financeiro({ linha, linhaId }) {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                 <span>Microparadas</span>
-                <span style={{ fontWeight: "bold", color: "#f59e0b" }}>{formatarMoeda(perdasMicro)}</span>
+                <span style={{ fontWeight: "bold", color: "#f59e0b" }}>{formatarMoeda(perdasLinha.micro)}</span>
               </div>
               <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
                 <div style={{ 
-                  width: `${perdasTotais > 0 ? (perdasMicro / perdasTotais) * 100 : 0}%`, 
+                  width: `${perdasTotais > 0 ? (perdasLinha.micro / perdasTotais) * 100 : 0}%`, 
                   height: "100%", 
                   backgroundColor: "#f59e0b",
                   borderRadius: "4px"
@@ -2409,11 +2347,11 @@ function Financeiro({ linha, linhaId }) {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "4px" }}>
                 <span>Refugo</span>
-                <span style={{ fontWeight: "bold", color: "#dc2626" }}>{formatarMoeda(perdasRefugo)}</span>
+                <span style={{ fontWeight: "bold", color: "#dc2626" }}>{formatarMoeda(perdasLinha.refugo)}</span>
               </div>
               <div style={{ height: "6px", backgroundColor: "#e5e7eb", borderRadius: "4px" }}>
                 <div style={{ 
-                  width: `${perdasTotais > 0 ? (perdasRefugo / perdasTotais) * 100 : 0}%`, 
+                  width: `${perdasTotais > 0 ? (perdasLinha.refugo / perdasTotais) * 100 : 0}%`, 
                   height: "100%", 
                   backgroundColor: "#dc2626",
                   borderRadius: "4px"
@@ -2457,110 +2395,6 @@ function Financeiro({ linha, linhaId }) {
         </div>
       </div>
 
-      {/* Tabela de Custos por Posto */}
-      <h3 style={{ 
-        color: "#1E3A8A", 
-        marginBottom: "clamp(10px, 1.5vw, 15px)", 
-        fontSize: "clamp(16px, 2.5vw, 18px)" 
-      }}>
-        Custos por Posto
-      </h3>
-      <div style={{ overflowX: "auto", marginBottom: "clamp(20px, 3vw, 30px)", width: "100%" }}>
-        <table style={{ 
-          width: "100%", 
-          borderCollapse: "collapse", 
-          backgroundColor: "white",
-          minWidth: "700px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          borderRadius: "8px"
-        }}>
-          <thead>
-            <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-              <th style={thResponsivo}>Posto</th>
-              <th style={thResponsivo}>Cargo</th>
-              <th style={thResponsivo}>Salário</th>
-              <th style={thResponsivo}>Encargos</th>
-              <th style={thResponsivo}>Custo Mensal</th>
-              <th style={thResponsivo}>Setup</th>
-              <th style={thResponsivo}>Custo Setup/dia</th>
-            </tr>
-          </thead>
-          <tbody>
-            {detalhamento && detalhamento.map((posto, idx) => (
-              <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                <td style={tdResponsivo}>{posto.posto}</td>
-                <td style={tdResponsivo}>{posto.cargo}</td>
-                <td style={tdResponsivo}>{formatarMoeda(posto.salario_base)}</td>
-                <td style={tdResponsivo}>{posto.encargos_percentual}%</td>
-                <td style={tdResponsivo}>
-                  <span style={{ fontWeight: "bold", color: "#1E3A8A" }}>
-                    {formatarMoeda(posto.custo_mensal)}
-                  </span>
-                </td>
-                <td style={tdResponsivo}>{posto.tempo_setup_minutos || 0} min</td>
-                <td style={tdResponsivo}>
-                  <span style={{ color: "#f59e0b", fontWeight: "bold" }}>
-                    {formatarMoeda(posto.custo_setup_dia)}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Tabela de Perdas por Produto */}
-      <h3 style={{ 
-        color: "#1E3A8A", 
-        marginBottom: "clamp(10px, 1.5vw, 15px)", 
-        fontSize: "clamp(16px, 2.5vw, 18px)",
-        marginTop: "clamp(20px, 3vw, 30px)"
-      }}>
-        Perdas por Produto
-      </h3>
-      <div style={{ overflowX: "auto", marginBottom: "clamp(20px, 3vw, 30px)", width: "100%" }}>
-        <table style={{ 
-          width: "100%", 
-          borderCollapse: "collapse", 
-          backgroundColor: "white",
-          minWidth: "800px",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          borderRadius: "8px"
-        }}>
-          <thead>
-            <tr style={{ backgroundColor: "#1E3A8A", color: "white" }}>
-              <th style={thResponsivo}>Produto</th>
-              <th style={thResponsivo}>Valor Unit.</th>
-              <th style={thResponsivo}>Micro (min)</th>
-              <th style={thResponsivo}>Custo Micro</th>
-              <th style={thResponsivo}>Refugo</th>
-              <th style={thResponsivo}>Custo Refugo</th>
-              <th style={thResponsivo}>Total/dia</th>
-            </tr>
-          </thead>
-          <tbody>
-            {perdasPorProduto.map((prod, idx) => {
-              const totalDia = prod.custoMicro + prod.custoRefugo;
-              return (
-                <tr key={idx} style={{ borderBottom: "1px solid #e5e7eb" }}>
-                  <td style={tdResponsivo}>{prod.nome}</td>
-                  <td style={tdResponsivo}>{formatarMoeda(prod.valor)}</td>
-                  <td style={tdResponsivo}>{prod.micro} min</td>
-                  <td style={tdResponsivo}>{formatarMoeda(prod.custoMicro)}</td>
-                  <td style={tdResponsivo}>{prod.refugo} pç</td>
-                  <td style={tdResponsivo}>{formatarMoeda(prod.custoRefugo)}</td>
-                  <td style={tdResponsivo}>
-                    <span style={{ fontWeight: "bold", color: "#dc2626" }}>
-                      {formatarMoeda(totalDia)}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
       {/* Resumo Financeiro */}
       <div style={{ 
         marginTop: "clamp(20px, 3vw, 30px)", 
@@ -2583,7 +2417,7 @@ function Financeiro({ linha, linhaId }) {
           <div>
             <span style={{ color: "#666", fontSize: "clamp(12px, 1.5vw, 13px)" }}>Custo Operacional Mensal</span>
             <p style={{ fontSize: "clamp(20px, 3vw, 24px)", fontWeight: "bold", color: "#1E3A8A", margin: "5px 0" }}>
-              {formatarMoeda(financeiro?.custo_mod_mensal)}
+              {formatarMoeda(custoMensal)}
             </p>
           </div>
           <div>
@@ -3616,8 +3450,24 @@ export default function FichaLinha() {
   const [abaAtiva, setAbaAtiva] = useState("visao");
   const [carregando, setCarregando] = useState(true);
   const [nomeLinha, setNomeLinha] = useState("");
+  const [dadosUnificados, setDadosUnificados] = useState(null);
   console.log('🔍 FichaLinha - clienteAtual:', clienteAtual);
   console.log('🔍 FichaLinha - nomeCliente:', nomeCliente);
+
+// ========================================
+// 🔥 NOVO useEffect para carregar dados unificados
+// ========================================
+useEffect(() => {
+  if (!clienteAtual) return;
+  
+  const carregarDadosUnificados = async () => {
+    const dados = await buscarDadosUnificados(clienteAtual);
+    setDadosUnificados(dados);
+    console.log('📊 Dados unificados carregados:', dados);
+  };
+  
+  carregarDadosUnificados();
+}, [clienteAtual]);
 
   useEffect(() => {
     setCarregando(true);
@@ -3804,7 +3654,7 @@ export default function FichaLinha() {
 
       {/* Conteúdo da aba ativa */}
       <div style={{ minHeight: "400px", width: "100%" }}>
-        <ComponenteAtivo linha={linha} linhaId={id} clienteAtual={clienteAtual} />
+        <ComponenteAtivo linha={linha} linhaId={id} clienteAtual={clienteAtual} dadosUnificados={dadosUnificados} />
       </div>
     </div>
   );
