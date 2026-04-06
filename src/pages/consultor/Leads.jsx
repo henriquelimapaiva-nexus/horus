@@ -21,10 +21,10 @@ export default function Leads() {
     contato_nome: "",
     contato_email: "",
     contato_telefone: "",
-    fonte: "indicação",
-    status: "prospecção",
+    fonte: "",
+    status: "",
     potencial_faturamento: "",
-    probabilidade_fechamento: 30,
+    probabilidade_fechamento: "",
     proximo_contato: "",
     observacoes: ""
   });
@@ -89,8 +89,8 @@ export default function Leads() {
       setEditandoId(null);
       setForm({
         nome: "", cnpj: "", contato_nome: "", contato_email: "", contato_telefone: "",
-        fonte: "indicação", status: "prospecção", potencial_faturamento: "",
-        probabilidade_fechamento: 30, proximo_contato: "", observacoes: ""
+        fonte: "", status: "", potencial_faturamento: "",
+        probabilidade_fechamento: "", proximo_contato: "", observacoes: ""
       });
       carregarLeads();
       carregarMetrics();
@@ -398,6 +398,7 @@ export default function Leads() {
               value={form.fonte}
               onChange={(e) => setForm({...form, fonte: e.target.value})}
               options={[
+                { value: "", label: "Selecione..." },
                 { value: "indicação", label: "Indicação" },
                 { value: "linkedin", label: "LinkedIn" },
                 { value: "site", label: "Site" },
@@ -410,6 +411,7 @@ export default function Leads() {
               value={form.status}
               onChange={(e) => setForm({...form, status: e.target.value})}
               options={[
+                { value: "", label: "Selecione..." },
                 { value: "prospecção", label: "Prospecção" },
                 { value: "contato_inicial", label: "Contato Inicial" },
                 { value: "proposta_enviada", label: "Proposta Enviada" },
@@ -427,6 +429,7 @@ export default function Leads() {
             <Input
               label="Probabilidade de Fechamento (%)"
               type="number"
+              placeholder="valor porcentagem"
               min="0"
               max="100"
               value={form.probabilidade_fechamento}
