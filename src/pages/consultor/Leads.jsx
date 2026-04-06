@@ -29,8 +29,8 @@ export default function Leads() {
     observacoes: ""
   });
   const [interacaoForm, setInteracaoForm] = useState({
-    tipo: "ligacao",
-    data: new Date().toISOString().split('T')[0],
+    tipo: "",
+    data: "",
     hora: "",
     descricao: ""
   });
@@ -111,8 +111,8 @@ export default function Leads() {
       toast.success("Interação registrada com sucesso!");
       setModalInteracao(null);
       setInteracaoForm({
-        tipo: "ligacao",
-        data: new Date().toISOString().split('T')[0],
+        tipo: "",
+        data: "",
         hora: "",
         descricao: ""
       });
@@ -508,6 +508,7 @@ export default function Leads() {
               value={interacaoForm.tipo}
               onChange={(e) => setInteracaoForm({...interacaoForm, tipo: e.target.value})}
               options={[
+                { value: "", label: "Selecione..." },
                 { value: "ligacao", label: "Ligação" },
                 { value: "email", label: "E-mail" },
                 { value: "reuniao", label: "Reunião" },
@@ -518,6 +519,7 @@ export default function Leads() {
             <Input
               label="Data"
               type="date"
+              placeholder="dd/mm/aaaa"
               value={interacaoForm.data}
               onChange={(e) => setInteracaoForm({...interacaoForm, data: e.target.value})}
               required
