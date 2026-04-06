@@ -401,61 +401,7 @@ export default function IAPrecificacaoPreContrato() {
                 </div>
               )}
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#166534' }}>Ganho Mensal</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>
-                    {formatarMoeda(resultado.detalhamento.ganho_mensal_projetado)}
-                  </div>
-                </div>
-                <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#166534' }}>ROI</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>
-                    {resultado.detalhamento.roi_cliente_percentual}%
-                  </div>
-                </div>
-                <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#166534' }}>Payback</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>
-                    {resultado.detalhamento.payback_meses} meses
-                  </div>
-                </div>
-                <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#166534' }}>Cliente Fica com</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>
-                    {resultado.detalhamento.cliente_fica_percentual}%
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ background: '#fee2e2', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '12px', color: '#991b1b' }}>Perda Estimada Atual</div>
-                <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#991b1b' }}>
-                  {formatarMoeda(resultado.detalhamento.perda_mensal_estimada)}/mês
-                </div>
-                <div style={{ fontSize: '12px', color: '#991b1b', marginTop: '5px' }}>
-                  Potencial de redução: {resultado.detalhamento.potencial_melhoria_percentual}%
-                </div>
-              </div>
-
-              {resultado.acoes_sugeridas && resultado.acoes_sugeridas.length > 0 && (
-                <div style={{ background: '#f3f4f6', padding: '15px', borderRadius: '8px' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '10px' }}>⚙️ Ações Prioritárias</div>
-                  {resultado.acoes_sugeridas.slice(0, 3).map((acao, idx) => (
-                    <div key={idx} style={{ marginBottom: '12px', paddingBottom: '8px', borderBottom: '1px solid #e5e7eb' }}>
-                      <div style={{ fontWeight: '500' }}>{acao.titulo}</div>
-                      <div style={{ fontSize: '12px', color: '#666' }}>{acao.descricao}</div>
-                      <div style={{ fontSize: '12px', marginTop: '4px' }}>
-                        <span style={{ color: '#166534' }}>Ganho: {formatarMoeda(acao.ganho_mensal)}/mês</span>
-                        {' | '}
-                        <span style={{ color: '#1E3A8A' }}>Investimento: {formatarMoeda(acao.investimento)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div style={{ background: '#f9fafb', padding: '15px', borderRadius: '8px', whiteSpace: 'pre-line', fontSize: '13px', maxHeight: '300px', overflow: 'auto' }}>
+              <div style={{ background: '#f9fafb', padding: '15px', borderRadius: '8px', whiteSpace: 'pre-line', fontSize: '13px', maxHeight: '400px', overflow: 'auto' }}>
                 {resultado.resumo}
               </div>
 
