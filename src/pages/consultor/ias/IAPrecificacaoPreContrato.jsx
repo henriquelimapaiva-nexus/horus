@@ -24,15 +24,15 @@ export default function IAPrecificacaoPreContrato() {
   // Dados do cliente (estimativas)
   const [dadosCliente, setDadosCliente] = useState({
     empresa_nome: '',
-    setor: 'metalurgico',
+    setor: '',
     numero_funcionarios: '',
     faturamento_anual: '',
-    numero_linhas: 1,
+    numero_linhas: '',
     problemas: [],
-    urgencia: 'normal',
-    complexidade: 'media',
-    gestor_dedicado: 'sim',
-    acesso_dados: 'imediato',
+    urgencia: '',
+    complexidade: '',
+    gestor_dedicado: '',
+    acesso_dados: '',
     projeto_piloto: false,
     tem_viagem: false
   });
@@ -291,6 +291,7 @@ export default function IAPrecificacaoPreContrato() {
                 value={dadosCliente.urgencia}
                 onChange={(e) => setDadosCliente({...dadosCliente, urgencia: e.target.value})}
                 options={[
+                  { value: '', label: 'Selecione...' }, 
                   { value: 'baixa', label: 'Baixa (6+ meses)' },
                   { value: 'normal', label: 'Normal (3-6 meses)' },
                   { value: 'alta', label: 'Alta (até 3 meses)' }
@@ -302,6 +303,7 @@ export default function IAPrecificacaoPreContrato() {
                 value={dadosCliente.complexidade}
                 onChange={(e) => setDadosCliente({...dadosCliente, complexidade: e.target.value})}
                 options={[
+                  { value: '', label: 'Selecione...' },
                   { value: 'baixa', label: 'Baixa' },
                   { value: 'media', label: 'Média' },
                   { value: 'alta', label: 'Alta' }
@@ -315,6 +317,7 @@ export default function IAPrecificacaoPreContrato() {
                 value={dadosCliente.gestor_dedicado}
                 onChange={(e) => setDadosCliente({...dadosCliente, gestor_dedicado: e.target.value})}
                 options={[
+                  { value: '', label: 'Selecione...' },
                   { value: 'sim', label: 'Sim, dedicado' },
                   { value: 'parcial', label: 'Parcial' },
                   { value: 'nao', label: 'Não' }
@@ -326,6 +329,7 @@ export default function IAPrecificacaoPreContrato() {
                 value={dadosCliente.acesso_dados}
                 onChange={(e) => setDadosCliente({...dadosCliente, acesso_dados: e.target.value})}
                 options={[
+                  { value: '', label: 'Selecione...' },
                   { value: 'imediato', label: 'Imediato' },
                   { value: 'mediado', label: 'Mediado' },
                   { value: 'restrito', label: 'Restrito' }
