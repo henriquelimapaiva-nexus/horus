@@ -11,6 +11,20 @@ const truncarTexto = (texto, maxLength = 20) => {
   return texto.length > maxLength ? texto.substring(0, maxLength - 3) + '...' : texto;
 };
 
+// ========================================
+// 🚀 FUNÇÃO PARA BUSCAR DADOS DA ROTA UNIFICADA
+// ========================================
+async function buscarDadosUnificados(empresaId) {
+  if (!empresaId) return null;
+  try {
+    const response = await api.get(`/company/${empresaId}/dashboard`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Erro na rota unificada:", error);
+    return null;
+  }
+}
+
 export default function Relatorio() {
   const { clienteAtual } = useOutletContext();
   
@@ -28,7 +42,6 @@ export default function Relatorio() {
   });
 
   useEffect(() => {
-    // ✅ CORRIGIDO: /empresas → /companies
     api.get("/companies")
       .then((res) => setEmpresas(res.data))
       .catch((err) => {
@@ -39,7 +52,6 @@ export default function Relatorio() {
 
   useEffect(() => {
     if (filtros.empresaId) {
-      // ✅ CORRIGIDO: /linhas/${filtros.empresaId} → /lines/${filtros.empresaId}
       api.get(`/lines/${filtros.empresaId}`)
         .then((res) => setLinhas(res.data))
         .catch((err) => {
@@ -63,42 +75,56 @@ export default function Relatorio() {
     try {
       let dados = [];
 
+      // 🔥 USAR A ROTA UNIFICADA
       if (filtros.linhaId) {
-        const [analise, postos] = await Promise.all([
-          // ✅ CORRIGIDO: /analise-linha mantido (já corrigido)
-          api.get(`/analise-linha/${filtros.linhaId}`).catch(() => ({ data: {} })),
-          // ✅ CORRIGIDO: /postos/${filtros.linhaId} → /work-stations/${filtros.linhaId}
-          api.get(`/work-stations/${filtros.linhaId}`).catch(() => ({ data: [] }))
-        ]);
-
-        dados = [{
-          tipo: "linha",
-          id: parseInt(filtros.linhaId),
-          nome: linhas.find(l => l.id === parseInt(filtros.linhaId))?.nome || "Linha",
-          analise: analise.data,
-          postos: postos.data
-        }];
-      } else if (filtros.empresaId) {
-        // ✅ CORRIGIDO: /linhas/${filtros.empresaId} → /lines/${filtros.empresaId}
-        const linhasDaEmpresa = await api.get(`/lines/${filtros.empresaId}`);
+        // Buscar dados da empresa primeiro para ter acesso às linhas
+        const dadosUnificados = await buscarDadosUnificados(filtros.empresaId);
         
-        for (const linha of linhasDaEmpresa.data) {
-          const [analise, postos] = await Promise.all([
-            // ✅ CORRIGIDO: /analise-linha mantido
-            api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} })),
-            // ✅ CORRIGIDO: /postos/${linha.id} → /work-stations/${linha.id}
-            api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }))
-          ]);
-
-          dados.push({
-            tipo: "linha",
-            id: linha.id,
-            nome: linha.nome,
-            analise: analise.data,
-            postos: postos.data
-          });
+        if (dadosUnificados && dadosUnificados.linhas) {
+          const linhaUnificada = dadosUnificados.linhas.find(l => l.id === parseInt(filtros.linhaId));
+          
+          if (linhaUnificada) {
+            // Buscar postos da linha (ainda precisa da API separada)
+            const postosRes = await api.get(`/work-stations/${filtros.linhaId}`).catch(() => ({ data: [] }));
+            
+            dados = [{
+              tipo: "linha",
+              id: parseInt(filtros.linhaId),
+              nome: linhaUnificada.nome,
+              analise: {
+                eficiencia_percentual: linhaUnificada.oee,
+                capacidade_estimada_dia: linhaUnificada.metaDiaria,
+                gargalo: linhaUnificada.gargalo
+              },
+              postos: postosRes.data
+            }];
+          }
+        }
+      } else if (filtros.empresaId) {
+        // Buscar dados unificados da empresa
+        const dadosUnificados = await buscarDadosUnificados(filtros.empresaId);
+        
+        if (dadosUnificados && dadosUnificados.linhas) {
+          for (const linha of dadosUnificados.linhas) {
+            // Buscar postos da linha
+            const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
+            
+            dados.push({
+              tipo: "linha",
+              id: linha.id,
+              nome: linha.nome,
+              analise: {
+                eficiencia_percentual: linha.oee,
+                capacidade_estimada_dia: linha.metaDiaria,
+                gargalo: linha.gargalo
+              },
+              postos: postosRes.data
+            });
+          }
         }
       }
+
+      console.log('📊 Relatório - DADOS DA ROTA UNIFICADA:', dados);
 
       setRelatorio({
         geradoEm: new Date().toLocaleString('pt-BR'),
