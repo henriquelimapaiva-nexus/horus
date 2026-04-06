@@ -3455,207 +3455,228 @@ export default function FichaLinha() {
   console.log('🔍 FichaLinha - nomeCliente:', nomeCliente);
 
 // ========================================
-// 🔥 NOVO useEffect para carregar dados unificados
+// 🔥 NOVO useEffect para carregar dados unificados (COM DIAGNÓSTICO)
 // ========================================
 useEffect(() => {
   if (!clienteAtual) return;
   
   const carregarDadosUnificados = async () => {
+    console.log('🔍 1. Buscando dados para empresa:', clienteAtual);
     const dados = await buscarDadosUnificados(clienteAtual);
+    
+    console.log('🔍 2. Dados recebidos da rota:');
+    if (dados) {
+      console.log('   - Empresa:', dados.empresa?.nome);
+      console.log('   - Total de linhas:', dados.linhas?.length);
+      console.log('   - Resumo:', dados.resumo);
+      
+      if (dados.linhas && dados.linhas.length > 0) {
+        dados.linhas.forEach(linha => {
+          console.log(`\n   📌 Linha ${linha.id} - ${linha.nome}:`);
+          console.log(`      Custo Mensal: R$ ${linha.custoMensal}`);
+          console.log(`      Setup: R$ ${linha.perdas?.setup}`);
+          console.log(`      Micro: R$ ${linha.perdas?.micro}`);
+          console.log(`      Refugo: R$ ${linha.perdas?.refugo}`);
+          console.log(`      Total Perdas: R$ ${linha.perdas?.total}`);
+        });
+      }
+    } else {
+      console.log('   ❌ Nenhum dado retornado!');
+    }
+    
     setDadosUnificados(dados);
-    console.log('📊 Dados unificados carregados:', dados);
+    console.log('🔍 3. Dados salvos no state!');
   };
   
   carregarDadosUnificados();
 }, [clienteAtual]);
 
-  useEffect(() => {
-    setCarregando(true);
-    
-    Promise.all([
-      api.get(`/analise-linha/${id}`).catch(() => ({ data: {} })),
-      api.get(`/work-stations/${id}`).catch(() => ({ data: [] })),
-      api.get(`/lines/${clienteAtual}`).catch(() => ({ data: [] }))
-    ])
-      .then(([analise, postos, linhas]) => {
-        const linhaAtual = Array.isArray(linhas.data) 
-          ? linhas.data.find(l => l.id === parseInt(id))
-          : null;
-        
-        setNomeLinha(linhaAtual?.nome || "Linha de Produção");
-        
-        // 🔥 CORREÇÃO: Mapear os campos corretos da API analise-linha
-        const postoGargalo = postos.data.find(p => p.tempo_ciclo_segundos === analise.data.gargalo_ciclo);
-        
-        setLinha({
-          ...analise.data,
-          postos: postos.data,
-          id: id,
-          gargalo_identificado: analise.data.gargalo_ciclo ? 
-            (postoGargalo?.nome || `${analise.data.gargalo_ciclo}s`) : 
-            "Não identificado",
-          capacidade_real_estimada: analise.data.capacidade_estimada_dia || 0,
-          takt_time_alvo: analise.data.takt_time || 0,
-          eficiencia_percentual: analise.data.eficiencia_percentual || 0,
-          maior_tempo_ciclo_real_segundos: analise.data.gargalo_ciclo || 0,
-          meta_planejada: analise.data.meta_diaria || 0
-        });
-      })
-      .catch((err) => {
-        console.error("Erro ao carregar linha:", err);
-        toast.error("Erro ao carregar dados da linha");
-      })
-      .finally(() => setCarregando(false));
-  }, [id, clienteAtual]);
+useEffect(() => {
+  setCarregando(true);
+  
+  Promise.all([
+    api.get(`/analise-linha/${id}`).catch(() => ({ data: {} })),
+    api.get(`/work-stations/${id}`).catch(() => ({ data: [] })),
+    api.get(`/lines/${clienteAtual}`).catch(() => ({ data: [] }))
+  ])
+    .then(([analise, postos, linhas]) => {
+      const linhaAtual = Array.isArray(linhas.data) 
+        ? linhas.data.find(l => l.id === parseInt(id))
+        : null;
+      
+      setNomeLinha(linhaAtual?.nome || "Linha de Produção");
+      
+      // 🔥 CORREÇÃO: Mapear os campos corretos da API analise-linha
+      const postoGargalo = postos.data.find(p => p.tempo_ciclo_segundos === analise.data.gargalo_ciclo);
+      
+      setLinha({
+        ...analise.data,
+        postos: postos.data,
+        id: id,
+        gargalo_identificado: analise.data.gargalo_ciclo ? 
+          (postoGargalo?.nome || `${analise.data.gargalo_ciclo}s`) : 
+          "Não identificado",
+        capacidade_real_estimada: analise.data.capacidade_estimada_dia || 0,
+        takt_time_alvo: analise.data.takt_time || 0,
+        eficiencia_percentual: analise.data.eficiencia_percentual || 0,
+        maior_tempo_ciclo_real_segundos: analise.data.gargalo_ciclo || 0,
+        meta_planejada: analise.data.meta_diaria || 0
+      });
+    })
+    .catch((err) => {
+      console.error("Erro ao carregar linha:", err);
+      toast.error("Erro ao carregar dados da linha");
+    })
+    .finally(() => setCarregando(false));
+}, [id, clienteAtual]);
 
-  const abas = [
-    { id: "visao", nome: "Visão Geral", componente: VisaoGeral },
-    { id: "mapa", nome: "Mapa da Linha", componente: Mapa },
-    { id: "postos", nome: "Postos", componente: Postos },
-    { id: "balanceamento", nome: "Balanceamento", componente: Balanceamento },
-    { id: "variabilidade", nome: "Variabilidade", componente: Variabilidade },
-    { id: "simulacao", nome: "Simulação", componente: Simulacao },
-    { id: "acoes", nome: "Ações", componente: Acoes },
-    { id: "historico", nome: "Histórico", componente: Historico },
-    { id: "financeiro", nome: "Financeiro", componente: Financeiro },
-    { id: "eficiencia", nome: "Eficiência", componente: EficienciaGlobal },
-    { id: "produtos", nome: "Produtos", componente: ProdutosLinha },
-    { id: "colaboradores", nome: "Colaboradores", componente: ColaboradoresLinha }
-  ];
+const abas = [
+  { id: "visao", nome: "Visão Geral", componente: VisaoGeral },
+  { id: "mapa", nome: "Mapa da Linha", componente: Mapa },
+  { id: "postos", nome: "Postos", componente: Postos },
+  { id: "balanceamento", nome: "Balanceamento", componente: Balanceamento },
+  { id: "variabilidade", nome: "Variabilidade", componente: Variabilidade },
+  { id: "simulacao", nome: "Simulação", componente: Simulacao },
+  { id: "acoes", nome: "Ações", componente: Acoes },
+  { id: "historico", nome: "Histórico", componente: Historico },
+  { id: "financeiro", nome: "Financeiro", componente: Financeiro },
+  { id: "eficiencia", nome: "Eficiência", componente: EficienciaGlobal },
+  { id: "produtos", nome: "Produtos", componente: ProdutosLinha },
+  { id: "colaboradores", nome: "Colaboradores", componente: ColaboradoresLinha }
+];
 
-  if (carregando) {
-    return (
-      <div style={{ 
-        padding: "clamp(20px, 5vw, 60px)", 
-        textAlign: "center",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center"
-      }}>
-        <div style={{ color: "#1E3A8A", fontSize: "clamp(14px, 2vw, 18px)" }}>
-          Carregando linha...
-        </div>
-      </div>
-    );
-  }
-
-  if (!linha) {
-    return (
-      <div style={{ 
-        padding: "clamp(20px, 5vw, 60px)", 
-        textAlign: "center",
-        backgroundColor: "white",
-        borderRadius: "8px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-        margin: "clamp(10px, 3vw, 30px)"
-      }}>
-        <h2 style={{ color: "#dc2626", marginBottom: "clamp(10px, 2vw, 20px)" }}>Linha não encontrada</h2>
-        <p style={{ color: "#666" }}>
-          Verifique se a linha existe ou se você tem permissão para acessá-la.
-        </p>
-      </div>
-    );
-  }
-
-  const ComponenteAtivo = abas.find(a => a.id === abaAtiva).componente;
-
+if (carregando) {
   return (
     <div style={{ 
-      padding: "clamp(15px, 3vw, 30px)", 
-      width: "100%",
-      maxWidth: "1600px",
-      margin: "0 auto",
-      boxSizing: "border-box"
+      padding: "clamp(20px, 5vw, 60px)", 
+      textAlign: "center",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center"
     }}>
-      {/* Cabeçalho da linha - CORRIGIDO COM BOTÃO VOLTAR */}
-      <div style={{ 
-        marginBottom: "clamp(20px, 3vw, 30px)",
-        backgroundColor: "white",
-        padding: "clamp(15px, 2vw, 20px)",
-        borderRadius: "8px",
-        boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
-      }}>
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "15px"
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
-            <Botao
-              variant="secondary"
-              size="sm"
-              onClick={() => navigate("/linhas")}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "5px",
-                padding: "6px 12px"
-              }}
-            >
-              ← Voltar
-            </Botao>
-            <div>
-              <h1 style={{ 
-                color: "#1E3A8A", 
-                marginBottom: "5px", 
-                fontSize: "clamp(20px, 4vw, 24px)" 
-              }}>
-                {truncarTexto(nomeLinha, 30)}
-              </h1>
-              <p style={{ color: "#666", fontSize: "clamp(12px, 1.8vw, 14px)" }}>
-                Cliente: <strong>{nomeCliente}</strong> • ID: {id}
-              </p>
-            </div>
-          </div>
-          <Link to={`/cronoanalise/${id}`}>
-            <Botao
-              variant="success"
-              size="md"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-              }}
-            >
-              📊 Iniciar Coleta
-            </Botao>
-          </Link>
-        </div>
-      </div>
-
-      {/* Abas responsivas */}
-      <div style={{ 
-        display: "flex", 
-        gap: "5px", 
-        borderBottom: "2px solid #e5e7eb",
-        marginBottom: "clamp(20px, 3vw, 25px)",
-        overflowX: "auto",
-        paddingBottom: "2px",
-        WebkitOverflowScrolling: "touch"
-      }}>
-        {abas.map((aba) => (
-          <Botao
-            key={aba.id}
-            variant={abaAtiva === aba.id ? "primary" : "outline"}
-            size="sm"
-            onClick={() => setAbaAtiva(aba.id)}
-            style={{
-              borderBottom: "none",
-              borderRadius: "4px 4px 0 0",
-              whiteSpace: "nowrap"
-            }}
-          >
-            {aba.nome}
-          </Botao>
-        ))}
-      </div>
-
-      {/* Conteúdo da aba ativa */}
-      <div style={{ minHeight: "400px", width: "100%" }}>
-        <ComponenteAtivo linha={linha} linhaId={id} clienteAtual={clienteAtual} dadosUnificados={dadosUnificados} />
+      <div style={{ color: "#1E3A8A", fontSize: "clamp(14px, 2vw, 18px)" }}>
+        Carregando linha...
       </div>
     </div>
   );
 }
+
+if (!linha) {
+  return (
+    <div style={{ 
+      padding: "clamp(20px, 5vw, 60px)", 
+      textAlign: "center",
+      backgroundColor: "white",
+      borderRadius: "8px",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+      margin: "clamp(10px, 3vw, 30px)"
+    }}>
+      <h2 style={{ color: "#dc2626", marginBottom: "clamp(10px, 2vw, 20px)" }}>Linha não encontrada</h2>
+      <p style={{ color: "#666" }}>
+        Verifique se a linha existe ou se você tem permissão para acessá-la.
+      </p>
+    </div>
+  );
+}
+
+const ComponenteAtivo = abas.find(a => a.id === abaAtiva).componente;
+
+return (
+  <div style={{ 
+    padding: "clamp(15px, 3vw, 30px)", 
+    width: "100%",
+    maxWidth: "1600px",
+    margin: "0 auto",
+    boxSizing: "border-box"
+  }}>
+    {/* Cabeçalho da linha - CORRIGIDO COM BOTÃO VOLTAR */}
+    <div style={{ 
+      marginBottom: "clamp(20px, 3vw, 30px)",
+      backgroundColor: "white",
+      padding: "clamp(15px, 2vw, 20px)",
+      borderRadius: "8px",
+      boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+    }}>
+      <div style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center",
+        flexWrap: "wrap",
+        gap: "15px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+          <Botao
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/linhas")}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              padding: "6px 12px"
+            }}
+          >
+            ← Voltar
+          </Botao>
+          <div>
+            <h1 style={{ 
+              color: "#1E3A8A", 
+              marginBottom: "5px", 
+              fontSize: "clamp(20px, 4vw, 24px)" 
+            }}>
+              {truncarTexto(nomeLinha, 30)}
+            </h1>
+            <p style={{ color: "#666", fontSize: "clamp(12px, 1.8vw, 14px)" }}>
+              Cliente: <strong>{nomeCliente}</strong> • ID: {id}
+            </p>
+          </div>
+        </div>
+        <Link to={`/cronoanalise/${id}`}>
+          <Botao
+            variant="success"
+            size="md"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}
+          >
+            📊 Iniciar Coleta
+          </Botao>
+        </Link>
+      </div>
+    </div>
+
+    {/* Abas responsivas */}
+    <div style={{ 
+      display: "flex", 
+      gap: "5px", 
+      borderBottom: "2px solid #e5e7eb",
+      marginBottom: "clamp(20px, 3vw, 25px)",
+      overflowX: "auto",
+      paddingBottom: "2px",
+      WebkitOverflowScrolling: "touch"
+    }}>
+      {abas.map((aba) => (
+        <Botao
+          key={aba.id}
+          variant={abaAtiva === aba.id ? "primary" : "outline"}
+          size="sm"
+          onClick={() => setAbaAtiva(aba.id)}
+          style={{
+            borderBottom: "none",
+            borderRadius: "4px 4px 0 0",
+            whiteSpace: "nowrap"
+          }}
+        >
+          {aba.nome}
+        </Botao>
+      ))}
+    </div>
+
+    {/* Conteúdo da aba ativa */}
+    <div style={{ minHeight: "400px", width: "100%" }}>
+      <ComponenteAtivo linha={linha} linhaId={id} clienteAtual={clienteAtual} dadosUnificados={dadosUnificados} />
+    </div>
+  </div>
+)};
