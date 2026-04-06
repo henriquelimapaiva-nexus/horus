@@ -127,7 +127,7 @@ export default function IAPrecificacaoPreContrato() {
   };
 
   const handleGerarContrato = () => {
-    let valorFinal = resultado.precos.ideal;
+    let valorFinal = resultado.precos.fase1;
     
     if (opcaoNegociacao === 'negociar') {
       const novoValor = parseFloat(valorNegociado);
