@@ -11,6 +11,20 @@ import GraficoPizza from "../components/graficos/GraficoPizza";
 import GraficoLinha from "../components/graficos/GraficoLinha";
 import { coresNexus } from "../components/graficos/GraficoBase";
 
+// ========================================
+// 🚀 FUNÇÃO PARA BUSCAR DADOS DA ROTA UNIFICADA
+// ========================================
+async function buscarDadosUnificados(empresaId) {
+  if (!empresaId) return null;
+  try {
+    const response = await api.get(`/company/${empresaId}/dashboard`);
+    return response.data;
+  } catch (error) {
+    console.error("❌ Erro na rota unificada:", error);
+    return null;
+  }
+}
+
 export default function Dashboard() {
   const { clienteAtual } = useOutletContext();
 
@@ -32,25 +46,10 @@ export default function Dashboard() {
     setErro("");
     
     try {
-      // ✅ CORRIGIDO: /empresas → /companies
-      const empresasRes = await api.get("/companies");
-      const empresaId = parseInt(clienteAtual);
-      const empresaAtual = empresasRes.data.find(e => e.id === empresaId);
+      // 🔥 USAR A ROTA UNIFICADA
+      const dadosUnificados = await buscarDadosUnificados(clienteAtual);
       
-      if (!empresaAtual) {
-        console.log("Empresa não encontrada para ID:", clienteAtual);
-        setErro(`Empresa com ID ${clienteAtual} não encontrada`);
-        setCarregando(false);
-        return;
-      }
-
-      setEmpresa(empresaAtual);
-
-      // ✅ CORRIGIDO: /linhas/ → /lines/
-      const linhasRes = await api.get(`/lines/${empresaAtual.id}`);
-      const linhas = linhasRes.data;
-
-      if (!linhas || linhas.length === 0) {
+      if (!dadosUnificados || !dadosUnificados.linhas || dadosUnificados.linhas.length === 0) {
         setDadosDashboard({
           mensagem: "Nenhuma linha cadastrada para esta empresa"
         });
@@ -58,97 +57,56 @@ export default function Dashboard() {
         return;
       }
 
-      let faturamentoTotal = 0;
-      let perdasTotales = 0;
-      let oees = [];
-      let nomesLinhas = [];
-      let perdasPorLinha = [];
-      let producoesPorLinha = [];
-      let faturamentosPorLinha = [];
+      setEmpresa({ id: dadosUnificados.empresa.id, nome: dadosUnificados.empresa.nome });
 
-      for (const linha of linhas) {
-        try {
-          const analiseRes = await api.get(`/analise-linha/${linha.id}`).catch(() => ({ data: {} }));
-          const analise = analiseRes.data;
-          
-          if (analise.eficiencia_percentual) {
-            oees.push(parseFloat(analise.eficiencia_percentual));
-            nomesLinhas.push(linha.nome);
-          }
+      // ========================================
+      // PREPARAR DADOS PARA O DASHBOARD
+      // ========================================
+      
+      const nomesLinhas = dadosUnificados.linhas.map(l => l.nome);
+      const perdasPorLinha = dadosUnificados.linhas.map(l => l.perdas.total);
+      const faturamentosPorLinha = dadosUnificados.linhas.map(l => l.faturamento);
+      const oees = dadosUnificados.linhas.map(l => l.oee);
 
-          // ✅ CORRIGIDO: /postos/ → /work-stations/
-          const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
-          const postos = postosRes.data;
-
-          let custoLinha = 0;
-          for (const posto of postos) {
-            if (posto.cargo_id) {
-              // ✅ CORRIGIDO: /cargos/ → /roles/
-              const cargosRes = await api.get(`/roles/${empresaAtual.id}`).catch(() => ({ data: [] }));
-              const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
-              if (cargo) {
-                const salario = parseFloat(cargo.salario_base) || 0;
-                const encargos = parseFloat(cargo.encargos_percentual) || 70;
-                custoLinha += salario * (1 + encargos / 100);
-              }
-            }
-          }
-
-          const perdaEstimada = custoLinha * 0.2;
-          perdasTotales += perdaEstimada;
-          perdasPorLinha.push(perdaEstimada);
-
-          const producaoLinha = analise.capacidade_estimada_dia || 0;
-          producoesPorLinha.push(producaoLinha);
-
-          // ✅ CORRIGIDO: /linha-produto/ → /line-products/
-          const produtosRes = await api.get(`/line-products/${linha.id}`).catch(() => ({ data: [] }));
-          const produtos = produtosRes.data;
-          
-          let faturamentoLinha = 0;
-          if (produtos.length > 0) {
-            const valorMedio = produtos.reduce((acc, p) => acc + (parseFloat(p.valor_unitario) || 0), 0) / produtos.length;
-            faturamentoLinha = producaoLinha * valorMedio * 22;
-          }
-          faturamentoTotal += faturamentoLinha;
-          faturamentosPorLinha.push(faturamentoLinha);
-
-        } catch (err) {
-          console.error(`Erro ao processar linha ${linha.id}:`, err);
-          toast.error(`Erro ao processar linha ${linha.nome}`);
-        }
-      }
-
-      const oeeMedio = oees.length > 0 ? oees.reduce((a, b) => a + b, 0) / oees.length : 0;
-      const oeeMin = oees.length > 0 ? Math.min(...oees) : 0;
-      const oeeMax = oees.length > 0 ? Math.max(...oees) : 0;
-
-      const meses = ['Out/23', 'Nov/23', 'Dez/23', 'Jan/24', 'Fev/24', 'Mar/24'];
-      const evolucaoPerdas = meses.map((_, i) => {
-        return perdasTotales * (0.7 + (i * 0.05));
+      // Dados para evolução (últimos 6 meses)
+      const mesesLabels = dadosUnificados.evolucao.map(e => {
+        const data = new Date(e.mes);
+        return data.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' });
       });
+      const evolucaoPerdas = dadosUnificados.evolucao.map(() => dadosUnificados.resumo.perdas.total);
 
+      // Oportunidades baseadas nos dados reais
       const oportunidades = [
-        { nome: "Redução de Setup", ganho: perdasTotales * 0.15, linha: nomesLinhas[0] || "Linha 1" },
-        { nome: "Eliminação de Refugo", ganho: perdasTotales * 0.12, linha: nomesLinhas[1] || "Linha 2" },
-        { nome: "Redução de Microparadas", ganho: perdasTotales * 0.08, linha: nomesLinhas[2] || "Linha 3" }
+        { nome: "Redução de Setup", ganho: dadosUnificados.resumo.perdas.setup * 0.3, linha: nomesLinhas[0] || "Linha 1" },
+        { nome: "Eliminação de Refugo", ganho: dadosUnificados.resumo.perdas.refugo * 0.3, linha: nomesLinhas[1] || "Linha 2" },
+        { nome: "Redução de Microparadas", ganho: dadosUnificados.resumo.perdas.micro * 0.25, linha: nomesLinhas[2] || "Linha 3" }
       ].sort((a, b) => b.ganho - a.ganho);
 
+      // Distribuição real das perdas
+      const totalPerdas = dadosUnificados.resumo.perdas.total;
       const distribuicaoPerdas = {
-        setup: perdasTotales * 0.4,
-        microparadas: perdasTotales * 0.35,
-        refugo: perdasTotales * 0.25
+        setup: dadosUnificados.resumo.perdas.setup,
+        microparadas: dadosUnificados.resumo.perdas.micro,
+        refugo: dadosUnificados.resumo.perdas.refugo
       };
 
+      console.log('📊 Dashboard - DADOS DA ROTA UNIFICADA:');
+      console.log(`   Faturamento: R$ ${dadosUnificados.resumo.faturamento}`);
+      console.log(`   Perdas Totais: R$ ${dadosUnificados.resumo.perdas.total}`);
+      console.log(`   Setup: R$ ${dadosUnificados.resumo.perdas.setup}`);
+      console.log(`   Micro: R$ ${dadosUnificados.resumo.perdas.micro}`);
+      console.log(`   Refugo: R$ ${dadosUnificados.resumo.perdas.refugo}`);
+      console.log(`   OEE Médio: ${dadosUnificados.resumo.oeeMedio}%`);
+
       const dados = {
-        empresa: empresaAtual.nome,
-        empresaId: empresaAtual.id,
-        totalLinhas: linhas.length,
-        faturamento: faturamentoTotal,
-        perdas: perdasTotales,
-        oeeMedio,
-        oeeMin,
-        oeeMax,
+        empresa: dadosUnificados.empresa.nome,
+        empresaId: dadosUnificados.empresa.id,
+        totalLinhas: dadosUnificados.resumo.totalLinhas,
+        faturamento: dadosUnificados.resumo.faturamento,
+        perdas: dadosUnificados.resumo.perdas.total,
+        oeeMedio: dadosUnificados.resumo.oeeMedio,
+        oeeMin: Math.min(...oees),
+        oeeMax: Math.max(...oees),
         oportunidades,
         graficos: {
           perdasPorLinha: {
@@ -160,24 +118,14 @@ export default function Dashboard() {
             valores: faturamentosPorLinha.slice(0, 5)
           },
           evolucao: {
-            labels: meses,
+            labels: mesesLabels,
             valores: evolucaoPerdas
           },
           distribuicaoPerdas
         }
       };
 
-      // 👇 LOG DE DEBUG
-      console.log('📊 Dashboard - dados calculados:', {
-        faturamento: faturamentoTotal,
-        perdas: perdasTotales,
-        oeeMedio,
-        totalLinhas: linhas.length,
-        nomesLinhas
-      });
-
       setDadosDashboard(dados);
-
       toast.success("Dashboard carregado com sucesso!");
 
     } catch (error) {
@@ -195,9 +143,6 @@ export default function Dashboard() {
       currency: 'BRL'
     }).format(valor || 0);
   };
-
-  // 👇 LOG DE RENDERIZAÇÃO
-  console.log('🖥️ Renderizando Dashboard - dadosDashboard:', dadosDashboard);
 
   if (!clienteAtual) {
     return (
