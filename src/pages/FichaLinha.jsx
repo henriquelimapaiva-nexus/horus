@@ -3485,6 +3485,7 @@ useEffect(() => {
     }
     
     setDadosUnificados(dados);
+    window.dadosUnificados = dados;
     console.log('🔍 3. Dados salvos no state!');
   };
   
