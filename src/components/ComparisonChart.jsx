@@ -3,16 +3,12 @@ import React from "react";
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  Area,
-  ComposedChart
+  ResponsiveContainer
 } from "recharts";
 import { colors, spacing, typography } from "../styles/theme";
 
@@ -35,8 +31,8 @@ const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
         <div style={{
           backgroundColor: colors.background.primary,
           padding: spacing.md,
-          borderRadius: borderRadius.md,
-          boxShadow: shadows.lg,
+          borderRadius: "8px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
           border: `1px solid ${colors.border.light}`
         }}>
           <p style={{ fontWeight: typography.fontWeight.bold, marginBottom: spacing.xs }}>{label}</p>
@@ -51,101 +47,6 @@ const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
     return null;
   };
 
-  const renderChart = () => {
-    switch (type) {
-      case "line":
-        return (
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke={colors.border.light} />
-            <XAxis 
-              dataKey="mes" 
-              stroke={colors.text.secondary}
-              tick={{ fontSize: 12 }}
-            />
-            <YAxis 
-              stroke={colors.text.secondary}
-              tick={{ fontSize: 12 }}
-              domain={[0, 100]}
-              label={{ 
-                value: "OEE (%)", 
-                angle: -90, 
-                position: "insideLeft",
-                style: { fontSize: 12, fill: colors.text.secondary }
-              }}
-            />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Line 
-              type="monotone" 
-              dataKey="oee" 
-              stroke={colors.primary.blue} 
-              strokeWidth={3}
-              dot={{ fill: colors.primary.blue, strokeWidth: 2 }}
-              name="OEE Global"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="disponibilidade" 
-              stroke={colors.status.info} 
-              strokeWidth={2}
-              dot={{ fill: colors.status.info }}
-              name="Disponibilidade"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="performance" 
-              stroke={colors.status.warning} 
-              strokeWidth={2}
-              dot={{ fill: colors.status.warning }}
-              name="Performance"
-            />
-            <Line 
-              type="monotone" 
-              dataKey="qualidade" 
-              stroke={colors.status.success} 
-              strokeWidth={2}
-              dot={{ fill: colors.status.success }}
-              name="Qualidade"
-            />
-          </LineChart>
-        );
-      
-      case "bar":
-        return (
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke={colors.border.light} />
-            <XAxis dataKey="name" stroke={colors.text.secondary} />
-            <YAxis stroke={colors.text.secondary} />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Bar dataKey="antes" fill={colors.status.danger} name="Antes" />
-            <Bar dataKey="depois" fill={colors.status.success} name="Depois" />
-          </BarChart>
-        );
-      
-      case "area":
-        return (
-          <ComposedChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke={colors.border.light} />
-            <XAxis dataKey="mes" stroke={colors.text.secondary} />
-            <YAxis stroke={colors.text.secondary} />
-            <Tooltip content={<CustomTooltip />} />
-            <Legend />
-            <Area 
-              type="monotone" 
-              dataKey="oee" 
-              fill={`${colors.primary.blue}20`} 
-              stroke={colors.primary.blue}
-              name="OEE"
-            />
-          </ComposedChart>
-        );
-      
-      default:
-        return null;
-    }
-  };
-
   return (
     <div style={{ width: "100%", height }}>
       {title && (
@@ -158,8 +59,36 @@ const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
           {title}
         </h3>
       )}
-      <ResponsiveContainer width="100%" height={height}>
-        {renderChart()}
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke={colors.border.light} />
+          <XAxis 
+            dataKey="mes" 
+            stroke={colors.text.secondary}
+            tick={{ fontSize: 12 }}
+          />
+          <YAxis 
+            stroke={colors.text.secondary}
+            tick={{ fontSize: 12 }}
+            domain={[0, 100]}
+            label={{ 
+              value: "OEE (%)", 
+              angle: -90, 
+              position: "insideLeft",
+              style: { fontSize: 12, fill: colors.text.secondary }
+            }}
+          />
+          <Tooltip content={<CustomTooltip />} />
+          <Legend />
+          <Line 
+            type="monotone" 
+            dataKey="oee" 
+            stroke={colors.primary.blue} 
+            strokeWidth={3}
+            dot={{ fill: colors.primary.blue, strokeWidth: 2 }}
+            name="OEE Global"
+          />
+        </LineChart>
       </ResponsiveContainer>
     </div>
   );

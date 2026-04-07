@@ -1,30 +1,24 @@
 // src/components/IndicatorCard.jsx
 import React from "react";
-import { colors, spacing, typography, borderRadius, shadows } from "../styles/theme";
+import { colors, spacing, typography } from "../styles/theme";
 
 const IndicatorCard = ({ 
   label, 
   value, 
   previousValue, 
   unit = "", 
-  type = "default", // "positive" (aumentar é bom) ou "negative" (diminuir é bom)
+  type = "default",
   icon = null,
   precision = 1,
   formatValue = null
 }) => {
   
-  // Calcular delta
   const delta = value - previousValue;
   const deltaPercent = previousValue !== 0 ? (delta / Math.abs(previousValue)) * 100 : 0;
-  
-  // Determinar se é melhoria baseado no tipo
   const isImprovement = type === "positive" ? delta >= 0 : delta <= 0;
-  
-  // Cores baseadas no resultado
   const deltaColor = isImprovement ? colors.status.success : colors.status.danger;
   const deltaIcon = delta >= 0 ? "▲" : "▼";
   
-  // Formatar valor
   const formatarValor = (val) => {
     if (formatValue) return formatValue(val);
     if (unit === "%") return `${val.toFixed(precision)}%`;
@@ -34,31 +28,17 @@ const IndicatorCard = ({
     return `${val.toFixed(precision)}${unit ? ` ${unit}` : ""}`;
   };
   
-  const cardStyle = {
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    boxShadow: shadows.md,
-    borderLeft: `4px solid ${isImprovement ? colors.status.success : colors.status.neutral}`,
-    transition: "all 0.2s ease",
-    cursor: "pointer",
-    height: "100%"
-  };
-  
-  const cardHoverStyle = {
-    transform: "translateY(-2px)",
-    boxShadow: shadows.lg
-  };
-  
-  const [isHovered, setIsHovered] = React.useState(false);
-  
   return (
-    <div 
-      style={{ ...cardStyle, ...(isHovered ? cardHoverStyle : {}) }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      {/* Ícone e Label */}
+    <div style={{ 
+      backgroundColor: colors.background.card,
+      borderRadius: "12px",
+      padding: spacing.lg,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+      borderLeft: `4px solid ${isImprovement ? colors.status.success : colors.status.neutral}`,
+      transition: "all 0.2s ease",
+      cursor: "pointer",
+      height: "100%"
+    }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: spacing.md }}>
         <span style={{ 
           fontSize: typography.fontSize.sm,
@@ -72,7 +52,6 @@ const IndicatorCard = ({
         {icon && <span style={{ fontSize: "24px" }}>{icon}</span>}
       </div>
       
-      {/* Valor Principal */}
       <div style={{ 
         fontSize: typography.fontSize["3xl"],
         fontWeight: typography.fontWeight.bold,
@@ -83,7 +62,6 @@ const IndicatorCard = ({
         {formatarValor(value)}
       </div>
       
-      {/* Valor Anterior */}
       <div style={{ 
         fontSize: typography.fontSize.xs,
         color: colors.text.tertiary,
@@ -92,7 +70,6 @@ const IndicatorCard = ({
         Antes: {formatarValor(previousValue)}
       </div>
       
-      {/* Delta */}
       <div style={{ 
         display: "flex",
         alignItems: "center",
