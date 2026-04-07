@@ -79,7 +79,6 @@ export default function ValidacaoResultados() {
       return;
     }
     
-    // Abrir nova janela com o relatório
     const relatorioWindow = window.open("", "_blank");
     relatorioWindow.document.write(gerarHTMLRelatorio());
     relatorioWindow.document.close();
@@ -92,11 +91,19 @@ export default function ValidacaoResultados() {
     return num.toFixed(casas);
   };
 
+  const formatarDataMes = (dataISO) => {
+    if (!dataISO) return "";
+    const partes = dataISO.split("-");
+    if (partes.length === 3) {
+      return `${partes[2]}/${partes[1]}`;
+    }
+    return dataISO;
+  };
+
   const gerarHTMLRelatorio = () => {
     const { indicadores, financeiro, evolucao_mensal_oee, periodo } = dados;
     const dataAtual = new Date().toLocaleDateString('pt-BR');
     
-    // Funções auxiliares para o HTML
     const fmtNum = (valor, casas = 1) => formatarNumeroHTML(valor, casas);
     const fmtPercent = (valor) => `${fmtNum(valor, 1)}%`;
     
@@ -110,6 +117,7 @@ export default function ValidacaoResultados() {
           @media print {
             body { margin: 0; padding: 20px; }
             .no-print { display: none; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
           body {
             font-family: Arial, sans-serif;
@@ -244,20 +252,49 @@ export default function ValidacaoResultados() {
             background-color: #e5e7eb;
             border-radius: 4px;
             overflow: hidden;
+            position: relative;
           }
           .barra-fill {
             height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            padding-right: 8px;
-            color: white;
-            font-size: 12px;
+            display: block;
+          }
+          .barra-texto {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #333;
+            font-size: 11px;
             font-weight: bold;
+            z-index: 2;
           }
           .barra-fill.alta { background-color: #10b981; }
           .barra-fill.media { background-color: #f59e0b; }
           .barra-fill.baixa { background-color: #ef4444; }
+          .pilar-container {
+            margin-bottom: 15px;
+          }
+          .pilar-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 13px;
+          }
+          .pilar-barras {
+            display: flex;
+            gap: 4px;
+            height: 30px;
+          }
+          .pilar-barra {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 4px;
+          }
           .btn-print {
             position: fixed;
             top: 20px;
@@ -338,42 +375,71 @@ export default function ValidacaoResultados() {
           <h3>📈 Evolução do OEE</h3>
           ${evolucao_mensal_oee.map(item => `
             <div class="barra-container">
-              <div class="barra-label">${item.mes}</div>
+              <div class="barra-label">${formatarDataMes(item.mes)}</div>
               <div class="barra">
-                <div class="barra-fill ${item.oee >= 70 ? 'alta' : (item.oee >= 50 ? 'media' : 'baixa')}" style="width: ${Math.min(100, item.oee)}%">
-                  ${fmtNum(item.oee, 1)}%
-                </div>
+                <div class="barra-fill ${item.oee >= 70 ? 'alta' : (item.oee >= 50 ? 'media' : 'baixa')}" style="width: ${Math.min(100, item.oee)}%"></div>
+                <span class="barra-texto">${fmtNum(item.oee, 1)}%</span>
               </div>
             </div>
           `).join('')}
         </div>
 
         <h3>🎯 Pilares do OEE</h3>
-        <div class="barra-container">
-          <div class="barra-label">Disponibilidade</div>
-          <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.disponibilidade.antes}%; background-color: #ef4444;">${fmtPercent(indicadores.disponibilidade.antes)}</div>
+        
+        <div class="pilar-container">
+          <div class="pilar-header">
+            <span>Disponibilidade</span>
+            <div>
+              <span style="color:#ef4444;">${fmtPercent(indicadores.disponibilidade.antes)}</span>
+              <span> → </span>
+              <span style="color:#10b981; font-weight:bold;">${fmtPercent(indicadores.disponibilidade.depois)}</span>
+            </div>
           </div>
-          <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.disponibilidade.depois}%; background-color: #10b981;">${fmtPercent(indicadores.disponibilidade.depois)}</div>
+          <div class="pilar-barras">
+            <div class="pilar-barra" style="width: ${indicadores.disponibilidade.antes}%; background-color: #ef4444;">
+              ${indicadores.disponibilidade.antes > 15 ? fmtPercent(indicadores.disponibilidade.antes) : ''}
+            </div>
+            <div class="pilar-barra" style="width: ${indicadores.disponibilidade.depois}%; background-color: #10b981;">
+              ${indicadores.disponibilidade.depois > 15 ? fmtPercent(indicadores.disponibilidade.depois) : ''}
+            </div>
           </div>
         </div>
-        <div class="barra-container">
-          <div class="barra-label">Performance</div>
-          <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.performance.antes}%; background-color: #ef4444;">${fmtPercent(indicadores.performance.antes)}</div>
+
+        <div class="pilar-container">
+          <div class="pilar-header">
+            <span>Performance</span>
+            <div>
+              <span style="color:#ef4444;">${fmtPercent(indicadores.performance.antes)}</span>
+              <span> → </span>
+              <span style="color:#10b981; font-weight:bold;">${fmtPercent(indicadores.performance.depois)}</span>
+            </div>
           </div>
-          <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.performance.depois}%; background-color: #10b981;">${fmtPercent(indicadores.performance.depois)}</div>
+          <div class="pilar-barras">
+            <div class="pilar-barra" style="width: ${indicadores.performance.antes}%; background-color: #ef4444;">
+              ${indicadores.performance.antes > 15 ? fmtPercent(indicadores.performance.antes) : ''}
+            </div>
+            <div class="pilar-barra" style="width: ${indicadores.performance.depois}%; background-color: #10b981;">
+              ${indicadores.performance.depois > 15 ? fmtPercent(indicadores.performance.depois) : ''}
+            </div>
           </div>
         </div>
-        <div class="barra-container">
-          <div class="barra-label">Qualidade</div>
-          <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.qualidade.antes}%; background-color: #ef4444;">${fmtPercent(indicadores.qualidade.antes)}</div>
+
+        <div class="pilar-container">
+          <div class="pilar-header">
+            <span>Qualidade</span>
+            <div>
+              <span style="color:#ef4444;">${fmtPercent(indicadores.qualidade.antes)}</span>
+              <span> → </span>
+              <span style="color:#10b981; font-weight:bold;">${fmtPercent(indicadores.qualidade.depois)}</span>
+            </div>
           </div>
-          <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.qualidade.depois}%; background-color: #10b981;">${fmtPercent(indicadores.qualidade.depois)}</div>
+          <div class="pilar-barras">
+            <div class="pilar-barra" style="width: ${indicadores.qualidade.antes}%; background-color: #ef4444;">
+              ${indicadores.qualidade.antes > 15 ? fmtPercent(indicadores.qualidade.antes) : ''}
+            </div>
+            <div class="pilar-barra" style="width: ${indicadores.qualidade.depois}%; background-color: #10b981;">
+              ${indicadores.qualidade.depois > 15 ? fmtPercent(indicadores.qualidade.depois) : ''}
+            </div>
           </div>
         </div>
 
@@ -683,27 +749,33 @@ export default function ValidacaoResultados() {
             <Card titulo="Evolução do OEE" style={{ marginBottom: "clamp(25px, 4vw, 35px)" }}>
               <div style={{ overflowX: "auto" }}>
                 <div style={{ minWidth: "500px" }}>
-                  {dados.evolucao_mensal_oee.map((item, idx) => (
-                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                      <div style={{ width: "60px", fontSize: "12px", color: "#666" }}>{item.mes}</div>
-                      <div style={{ flex: 1, height: "30px", backgroundColor: "#e5e7eb", borderRadius: "4px", overflow: "hidden" }}>
-                        <div style={{
-                          width: `${Math.min(100, item.oee)}%`,
-                          height: "100%",
-                          backgroundColor: item.oee >= 70 ? "#10b981" : item.oee >= 50 ? "#f59e0b" : "#ef4444",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "flex-end",
-                          paddingRight: "8px",
-                          color: "white",
-                          fontSize: "12px",
-                          fontWeight: "bold"
-                        }}>
-                          {formatarNumero(item.oee, 1)}%
+                  {dados.evolucao_mensal_oee.map((item, idx) => {
+                    const mesFormatado = item.mes.split("-");
+                    const mesAno = mesFormatado.length === 2 ? `${mesFormatado[1]}/${mesFormatado[0]}` : item.mes;
+                    return (
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+                        <div style={{ width: "60px", fontSize: "12px", color: "#666" }}>{mesAno}</div>
+                        <div style={{ flex: 1, height: "30px", backgroundColor: "#e5e7eb", borderRadius: "4px", overflow: "hidden", position: "relative" }}>
+                          <div style={{
+                            width: `${Math.min(100, item.oee)}%`,
+                            height: "100%",
+                            backgroundColor: item.oee >= 70 ? "#10b981" : item.oee >= 50 ? "#f59e0b" : "#ef4444"
+                          }}></div>
+                          <span style={{
+                            position: "absolute",
+                            right: "8px",
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            color: "#333",
+                            fontSize: "11px",
+                            fontWeight: "bold"
+                          }}>
+                            {formatarNumero(item.oee, 1)}%
+                          </span>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </Card>
@@ -721,11 +793,29 @@ export default function ValidacaoResultados() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "4px", height: "30px" }}>
-                  <div style={{ width: `${dados.indicadores.disponibilidade.antes}%`, backgroundColor: "#ef4444", borderRadius: "4px 0 0 4px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "11px" }}>
-                    {formatarPercentual(dados.indicadores.disponibilidade.antes)}
+                  <div style={{
+                    width: `${dados.indicadores.disponibilidade.antes}%`,
+                    backgroundColor: "#ef4444",
+                    borderRadius: "4px 0 0 4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "11px"
+                  }}>
+                    {dados.indicadores.disponibilidade.antes > 15 ? formatarPercentual(dados.indicadores.disponibilidade.antes) : ""}
                   </div>
-                  <div style={{ width: `${dados.indicadores.disponibilidade.depois}%`, backgroundColor: "#10b981", borderRadius: "0 4px 4px 0", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "11px" }}>
-                    {formatarPercentual(dados.indicadores.disponibilidade.depois)}
+                  <div style={{
+                    width: `${dados.indicadores.disponibilidade.depois}%`,
+                    backgroundColor: "#10b981",
+                    borderRadius: "0 4px 4px 0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "11px"
+                  }}>
+                    {dados.indicadores.disponibilidade.depois > 15 ? formatarPercentual(dados.indicadores.disponibilidade.depois) : ""}
                   </div>
                 </div>
               </div>
@@ -739,11 +829,29 @@ export default function ValidacaoResultados() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "4px", height: "30px" }}>
-                  <div style={{ width: `${dados.indicadores.performance.antes}%`, backgroundColor: "#ef4444", borderRadius: "4px 0 0 4px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "11px" }}>
-                    {formatarPercentual(dados.indicadores.performance.antes)}
+                  <div style={{
+                    width: `${dados.indicadores.performance.antes}%`,
+                    backgroundColor: "#ef4444",
+                    borderRadius: "4px 0 0 4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "11px"
+                  }}>
+                    {dados.indicadores.performance.antes > 15 ? formatarPercentual(dados.indicadores.performance.antes) : ""}
                   </div>
-                  <div style={{ width: `${dados.indicadores.performance.depois}%`, backgroundColor: "#10b981", borderRadius: "0 4px 4px 0", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "11px" }}>
-                    {formatarPercentual(dados.indicadores.performance.depois)}
+                  <div style={{
+                    width: `${dados.indicadores.performance.depois}%`,
+                    backgroundColor: "#10b981",
+                    borderRadius: "0 4px 4px 0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "11px"
+                  }}>
+                    {dados.indicadores.performance.depois > 15 ? formatarPercentual(dados.indicadores.performance.depois) : ""}
                   </div>
                 </div>
               </div>
@@ -757,11 +865,29 @@ export default function ValidacaoResultados() {
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: "4px", height: "30px" }}>
-                  <div style={{ width: `${dados.indicadores.qualidade.antes}%`, backgroundColor: "#ef4444", borderRadius: "4px 0 0 4px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "11px" }}>
-                    {formatarPercentual(dados.indicadores.qualidade.antes)}
+                  <div style={{
+                    width: `${dados.indicadores.qualidade.antes}%`,
+                    backgroundColor: "#ef4444",
+                    borderRadius: "4px 0 0 4px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "11px"
+                  }}>
+                    {dados.indicadores.qualidade.antes > 15 ? formatarPercentual(dados.indicadores.qualidade.antes) : ""}
                   </div>
-                  <div style={{ width: `${dados.indicadores.qualidade.depois}%`, backgroundColor: "#10b981", borderRadius: "0 4px 4px 0", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: "11px" }}>
-                    {formatarPercentual(dados.indicadores.qualidade.depois)}
+                  <div style={{
+                    width: `${dados.indicadores.qualidade.depois}%`,
+                    backgroundColor: "#10b981",
+                    borderRadius: "0 4px 4px 0",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "11px"
+                  }}>
+                    {dados.indicadores.qualidade.depois > 15 ? formatarPercentual(dados.indicadores.qualidade.depois) : ""}
                   </div>
                 </div>
               </div>
