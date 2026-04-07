@@ -72,7 +72,7 @@ const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
             tick={{ fontSize: 12 }}
             domain={[0, 100]}
             label={{ 
-              value: "OEE (%)", 
+              value: "Percentual (%)", 
               angle: -90, 
               position: "insideLeft",
               style: { fontSize: 12, fill: colors.text.secondary }
@@ -87,6 +87,30 @@ const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
             strokeWidth={3}
             dot={{ fill: colors.primary.blue, strokeWidth: 2 }}
             name="OEE Global"
+          />
+          <Line 
+            type="monotone" 
+            dataKey="disponibilidade" 
+            stroke={colors.status.info} 
+            strokeWidth={2}
+            dot={{ fill: colors.status.info }}
+            name="Disponibilidade"
+          />
+          <Line 
+            type="monotone" 
+            dataKey="performance" 
+            stroke={colors.status.warning} 
+            strokeWidth={2}
+            dot={{ fill: colors.status.warning }}
+            name="Performance"
+          />
+          <Line 
+            type="monotone" 
+            dataKey="qualidade" 
+            stroke={colors.status.success} 
+            strokeWidth={2}
+            dot={{ fill: colors.status.success }}
+            name="Qualidade"
           />
         </LineChart>
       </ResponsiveContainer>
