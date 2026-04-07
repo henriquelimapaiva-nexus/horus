@@ -248,35 +248,33 @@ export default function ValidacaoResultados() {
             margin-bottom: 8px;
           }
           .barra-label {
-            width: 60px;
+            width: 70px;
             font-size: 12px;
-            color: #666;
+            font-weight: bold;
+            color: #333;
+          }
+          .barra-wrapper {
+            flex: 1;
           }
           .barra {
-            flex: 1;
             height: 30px;
             background-color: #e5e7eb;
             border-radius: 4px;
             overflow: hidden;
-            position: relative;
+            margin-bottom: 4px;
           }
           .barra-fill {
             height: 100%;
             display: block;
           }
-          .barra-texto {
-            position: absolute;
-            right: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #333;
-            font-size: 11px;
-            font-weight: bold;
-            z-index: 2;
-          }
           .barra-fill.alta { background-color: #10b981; }
           .barra-fill.media { background-color: #f59e0b; }
           .barra-fill.baixa { background-color: #ef4444; }
+          .barra-percentual {
+            font-size: 11px;
+            color: #666;
+            text-align: right;
+          }
           .pilar-container {
             margin-bottom: 15px;
             page-break-inside: avoid;
@@ -286,6 +284,7 @@ export default function ValidacaoResultados() {
             justify-content: space-between;
             margin-bottom: 5px;
             font-size: 13px;
+            font-weight: bold;
           }
           .pilar-barras {
             display: flex;
@@ -321,6 +320,9 @@ export default function ValidacaoResultados() {
           h3 {
             page-break-after: avoid;
             margin-top: 30px;
+          }
+          .negrito {
+            font-weight: bold;
           }
         </style>
       </head>
@@ -384,15 +386,26 @@ export default function ValidacaoResultados() {
 
         <div class="grafico-container">
           <h3>Evolucao do OEE</h3>
-          ${evolucao_mensal_oee.map(item => `
-            <div class="barra-container">
-              <div class="barra-label">${formatarDataMes(item.mes)}</div>
-              <div class="barra">
-                <div class="barra-fill ${item.oee >= 70 ? 'alta' : (item.oee >= 50 ? 'media' : 'baixa')}" style="width: ${Math.min(100, item.oee)}%"></div>
-                <span class="barra-texto">${fmtNum(item.oee, 1)}%</span>
+          ${evolucao_mensal_oee.map(item => {
+            const mesFormatado = formatarDataMes(item.mes);
+            const percentual = item.oee;
+            let classeCor = '';
+            if (percentual >= 70) classeCor = 'alta';
+            else if (percentual >= 50) classeCor = 'media';
+            else classeCor = 'baixa';
+            
+            return `
+              <div class="barra-container">
+                <div class="barra-label">${mesFormatado}</div>
+                <div class="barra-wrapper">
+                  <div class="barra">
+                    <div class="barra-fill ${classeCor}" style="width: ${Math.min(100, percentual)}%"></div>
+                  </div>
+                  <div class="barra-percentual">${fmtNum(percentual, 1)}%</div>
+                </div>
               </div>
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
 
         <h3 style="page-break-before: avoid;">Pilares do OEE</h3>
@@ -493,28 +506,28 @@ export default function ValidacaoResultados() {
               <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.qualidade.depois)}</td>
               <td style="text-align: right;">${indicadores.qualidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.delta, 1)}%</td>
               <td style="text-align: right;">${indicadores.qualidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.percentual, 0)}%</td>
-             </tr>
+            </tr>
             <tr>
               <td>Setup (minutos)</td>
               <td style="text-align: right;">${fmtNum(indicadores.setup.antes, 0)}</td>
               <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.setup.depois, 0)}</td>
               <td style="text-align: right;">${indicadores.setup.delta >= 0 ? '+' : ''}${fmtNum(indicadores.setup.delta, 0)}</td>
               <td style="text-align: right;">${indicadores.setup.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.setup.percentual, 0)}%</td>
-             </tr>
+            </tr>
             <tr style="background-color: #f9fafb;">
               <td>Refugo (pecas/dia)</td>
               <td style="text-align: right;">${fmtNum(indicadores.refugo_diario.antes, 0)}</td>
               <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.refugo_diario.depois, 0)}</td>
               <td style="text-align: right;">${indicadores.refugo_diario.delta >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.delta, 0)}</td>
               <td style="text-align: right;">${indicadores.refugo_diario.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.percentual, 0)}%</td>
-             </tr>
+            </tr>
             <tr>
               <td>Produtividade (pecas/dia)</td>
               <td style="text-align: right;">${fmtNum(indicadores.produtividade.antes, 0)}</td>
               <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.produtividade.depois, 0)}</td>
               <td style="text-align: right;">${indicadores.produtividade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.delta, 0)}</td>
               <td style="text-align: right;">${indicadores.produtividade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.percentual, 0)}%</td>
-             </tr>
+            </tr>
           </tbody>
         </table>
 
@@ -764,25 +777,19 @@ export default function ValidacaoResultados() {
                     const mesFormatado = item.mes.split("-");
                     const mesAno = mesFormatado.length === 2 ? `${mesFormatado[1]}/${mesFormatado[0]}` : item.mes;
                     return (
-                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
-                        <div style={{ width: "60px", fontSize: "12px", color: "#666" }}>{mesAno}</div>
-                        <div style={{ flex: 1, height: "30px", backgroundColor: "#e5e7eb", borderRadius: "4px", overflow: "hidden", position: "relative" }}>
-                          <div style={{
-                            width: `${Math.min(100, item.oee)}%`,
-                            height: "100%",
-                            backgroundColor: item.oee >= 70 ? "#10b981" : item.oee >= 50 ? "#f59e0b" : "#ef4444"
-                          }}></div>
-                          <span style={{
-                            position: "absolute",
-                            right: "8px",
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                            color: "#333",
-                            fontSize: "11px",
-                            fontWeight: "bold"
-                          }}>
+                      <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "15px" }}>
+                        <div style={{ width: "70px", fontSize: "13px", fontWeight: "bold", color: "#333" }}>{mesAno}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ height: "30px", backgroundColor: "#e5e7eb", borderRadius: "4px", overflow: "hidden", marginBottom: "4px" }}>
+                            <div style={{
+                              width: `${Math.min(100, item.oee)}%`,
+                              height: "100%",
+                              backgroundColor: item.oee >= 70 ? "#10b981" : item.oee >= 50 ? "#f59e0b" : "#ef4444"
+                            }}></div>
+                          </div>
+                          <div style={{ fontSize: "11px", color: "#666", textAlign: "right" }}>
                             {formatarNumero(item.oee, 1)}%
-                          </span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -795,8 +802,8 @@ export default function ValidacaoResultados() {
           <Card titulo="Pilares do OEE - Antes x Depois" style={{ marginBottom: "clamp(25px, 4vw, 35px)" }}>
             <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                  <span style={{ fontSize: "13px", fontWeight: "500" }}>Disponibilidade</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontWeight: "bold" }}>
+                  <span>Disponibilidade</span>
                   <div>
                     <span style={{ color: "#ef4444" }}>{formatarPercentual(dados.indicadores.disponibilidade.antes)}</span>
                     <span> → </span>
@@ -831,8 +838,8 @@ export default function ValidacaoResultados() {
                 </div>
               </div>
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                  <span style={{ fontSize: "13px", fontWeight: "500" }}>Performance</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontWeight: "bold" }}>
+                  <span>Performance</span>
                   <div>
                     <span style={{ color: "#ef4444" }}>{formatarPercentual(dados.indicadores.performance.antes)}</span>
                     <span> → </span>
@@ -867,8 +874,8 @@ export default function ValidacaoResultados() {
                 </div>
               </div>
               <div>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
-                  <span style={{ fontSize: "13px", fontWeight: "500" }}>Qualidade</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontWeight: "bold" }}>
+                  <span>Qualidade</span>
                   <div>
                     <span style={{ color: "#ef4444" }}>{formatarPercentual(dados.indicadores.qualidade.antes)}</span>
                     <span> → </span>
