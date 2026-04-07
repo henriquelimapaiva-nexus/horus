@@ -56,26 +56,14 @@ export default function ValidacaoResultados() {
     toast.loading("Carregando dados de validação...", { id: "validacao" });
 
     try {
-      // Converter datas para formato YYYY-MM-DD para enviar ao backend
-      const formatarParaAPI = (data) => {
-        if (!data) return "";
-        const partes = data.split("/");
-        if (partes.length === 3) {
-          return `${partes[2]}-${partes[1]}-${partes[0]}`;
+      const response = await api.get(`/evolution/compare/${clienteAtual}`, {
+        params: {
+          antes_inicio: periodoAntes.inicio,
+          antes_fim: periodoAntes.fim,
+          depois_inicio: periodoDepois.inicio,
+          depois_fim: periodoDepois.fim
         }
-        return data;
-      };
-
-      const params = {
-        antes_inicio: formatarParaAPI(periodoAntes.inicio),
-        antes_fim: formatarParaAPI(periodoAntes.fim),
-        depois_inicio: formatarParaAPI(periodoDepois.inicio),
-        depois_fim: formatarParaAPI(periodoDepois.fim)
-      };
-
-      console.log("Enviando para API:", params);
-
-      const response = await api.get(`/evolution/compare/${clienteAtual}`, { params });
+      });
       setDados(response.data);
       toast.success("Dados carregados com sucesso!", { id: "validacao" });
     } catch (error) {
@@ -94,8 +82,8 @@ export default function ValidacaoResultados() {
     setMostrarRelatorio(true);
   };
 
-  const handleFecharRelatorio = () => {
-    setMostrarRelatorio(false);
+  const handleImprimir = () => {
+    window.print();
   };
 
   const formatarNumeroHTML = (valor, casas = 1) => {
@@ -112,6 +100,463 @@ export default function ValidacaoResultados() {
       return `${partes[2]}/${partes[1]}`;
     }
     return dataISO;
+  };
+
+  const gerarHTMLRelatorio = () => {
+    const { indicadores, financeiro, evolucao_mensal_oee, periodo } = dados;
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
+    
+    const fmtNum = (valor, casas = 1) => formatarNumeroHTML(valor, casas);
+    const fmtPercent = (valor) => `${fmtNum(valor, 1)}%`;
+    
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Relatório de Validação de Resultados - ${empresaNome}</title>
+        <style>
+          @media print {
+            body { margin: 0; padding: 20px; }
+            .no-print { display: none; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .page-break-avoid { page-break-inside: avoid; }
+            .pilar-container { page-break-inside: avoid; }
+            .cards-container { page-break-inside: avoid; }
+            .grafico-container { page-break-inside: avoid; }
+            .tabela-container { page-break-inside: avoid; }
+            .financeiro-container { page-break-inside: avoid; }
+          }
+          body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            color: #333;
+            line-height: 1.6;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 2px solid #1E3A8A;
+            padding-bottom: 20px;
+          }
+          .logo {
+            max-width: 150px;
+            margin-bottom: 10px;
+          }
+          .titulo-relatorio {
+            color: #1E3A8A;
+            font-size: 24px;
+            margin: 10px 0;
+          }
+          .subtitulo {
+            color: #666;
+            font-size: 14px;
+          }
+          .empresa-nome {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1E3A8A;
+            margin: 20px 0 10px;
+          }
+          .periodo-info {
+            background-color: #f3f4f6;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            font-size: 14px;
+          }
+          .cards-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+          }
+          .card {
+            background-color: #f9fafb;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #1E3A8A;
+          }
+          .card-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+          }
+          .card-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+          }
+          .card-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1E3A8A;
+          }
+          .card-delta {
+            font-size: 12px;
+            margin-top: 5px;
+          }
+          .card-delta.positivo { color: #10b981; }
+          .card-delta.negativo { color: #ef4444; }
+          .tabela {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+          }
+          .tabela th {
+            background-color: #1E3A8A;
+            color: white;
+            padding: 12px;
+            text-align: left;
+          }
+          .tabela td {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          .tabela tr:nth-child(even) {
+            background-color: #f9fafb;
+          }
+          .financeiro-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-top: 30px;
+          }
+          .financeiro-card {
+            background-color: #f0fdf4;
+            padding: 20px;
+            border-radius: 8px;
+          }
+          .financeiro-card h3 {
+            color: #166534;
+            margin-top: 0;
+          }
+          .footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 11px;
+            color: #999;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 20px;
+          }
+          .grafico-container {
+            margin: 30px 0;
+          }
+          .barra-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+          }
+          .barra-label {
+            width: 70px;
+            font-size: 12px;
+            font-weight: bold;
+            color: #333;
+          }
+          .barra-wrapper {
+            flex: 1;
+          }
+          .barra {
+            height: 30px;
+            background-color: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 4px;
+          }
+          .barra-fill {
+            height: 100%;
+            display: block;
+          }
+          .barra-fill.alta { background-color: #10b981; }
+          .barra-fill.media { background-color: #f59e0b; }
+          .barra-fill.baixa { background-color: #ef4444; }
+          .barra-percentual {
+            font-size: 11px;
+            color: #666;
+            text-align: right;
+          }
+          .pilar-container {
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+          }
+          .pilar-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 13px;
+            font-weight: bold;
+          }
+          .pilar-barras {
+            display: flex;
+            gap: 4px;
+            height: 30px;
+          }
+          .pilar-barra {
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            border-radius: 4px;
+          }
+          .btn-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #1E3A8A;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+          }
+          .btn-print:hover {
+            background-color: #152c6b;
+          }
+          h3 {
+            page-break-after: avoid;
+            margin-top: 30px;
+          }
+          .negrito {
+            font-weight: bold;
+          }
+        </style>
+      </head>
+      <body>
+        <button class="btn-print no-print" onclick="window.print()">Imprimir / Salvar PDF</button>
+        
+        <div class="header">
+          <img src="${logo}" alt="Nexus Engenharia Aplicada" class="logo" style="max-width: 180px;">
+          <h1 class="titulo-relatorio">NEXUS ENGENHARIA APLICADA</h1>
+          <h2 class="subtitulo">Validação de Resultados</h2>
+        </div>
+
+        <div class="empresa-nome">Empresa: ${empresaNome}</div>
+        
+        <div class="periodo-info">
+          <strong>Período Analisado:</strong><br>
+          Antes: ${periodo.antes.inicio} a ${periodo.antes.fim}<br>
+          Depois: ${periodo.depois.inicio} a ${periodo.depois.fim}<br>
+          Data do Diagnóstico: ${periodo.data_diagnostico} | Implementação: ${periodo.data_implementacao}<br>
+          Gerado em: ${dataAtual}
+        </div>
+
+        <div class="cards-container">
+          <div class="card">
+            <div class="card-icon">📊</div>
+            <div class="card-label">OEE Global</div>
+            <div class="card-value">${fmtPercent(indicadores.oee.depois)}</div>
+            <div class="card-delta ${indicadores.oee.delta >= 0 ? 'positivo' : 'negativo'}">
+              ${indicadores.oee.delta >= 0 ? '▲' : '▼'} ${Math.abs(indicadores.oee.delta).toFixed(1)}% (${indicadores.oee.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.oee.percentual, 0)}%)
+            </div>
+            <div style="font-size: 11px; color:#666;">Antes: ${fmtPercent(indicadores.oee.antes)}</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">⏱️</div>
+            <div class="card-label">Setup Médio</div>
+            <div class="card-value">${fmtNum(indicadores.setup.depois, 0)} min</div>
+            <div class="card-delta ${indicadores.setup.delta <= 0 ? 'positivo' : 'negativo'}">
+              ${indicadores.setup.delta <= 0 ? '▼' : '▲'} ${Math.abs(indicadores.setup.delta).toFixed(0)} min (${indicadores.setup.percentual <= 0 ? '' : '+'}${fmtNum(indicadores.setup.percentual, 0)}%)
+            </div>
+            <div style="font-size: 11px; color:#666;">Antes: ${fmtNum(indicadores.setup.antes, 0)} min</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">🔧</div>
+            <div class="card-label">Refugo (pecas/dia)</div>
+            <div class="card-value">${fmtNum(indicadores.refugo_diario.depois, 0)}</div>
+            <div class="card-delta ${indicadores.refugo_diario.delta <= 0 ? 'positivo' : 'negativo'}">
+              ${indicadores.refugo_diario.delta <= 0 ? '▼' : '▲'} ${Math.abs(indicadores.refugo_diario.delta).toFixed(0)} (${indicadores.refugo_diario.percentual <= 0 ? '' : '+'}${fmtNum(indicadores.refugo_diario.percentual, 0)}%)
+            </div>
+            <div style="font-size: 11px; color:#666;">Antes: ${fmtNum(indicadores.refugo_diario.antes, 0)}</div>
+          </div>
+          <div class="card">
+            <div class="card-icon">💰</div>
+            <div class="card-label">ROI</div>
+            <div class="card-value">${fmtNum(financeiro.roi, 0)}%</div>
+            <div class="card-delta positivo">
+              Payback: ${fmtNum(financeiro.payback_meses, 1)} meses
+            </div>
+            <div style="font-size: 11px; color:#666;">Economia: R$ ${financeiro.economia_anual.toLocaleString('pt-BR')}/ano</div>
+          </div>
+        </div>
+
+        <div class="grafico-container">
+          <h3>Evolucao do OEE</h3>
+          ${evolucao_mensal_oee.map(item => {
+            const mesFormatado = formatarDataMes(item.mes);
+            const percentual = item.oee;
+            let classeCor = '';
+            if (percentual >= 70) classeCor = 'alta';
+            else if (percentual >= 50) classeCor = 'media';
+            else classeCor = 'baixa';
+            
+            return `
+              <div class="barra-container">
+                <div class="barra-label">${mesFormatado}</div>
+                <div class="barra-wrapper">
+                  <div class="barra">
+                    <div class="barra-fill ${classeCor}" style="width: ${Math.min(100, percentual)}%"></div>
+                  </div>
+                  <div class="barra-percentual">${fmtNum(percentual, 1)}%</div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <h3 style="page-break-before: avoid;">Pilares do OEE</h3>
+        
+        <div class="pilar-container">
+          <div class="pilar-header">
+            <span>Disponibilidade</span>
+            <div>
+              <span style="color:#ef4444;">${fmtPercent(indicadores.disponibilidade.antes)}</span>
+              <span> → </span>
+              <span style="color:#10b981; font-weight:bold;">${fmtPercent(indicadores.disponibilidade.depois)}</span>
+            </div>
+          </div>
+          <div class="pilar-barras">
+            <div class="pilar-barra" style="width: ${indicadores.disponibilidade.antes}%; background-color: #ef4444;">
+              ${indicadores.disponibilidade.antes > 15 ? fmtPercent(indicadores.disponibilidade.antes) : ''}
+            </div>
+            <div class="pilar-barra" style="width: ${indicadores.disponibilidade.depois}%; background-color: #10b981;">
+              ${indicadores.disponibilidade.depois > 15 ? fmtPercent(indicadores.disponibilidade.depois) : ''}
+            </div>
+          </div>
+        </div>
+
+        <div class="pilar-container">
+          <div class="pilar-header">
+            <span>Performance</span>
+            <div>
+              <span style="color:#ef4444;">${fmtPercent(indicadores.performance.antes)}</span>
+              <span> → </span>
+              <span style="color:#10b981; font-weight:bold;">${fmtPercent(indicadores.performance.depois)}</span>
+            </div>
+          </div>
+          <div class="pilar-barras">
+            <div class="pilar-barra" style="width: ${indicadores.performance.antes}%; background-color: #ef4444;">
+              ${indicadores.performance.antes > 15 ? fmtPercent(indicadores.performance.antes) : ''}
+            </div>
+            <div class="pilar-barra" style="width: ${indicadores.performance.depois}%; background-color: #10b981;">
+              ${indicadores.performance.depois > 15 ? fmtPercent(indicadores.performance.depois) : ''}
+            </div>
+          </div>
+        </div>
+
+        <div class="pilar-container">
+          <div class="pilar-header">
+            <span>Qualidade</span>
+            <div>
+              <span style="color:#ef4444;">${fmtPercent(indicadores.qualidade.antes)}</span>
+              <span> → </span>
+              <span style="color:#10b981; font-weight:bold;">${fmtPercent(indicadores.qualidade.depois)}</span>
+            </div>
+          </div>
+          <div class="pilar-barras">
+            <div class="pilar-barra" style="width: ${indicadores.qualidade.antes}%; background-color: #ef4444;">
+              ${indicadores.qualidade.antes > 15 ? fmtPercent(indicadores.qualidade.antes) : ''}
+            </div>
+            <div class="pilar-barra" style="width: ${indicadores.qualidade.depois}%; background-color: #10b981;">
+              ${indicadores.qualidade.depois > 15 ? fmtPercent(indicadores.qualidade.depois) : ''}
+            </div>
+          </div>
+        </div>
+
+        <h3>Indicadores Comparativos</h3>
+        <table class="tabela">
+          <thead>
+            <tr>
+              <th>Indicador</th>
+              <th>Antes</th>
+              <th>Depois</th>
+              <th>Delta</th>
+              <th>Melhoria (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>OEE Global</td>
+              <td style="text-align: right;">${fmtPercent(indicadores.oee.antes)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.oee.depois)}</td>
+              <td style="text-align: right;">${indicadores.oee.delta >= 0 ? '+' : ''}${fmtNum(indicadores.oee.delta, 1)}%</td>
+              <td style="text-align: right;">${indicadores.oee.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.oee.percentual, 0)}%</td>
+            </tr>
+            <tr style="background-color: #f9fafb;">
+              <td>Disponibilidade</td>
+              <td style="text-align: right;">${fmtPercent(indicadores.disponibilidade.antes)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.disponibilidade.depois)}</td>
+              <td style="text-align: right;">${indicadores.disponibilidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.disponibilidade.delta, 1)}%</td>
+              <td style="text-align: right;">${indicadores.disponibilidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.disponibilidade.percentual, 0)}%</td>
+            </tr>
+            <tr>
+              <td>Performance</td>
+              <td style="text-align: right;">${fmtPercent(indicadores.performance.antes)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.performance.depois)}</td>
+              <td style="text-align: right;">${indicadores.performance.delta >= 0 ? '+' : ''}${fmtNum(indicadores.performance.delta, 1)}%</td>
+              <td style="text-align: right;">${indicadores.performance.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.performance.percentual, 0)}%</td>
+            </tr>
+            <tr style="background-color: #f9fafb;">
+              <td>Qualidade</td>
+              <td style="text-align: right;">${fmtPercent(indicadores.qualidade.antes)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.qualidade.depois)}</td>
+              <td style="text-align: right;">${indicadores.qualidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.delta, 1)}%</td>
+              <td style="text-align: right;">${indicadores.qualidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.percentual, 0)}%</td>
+            </tr>
+            <tr>
+              <td>Setup (minutos)</td>
+              <td style="text-align: right;">${fmtNum(indicadores.setup.antes, 0)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.setup.depois, 0)}</td>
+              <td style="text-align: right;">${indicadores.setup.delta >= 0 ? '+' : ''}${fmtNum(indicadores.setup.delta, 0)}</td>
+              <td style="text-align: right;">${indicadores.setup.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.setup.percentual, 0)}%</td>
+            </tr>
+            <tr style="background-color: #f9fafb;">
+              <td>Refugo (pecas/dia)</td>
+              <td style="text-align: right;">${fmtNum(indicadores.refugo_diario.antes, 0)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.refugo_diario.depois, 0)}</td>
+              <td style="text-align: right;">${indicadores.refugo_diario.delta >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.delta, 0)}</td>
+              <td style="text-align: right;">${indicadores.refugo_diario.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.percentual, 0)}%</td>
+            </tr>
+            <tr>
+              <td>Produtividade (pecas/dia)</td>
+              <td style="text-align: right;">${fmtNum(indicadores.produtividade.antes, 0)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.produtividade.depois, 0)}</td>
+              <td style="text-align: right;">${indicadores.produtividade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.delta, 0)}</td>
+              <td style="text-align: right;">${indicadores.produtividade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.percentual, 0)}%</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="financeiro-container">
+          <div class="financeiro-card">
+            <h3>Economia Gerada</h3>
+            <div style="display: flex; justify-content: space-between;"><span>Perda mensal antes:</span><span style="color:#ef4444;">R$ ${financeiro.perda_mensal_antes.toLocaleString('pt-BR')}</span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Perda mensal depois:</span><span style="color:#10b981;">R$ ${financeiro.perda_mensal_depois.toLocaleString('pt-BR')}</span></div>
+            <div style="display: flex; justify-content: space-between; border-top:1px solid #ccc; margin-top:10px; padding-top:10px;"><span><strong>Economia mensal:</strong></span><span style="color:#10b981; font-size:18px;"><strong>R$ ${financeiro.economia_mensal.toLocaleString('pt-BR')}</strong></span></div>
+            <div style="display: flex; justify-content: space-between;"><span><strong>Economia anual:</strong></span><span style="color:#10b981; font-size:18px;"><strong>R$ ${financeiro.economia_anual.toLocaleString('pt-BR')}</strong></span></div>
+          </div>
+          <div class="financeiro-card">
+            <h3>Retorno sobre Investimento</h3>
+            <div style="display: flex; justify-content: space-between;"><span>Investimento total:</span><span><strong>R$ ${financeiro.investimento_total.toLocaleString('pt-BR')}</strong></span></div>
+            <div style="display: flex; justify-content: space-between;"><span>ROI:</span><span style="color:#10b981; font-size:22px;"><strong>${fmtNum(financeiro.roi, 0)}%</strong></span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Payback real:</span><span style="color:#10b981; font-size:18px;"><strong>${fmtNum(financeiro.payback_meses, 1)} meses</strong></span></div>
+          </div>
+        </div>
+
+        <div class="footer">
+          <p>Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos</p>
+          <p>Total de registros considerados: ${dados.metadados?.total_registros_antes || 0} (antes) | ${dados.metadados?.total_registros_depois || 0} (depois)</p>
+          <p>© ${new Date().getFullYear()} Nexus Engenharia Aplicada - Todos os direitos reservados</p>
+        </div>
+      </body>
+      </html>
+    `;
   };
 
   const formatarMoeda = (valor) => {
@@ -179,7 +624,7 @@ export default function ValidacaoResultados() {
           justifyContent: "center",
           alignItems: "center",
           overflow: "auto"
-        }} onClick={handleFecharRelatorio}>
+        }} onClick={() => setMostrarRelatorio(false)}>
           <div style={{
             backgroundColor: "white",
             width: "90%",
@@ -190,348 +635,36 @@ export default function ValidacaoResultados() {
             padding: "20px",
             position: "relative"
           }} onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={handleFecharRelatorio}
-              style={{
-                position: "sticky",
-                top: "10px",
-                right: "10px",
-                float: "right",
-                padding: "8px 16px",
-                backgroundColor: "#1E3A8A",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                zIndex: 1001
-              }}
-            >
-              Fechar
-            </button>
-            <button
-              onClick={() => window.print()}
-              style={{
-                position: "sticky",
-                top: "10px",
-                right: "100px",
-                float: "right",
-                padding: "8px 16px",
-                backgroundColor: "#10b981",
-                color: "white",
-                border: "none",
-                borderRadius: "4px",
-                cursor: "pointer",
-                marginRight: "10px",
-                zIndex: 1001
-              }}
-            >
-              Imprimir / PDF
-            </button>
-            <div style={{ clear: "both" }}></div>
-            
-            {/* Conteúdo do Relatório */}
-            <div className="relatorio-content" style={{ fontFamily: "Arial, sans-serif", padding: "20px" }}>
-              <div style={{ textAlign: "center", marginBottom: "30px", borderBottom: "2px solid #1E3A8A", paddingBottom: "20px" }}>
-                <img src={logo} alt="Nexus" style={{ maxWidth: "150px", marginBottom: "10px" }} />
-                <h1 style={{ color: "#1E3A8A", margin: "10px 0" }}>NEXUS ENGENHARIA APLICADA</h1>
-                <h2 style={{ color: "#666", fontSize: "18px" }}>Validação de Resultados</h2>
-              </div>
-
-              <div style={{ fontSize: "18px", fontWeight: "bold", color: "#1E3A8A", margin: "20px 0 10px" }}>
-                Empresa: {empresaNome}
-              </div>
-              
-              <div style={{ backgroundColor: "#f3f4f6", padding: "15px", borderRadius: "8px", marginBottom: "30px", fontSize: "14px" }}>
-                <strong>Período Analisado:</strong><br />
-                Antes: {dados.periodo.antes.inicio} a {dados.periodo.antes.fim}<br />
-                Depois: {dados.periodo.depois.inicio} a {dados.periodo.depois.fim}<br />
-                Data do Diagnóstico: {dados.periodo.data_diagnostico} | Implementação: {dados.periodo.data_implementacao}<br />
-                Gerado em: {new Date().toLocaleDateString('pt-BR')}
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px", marginBottom: "30px" }}>
-                <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "8px", textAlign: "center", borderLeft: "4px solid #1E3A8A" }}>
-                  <div style={{ fontSize: "24px", marginBottom: "10px" }}>📊</div>
-                  <div style={{ fontSize: "12px", color: "#666" }}>OEE Global</div>
-                  <div style={{ fontSize: "24px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarPercentual(dados.indicadores.oee.depois)}</div>
-                  <div style={{ fontSize: "12px", marginTop: "5px", color: dados.indicadores.oee.delta >= 0 ? "#10b981" : "#ef4444" }}>
-                    {getDeltaIcon(dados.indicadores.oee.delta)} {Math.abs(dados.indicadores.oee.delta).toFixed(1)}% ({dados.indicadores.oee.percentual >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.oee.percentual, 0)}%)
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarPercentual(dados.indicadores.oee.antes)}</div>
-                </div>
-
-                <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "8px", textAlign: "center", borderLeft: "4px solid #1E3A8A" }}>
-                  <div style={{ fontSize: "24px", marginBottom: "10px" }}>⏱️</div>
-                  <div style={{ fontSize: "12px", color: "#666" }}>Setup Médio</div>
-                  <div style={{ fontSize: "24px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.setup.depois, 0)} min</div>
-                  <div style={{ fontSize: "12px", marginTop: "5px", color: dados.indicadores.setup.delta <= 0 ? "#10b981" : "#ef4444" }}>
-                    {getDeltaIcon(dados.indicadores.setup.delta)} {Math.abs(dados.indicadores.setup.delta).toFixed(0)} min ({dados.indicadores.setup.percentual <= 0 ? '' : '+'}{formatarNumero(dados.indicadores.setup.percentual, 0)}%)
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.setup.antes, 0)} min</div>
-                </div>
-
-                <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "8px", textAlign: "center", borderLeft: "4px solid #1E3A8A" }}>
-                  <div style={{ fontSize: "24px", marginBottom: "10px" }}>🔧</div>
-                  <div style={{ fontSize: "12px", color: "#666" }}>Refugo (pecas/dia)</div>
-                  <div style={{ fontSize: "24px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.refugo_diario.depois, 0)}</div>
-                  <div style={{ fontSize: "12px", marginTop: "5px", color: dados.indicadores.refugo_diario.delta <= 0 ? "#10b981" : "#ef4444" }}>
-                    {getDeltaIcon(dados.indicadores.refugo_diario.delta)} {Math.abs(dados.indicadores.refugo_diario.delta).toFixed(0)} ({dados.indicadores.refugo_diario.percentual <= 0 ? '' : '+'}{formatarNumero(dados.indicadores.refugo_diario.percentual, 0)}%)
-                  </div>
-                  <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.refugo_diario.antes, 0)}</div>
-                </div>
-
-                <div style={{ backgroundColor: "#f9fafb", padding: "20px", borderRadius: "8px", textAlign: "center", borderLeft: "4px solid #1E3A8A" }}>
-                  <div style={{ fontSize: "24px", marginBottom: "10px" }}>💰</div>
-                  <div style={{ fontSize: "12px", color: "#666" }}>ROI</div>
-                  <div style={{ fontSize: "24px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.financeiro.roi, 0)}%</div>
-                  <div style={{ fontSize: "12px", marginTop: "5px", color: "#10b981" }}>Payback: {formatarNumero(dados.financeiro.payback_meses, 1)} meses</div>
-                  <div style={{ fontSize: "11px", color: "#666" }}>Economia: {formatarMoeda(dados.financeiro.economia_anual)}/ano</div>
-                </div>
-              </div>
-
-              <div style={{ margin: "30px 0" }}>
-                <h3>Evolucao do OEE</h3>
-                {dados.evolucao_mensal_oee && dados.evolucao_mensal_oee.map((item, idx) => (
-                  <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "15px" }}>
-                    <div style={{ width: "70px", fontSize: "13px", fontWeight: "bold", color: "#333" }}>{formatarDataMes(item.mes)}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ height: "30px", backgroundColor: "#e5e7eb", borderRadius: "4px", overflow: "hidden", marginBottom: "4px" }}>
-                        <div style={{
-                          width: `${Math.min(100, item.oee)}%`,
-                          height: "100%",
-                          backgroundColor: item.oee >= 70 ? "#10b981" : item.oee >= 50 ? "#f59e0b" : "#ef4444"
-                        }}></div>
-                      </div>
-                      <div style={{ fontSize: "11px", color: "#666", textAlign: "right" }}>{formatarNumero(item.oee, 1)}%</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ margin: "30px 0" }}>
-                <h3>Pilares do OEE</h3>
-                
-                <div style={{ marginBottom: "15px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontWeight: "bold" }}>
-                    <span>Disponibilidade</span>
-                    <div>
-                      <span style={{ color: "#ef4444" }}>{formatarPercentual(dados.indicadores.disponibilidade.antes)}</span>
-                      <span> → </span>
-                      <span style={{ color: "#10b981", fontWeight: "bold" }}>{formatarPercentual(dados.indicadores.disponibilidade.depois)}</span>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: "4px", height: "30px" }}>
-                    <div style={{
-                      width: `${dados.indicadores.disponibilidade.antes}%`,
-                      backgroundColor: "#ef4444",
-                      borderRadius: "4px 0 0 4px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontSize: "11px"
-                    }}>
-                      {dados.indicadores.disponibilidade.antes > 15 ? formatarPercentual(dados.indicadores.disponibilidade.antes) : ""}
-                    </div>
-                    <div style={{
-                      width: `${dados.indicadores.disponibilidade.depois}%`,
-                      backgroundColor: "#10b981",
-                      borderRadius: "0 4px 4px 0",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontSize: "11px"
-                    }}>
-                      {dados.indicadores.disponibilidade.depois > 15 ? formatarPercentual(dados.indicadores.disponibilidade.depois) : ""}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: "15px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontWeight: "bold" }}>
-                    <span>Performance</span>
-                    <div>
-                      <span style={{ color: "#ef4444" }}>{formatarPercentual(dados.indicadores.performance.antes)}</span>
-                      <span> → </span>
-                      <span style={{ color: "#10b981", fontWeight: "bold" }}>{formatarPercentual(dados.indicadores.performance.depois)}</span>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: "4px", height: "30px" }}>
-                    <div style={{
-                      width: `${dados.indicadores.performance.antes}%`,
-                      backgroundColor: "#ef4444",
-                      borderRadius: "4px 0 0 4px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontSize: "11px"
-                    }}>
-                      {dados.indicadores.performance.antes > 15 ? formatarPercentual(dados.indicadores.performance.antes) : ""}
-                    </div>
-                    <div style={{
-                      width: `${dados.indicadores.performance.depois}%`,
-                      backgroundColor: "#10b981",
-                      borderRadius: "0 4px 4px 0",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontSize: "11px"
-                    }}>
-                      {dados.indicadores.performance.depois > 15 ? formatarPercentual(dados.indicadores.performance.depois) : ""}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginBottom: "15px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px", fontWeight: "bold" }}>
-                    <span>Qualidade</span>
-                    <div>
-                      <span style={{ color: "#ef4444" }}>{formatarPercentual(dados.indicadores.qualidade.antes)}</span>
-                      <span> → </span>
-                      <span style={{ color: "#10b981", fontWeight: "bold" }}>{formatarPercentual(dados.indicadores.qualidade.depois)}</span>
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", gap: "4px", height: "30px" }}>
-                    <div style={{
-                      width: `${dados.indicadores.qualidade.antes}%`,
-                      backgroundColor: "#ef4444",
-                      borderRadius: "4px 0 0 4px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontSize: "11px"
-                    }}>
-                      {dados.indicadores.qualidade.antes > 15 ? formatarPercentual(dados.indicadores.qualidade.antes) : ""}
-                    </div>
-                    <div style={{
-                      width: `${dados.indicadores.qualidade.depois}%`,
-                      backgroundColor: "#10b981",
-                      borderRadius: "0 4px 4px 0",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      color: "white",
-                      fontSize: "11px"
-                    }}>
-                      {dados.indicadores.qualidade.depois > 15 ? formatarPercentual(dados.indicadores.qualidade.depois) : ""}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ margin: "30px 0" }}>
-                <h3>Indicadores Comparativos</h3>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ backgroundColor: "#1E3A8A" }}>
-                      <th style={{ textAlign: "left", padding: "12px", color: "white" }}>Indicador</th>
-                      <th style={{ textAlign: "right", padding: "12px", color: "white" }}>Antes</th>
-                      <th style={{ textAlign: "right", padding: "12px", color: "white" }}>Depois</th>
-                      <th style={{ textAlign: "right", padding: "12px", color: "white" }}>Delta</th>
-                      <th style={{ textAlign: "right", padding: "12px", color: "white" }}>Melhoria (%)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "10px" }}>OEE Global</td>
-                      <td style={{ textAlign: "right" }}>{formatarPercentual(dados.indicadores.oee.antes)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.oee.depois)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.oee.delta >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.oee.delta, 1)}%</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.oee.percentual >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.oee.percentual, 0)}%</td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid #e5e7eb", backgroundColor: "#f9fafb" }}>
-                      <td style={{ padding: "10px" }}>Disponibilidade</td>
-                      <td style={{ textAlign: "right" }}>{formatarPercentual(dados.indicadores.disponibilidade.antes)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.disponibilidade.depois)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.disponibilidade.delta >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.disponibilidade.delta, 1)}%</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.disponibilidade.percentual >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.disponibilidade.percentual, 0)}%</td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "10px" }}>Performance</td>
-                      <td style={{ textAlign: "right" }}>{formatarPercentual(dados.indicadores.performance.antes)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.performance.depois)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.performance.delta >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.performance.delta, 1)}%</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.performance.percentual >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.performance.percentual, 0)}%</td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid #e5e7eb", backgroundColor: "#f9fafb" }}>
-                      <td style={{ padding: "10px" }}>Qualidade</td>
-                      <td style={{ textAlign: "right" }}>{formatarPercentual(dados.indicadores.qualidade.antes)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.qualidade.depois)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.qualidade.delta >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.qualidade.delta, 1)}%</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.qualidade.percentual >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.qualidade.percentual, 0)}%</td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "10px" }}>Setup (minutos)</td>
-                      <td style={{ textAlign: "right" }}>{formatarNumero(dados.indicadores.setup.antes, 0)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.setup.depois, 0)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.setup.delta >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.setup.delta, 0)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.setup.percentual >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.setup.percentual, 0)}%</td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid #e5e7eb", backgroundColor: "#f9fafb" }}>
-                      <td style={{ padding: "10px" }}>Refugo (pecas/dia)</td>
-                      <td style={{ textAlign: "right" }}>{formatarNumero(dados.indicadores.refugo_diario.antes, 0)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.refugo_diario.depois, 0)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.refugo_diario.delta >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.refugo_diario.delta, 0)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.refugo_diario.percentual >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.refugo_diario.percentual, 0)}%</td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
-                      <td style={{ padding: "10px" }}>Produtividade (pecas/dia)</td>
-                      <td style={{ textAlign: "right" }}>{formatarNumero(dados.indicadores.produtividade.antes, 0)}</td>
-                      <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.produtividade.depois, 0)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.produtividade.delta >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.produtividade.delta, 0)}</td>
-                      <td style={{ textAlign: "right" }}>{dados.indicadores.produtividade.percentual >= 0 ? '+' : ''}{formatarNumero(dados.indicadores.produtividade.percentual, 0)}%</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px", margin: "30px 0" }}>
-                <div style={{ backgroundColor: "#f0fdf4", padding: "20px", borderRadius: "8px" }}>
-                  <h3 style={{ color: "#166534", marginTop: 0 }}>Economia Gerada</h3>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                    <span>Perda mensal antes:</span>
-                    <span style={{ color: "#ef4444", fontWeight: "bold" }}>{formatarMoeda(dados.financeiro.perda_mensal_antes)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                    <span>Perda mensal depois:</span>
-                    <span style={{ color: "#10b981", fontWeight: "bold" }}>{formatarMoeda(dados.financeiro.perda_mensal_depois)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px solid #ccc", marginTop: "10px", paddingTop: "10px" }}>
-                    <span><strong>Economia mensal:</strong></span>
-                    <span style={{ color: "#10b981", fontSize: "18px", fontWeight: "bold" }}>{formatarMoeda(dados.financeiro.economia_mensal)}</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span><strong>Economia anual:</strong></span>
-                    <span style={{ color: "#10b981", fontSize: "18px", fontWeight: "bold" }}>{formatarMoeda(dados.financeiro.economia_anual)}</span>
-                  </div>
-                </div>
-                <div style={{ backgroundColor: "#f0fdf4", padding: "20px", borderRadius: "8px" }}>
-                  <h3 style={{ color: "#166534", marginTop: 0 }}>Retorno sobre Investimento</h3>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                    <span>Investimento total:</span>
-                    <span><strong>{formatarMoeda(dados.financeiro.investimento_total)}</strong></span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                    <span>ROI:</span>
-                    <span style={{ color: "#10b981", fontSize: "22px", fontWeight: "bold" }}>{formatarNumero(dados.financeiro.roi, 0)}%</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>Payback real:</span>
-                    <span style={{ color: "#10b981", fontSize: "18px", fontWeight: "bold" }}>{formatarNumero(dados.financeiro.payback_meses, 1)} meses</span>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ fontSize: "11px", color: "#999", textAlign: "center", marginTop: "30px", borderTop: "1px solid #e5e7eb", paddingTop: "15px" }}>
-                <p>Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos</p>
-                <p>Total de registros considerados: {dados.metadados?.total_registros_antes || 0} (antes) | {dados.metadados?.total_registros_depois || 0} (depois)</p>
-                <p>© {new Date().getFullYear()} Nexus Engenharia Aplicada - Todos os direitos reservados</p>
-              </div>
+            <div style={{ position: "sticky", top: 0, right: 0, textAlign: "right", marginBottom: "10px", backgroundColor: "white", padding: "10px", zIndex: 10 }}>
+              <button
+                onClick={() => setMostrarRelatorio(false)}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#1E3A8A",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer",
+                  marginRight: "10px"
+                }}
+              >
+                Fechar
+              </button>
+              <button
+                onClick={handleImprimir}
+                style={{
+                  padding: "8px 16px",
+                  backgroundColor: "#10b981",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "4px",
+                  cursor: "pointer"
+                }}
+              >
+                Imprimir / PDF
+              </button>
             </div>
+            <div dangerouslySetInnerHTML={{ __html: gerarHTMLRelatorio() }} />
           </div>
         </div>
       )}
@@ -855,52 +988,52 @@ export default function ValidacaoResultados() {
                 <tbody>
                   <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={{ padding: "10px" }}>OEE Global</td>
-                    <td style={{ textAlign: "right" }}>{formatarPercentual(dados.indicadores.oee.antes)}</td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.oee.depois)}</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.oee.delta)}{formatarNumero(dados.indicadores.oee.delta, 1)}%</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.oee.percentual)}{formatarNumero(dados.indicadores.oee.percentual, 0)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px" }}>{formatarPercentual(dados.indicadores.oee.antes)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.oee.depois)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.oee.delta) }}>{getDeltaSymbol(dados.indicadores.oee.delta)}{formatarNumero(dados.indicadores.oee.delta, 1)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.oee.percentual) }}>{getDeltaSymbol(dados.indicadores.oee.percentual)}{formatarNumero(dados.indicadores.oee.percentual, 0)}%</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #e5e7eb", backgroundColor: "#f9fafb" }}>
                     <td style={{ padding: "10px" }}>Disponibilidade</td>
-                    <td style={{ textAlign: "right" }}>{formatarPercentual(dados.indicadores.disponibilidade.antes)}</td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.disponibilidade.depois)}</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.disponibilidade.delta)}{formatarNumero(dados.indicadores.disponibilidade.delta, 1)}%</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.disponibilidade.percentual)}{formatarNumero(dados.indicadores.disponibilidade.percentual, 0)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px" }}>{formatarPercentual(dados.indicadores.disponibilidade.antes)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.disponibilidade.depois)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.disponibilidade.delta) }}>{getDeltaSymbol(dados.indicadores.disponibilidade.delta)}{formatarNumero(dados.indicadores.disponibilidade.delta, 1)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.disponibilidade.percentual) }}>{getDeltaSymbol(dados.indicadores.disponibilidade.percentual)}{formatarNumero(dados.indicadores.disponibilidade.percentual, 0)}%</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={{ padding: "10px" }}>Performance</td>
-                    <td style={{ textAlign: "right" }}>{formatarPercentual(dados.indicadores.performance.antes)}</td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.performance.depois)}</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.performance.delta)}{formatarNumero(dados.indicadores.performance.delta, 1)}%</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.performance.percentual)}{formatarNumero(dados.indicadores.performance.percentual, 0)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px" }}>{formatarPercentual(dados.indicadores.performance.antes)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.performance.depois)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.performance.delta) }}>{getDeltaSymbol(dados.indicadores.performance.delta)}{formatarNumero(dados.indicadores.performance.delta, 1)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.performance.percentual) }}>{getDeltaSymbol(dados.indicadores.performance.percentual)}{formatarNumero(dados.indicadores.performance.percentual, 0)}%</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #e5e7eb", backgroundColor: "#f9fafb" }}>
                     <td style={{ padding: "10px" }}>Qualidade</td>
-                    <td style={{ textAlign: "right" }}>{formatarPercentual(dados.indicadores.qualidade.antes)}</td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.qualidade.depois)}</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.qualidade.delta)}{formatarNumero(dados.indicadores.qualidade.delta, 1)}%</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.qualidade.percentual)}{formatarNumero(dados.indicadores.qualidade.percentual, 0)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px" }}>{formatarPercentual(dados.indicadores.qualidade.antes)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", fontWeight: "bold", color: "#10b981" }}>{formatarPercentual(dados.indicadores.qualidade.depois)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.qualidade.delta) }}>{getDeltaSymbol(dados.indicadores.qualidade.delta)}{formatarNumero(dados.indicadores.qualidade.delta, 1)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.qualidade.percentual) }}>{getDeltaSymbol(dados.indicadores.qualidade.percentual)}{formatarNumero(dados.indicadores.qualidade.percentual, 0)}%</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={{ padding: "10px" }}>Setup (minutos)</td>
-                    <td style={{ textAlign: "right" }}>{formatarNumero(dados.indicadores.setup.antes, 0)}</td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.setup.depois, 0)}</td>
-                    <td style={{ textAlign: "right" }}>{dados.indicadores.setup.delta > 0 ? "+" : ""}{formatarNumero(dados.indicadores.setup.delta, 0)}</td>
-                    <td style={{ textAlign: "right" }}>{dados.indicadores.setup.percentual > 0 ? "+" : ""}{formatarNumero(dados.indicadores.setup.percentual, 0)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px" }}>{formatarNumero(dados.indicadores.setup.antes, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.setup.depois, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.setup.delta, true) }}>{dados.indicadores.setup.delta > 0 ? "+" : ""}{formatarNumero(dados.indicadores.setup.delta, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.setup.percentual, true) }}>{dados.indicadores.setup.percentual > 0 ? "+" : ""}{formatarNumero(dados.indicadores.setup.percentual, 0)}%</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #e5e7eb", backgroundColor: "#f9fafb" }}>
                     <td style={{ padding: "10px" }}>Refugo (peças/dia)</td>
-                    <td style={{ textAlign: "right" }}>{formatarNumero(dados.indicadores.refugo_diario.antes, 0)}</td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.refugo_diario.depois, 0)}</td>
-                    <td style={{ textAlign: "right" }}>{dados.indicadores.refugo_diario.delta > 0 ? "+" : ""}{formatarNumero(dados.indicadores.refugo_diario.delta, 0)}</td>
-                    <td style={{ textAlign: "right" }}>{dados.indicadores.refugo_diario.percentual > 0 ? "+" : ""}{formatarNumero(dados.indicadores.refugo_diario.percentual, 0)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px" }}>{formatarNumero(dados.indicadores.refugo_diario.antes, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.refugo_diario.depois, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.refugo_diario.delta, true) }}>{dados.indicadores.refugo_diario.delta > 0 ? "+" : ""}{formatarNumero(dados.indicadores.refugo_diario.delta, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.refugo_diario.percentual, true) }}>{dados.indicadores.refugo_diario.percentual > 0 ? "+" : ""}{formatarNumero(dados.indicadores.refugo_diario.percentual, 0)}%</td>
                   </tr>
                   <tr style={{ borderBottom: "1px solid #e5e7eb" }}>
                     <td style={{ padding: "10px" }}>Produtividade (peças/dia)</td>
-                    <td style={{ textAlign: "right" }}>{formatarNumero(dados.indicadores.produtividade.antes, 0)}</td>
-                    <td style={{ textAlign: "right", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.produtividade.depois, 0)}</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.produtividade.delta)}{formatarNumero(dados.indicadores.produtividade.delta, 0)}</td>
-                    <td style={{ textAlign: "right" }}>{getDeltaSymbol(dados.indicadores.produtividade.percentual)}{formatarNumero(dados.indicadores.produtividade.percentual, 0)}%</td>
+                    <td style={{ textAlign: "right", padding: "10px" }}>{formatarNumero(dados.indicadores.produtividade.antes, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", fontWeight: "bold", color: "#10b981" }}>{formatarNumero(dados.indicadores.produtividade.depois, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.produtividade.delta) }}>{getDeltaSymbol(dados.indicadores.produtividade.delta)}{formatarNumero(dados.indicadores.produtividade.delta, 0)}</td>
+                    <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(dados.indicadores.produtividade.percentual) }}>{getDeltaSymbol(dados.indicadores.produtividade.percentual)}{formatarNumero(dados.indicadores.produtividade.percentual, 0)}%</td>
                   </tr>
                 </tbody>
               </table>
