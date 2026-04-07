@@ -97,7 +97,9 @@ export default function ValidacaoResultados() {
   };
 
   const handleExportarPDF = () => {
-    window.print();
+    setTimeout(() => {
+      window.print();
+    }, 100);
   };
 
   if (!clienteAtual) {
@@ -778,12 +780,14 @@ export default function ValidacaoResultados() {
             visibility: visible;
           }
           .relatorio-print {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
+            right: 0;
             width: 100%;
             margin: 0;
             padding: 20px;
+            background: white;
           }
           .no-print {
             display: none !important;
@@ -791,6 +795,17 @@ export default function ValidacaoResultados() {
           @page {
             size: A4;
             margin: 1.5cm;
+          }
+          h1, h2, h3, h4, .card, table, .grafico-container {
+            page-break-after: avoid;
+            page-break-inside: avoid;
+          }
+          table {
+            page-break-inside: auto;
+          }
+          tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
           }
         }
       `}</style>
