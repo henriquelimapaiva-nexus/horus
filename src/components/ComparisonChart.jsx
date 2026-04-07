@@ -12,7 +12,7 @@ import {
 } from "recharts";
 import { colors, spacing, typography } from "../styles/theme";
 
-const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
+const ComparisonChart = ({ data, title, height = 400 }) => {
   if (!data || data.length === 0) {
     return (
       <div style={{ 
@@ -48,7 +48,7 @@ const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
   };
 
   return (
-    <div style={{ width: "100%", height }}>
+    <div style={{ width: "100%", height: `${height}px`, minHeight: "400px" }}>
       {title && (
         <h3 style={{ 
           marginBottom: spacing.lg,
@@ -59,7 +59,7 @@ const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
           {title}
         </h3>
       )}
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="90%">
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke={colors.border.light} />
           <XAxis 
