@@ -79,22 +79,26 @@ export default function ValidacaoResultados() {
       return;
     }
     
+    // Abrir nova janela com o relatório
     const relatorioWindow = window.open("", "_blank");
     relatorioWindow.document.write(gerarHTMLRelatorio());
     relatorioWindow.document.close();
   };
 
-  const handleExportarPDF = () => {
-    if (!dados) {
-      toast.error("Carregue os dados primeiro");
-      return;
-    }
-    window.print();
+  const formatarNumeroHTML = (valor, casas = 1) => {
+    if (valor === undefined || valor === null) return "0";
+    const num = typeof valor === 'number' ? valor : parseFloat(valor);
+    if (isNaN(num)) return "0";
+    return num.toFixed(casas);
   };
 
   const gerarHTMLRelatorio = () => {
     const { indicadores, financeiro, evolucao_mensal_oee, periodo } = dados;
     const dataAtual = new Date().toLocaleDateString('pt-BR');
+    
+    // Funções auxiliares para o HTML
+    const fmtNum = (valor, casas = 1) => formatarNumeroHTML(valor, casas);
+    const fmtPercent = (valor) => `${fmtNum(valor, 1)}%`;
     
     return `
       <!DOCTYPE html>
@@ -254,9 +258,27 @@ export default function ValidacaoResultados() {
           .barra-fill.alta { background-color: #10b981; }
           .barra-fill.media { background-color: #f59e0b; }
           .barra-fill.baixa { background-color: #ef4444; }
+          .btn-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #1E3A8A;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 1000;
+          }
+          .btn-print:hover {
+            background-color: #152c6b;
+          }
         </style>
       </head>
       <body>
+        <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+        
         <div class="header">
           <img src="${logo}" alt="Nexus Engenharia Aplicada" class="logo" style="max-width: 180px;">
           <h1 class="titulo-relatorio">NEXUS ENGENHARIA APLICADA</h1>
@@ -267,8 +289,8 @@ export default function ValidacaoResultados() {
         
         <div class="periodo-info">
           <strong>Período Analisado:</strong><br>
-          📅 Antes: ${periodo.antes.inicio} a ${periodo.antes.fim} (${periodo.antes.meses_analisados} meses)<br>
-          📅 Depois: ${periodo.depois.inicio} a ${periodo.depois.fim} (${periodo.depois.meses_analisados} meses)<br>
+          📅 Antes: ${periodo.antes.inicio} a ${periodo.antes.fim}<br>
+          📅 Depois: ${periodo.depois.inicio} a ${periodo.depois.fim}<br>
           📌 Data do Diagnóstico: ${periodo.data_diagnostico} | Implementação: ${periodo.data_implementacao}<br>
           📊 Gerado em: ${dataAtual}
         </div>
@@ -277,36 +299,36 @@ export default function ValidacaoResultados() {
           <div class="card">
             <div class="card-icon">📊</div>
             <div class="card-label">OEE Global</div>
-            <div class="card-value">${indicadores.oee.depois.toFixed(1)}%</div>
+            <div class="card-value">${fmtPercent(indicadores.oee.depois)}</div>
             <div class="card-delta ${indicadores.oee.delta >= 0 ? 'positivo' : 'negativo'}">
-              ${indicadores.oee.delta >= 0 ? '▲' : '▼'} ${Math.abs(indicadores.oee.delta).toFixed(1)}% (${indicadores.oee.percentual >= 0 ? '+' : ''}${indicadores.oee.percentual.toFixed(0)}%)
+              ${indicadores.oee.delta >= 0 ? '▲' : '▼'} ${Math.abs(indicadores.oee.delta).toFixed(1)}% (${indicadores.oee.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.oee.percentual, 0)}%)
             </div>
-            <div style="font-size: 11px; color:#666;">Antes: ${indicadores.oee.antes.toFixed(1)}%</div>
+            <div style="font-size: 11px; color:#666;">Antes: ${fmtPercent(indicadores.oee.antes)}</div>
           </div>
           <div class="card">
             <div class="card-icon">⏱️</div>
             <div class="card-label">Setup Médio</div>
-            <div class="card-value">${indicadores.setup.depois.toFixed(0)} min</div>
+            <div class="card-value">${fmtNum(indicadores.setup.depois, 0)} min</div>
             <div class="card-delta ${indicadores.setup.delta <= 0 ? 'positivo' : 'negativo'}">
-              ${indicadores.setup.delta <= 0 ? '▼' : '▲'} ${Math.abs(indicadores.setup.delta).toFixed(0)} min (${indicadores.setup.percentual <= 0 ? '' : '+'}${indicadores.setup.percentual.toFixed(0)}%)
+              ${indicadores.setup.delta <= 0 ? '▼' : '▲'} ${Math.abs(indicadores.setup.delta).toFixed(0)} min (${indicadores.setup.percentual <= 0 ? '' : '+'}${fmtNum(indicadores.setup.percentual, 0)}%)
             </div>
-            <div style="font-size: 11px; color:#666;">Antes: ${indicadores.setup.antes.toFixed(0)} min</div>
+            <div style="font-size: 11px; color:#666;">Antes: ${fmtNum(indicadores.setup.antes, 0)} min</div>
           </div>
           <div class="card">
             <div class="card-icon">🔧</div>
             <div class="card-label">Refugo (pç/dia)</div>
-            <div class="card-value">${indicadores.refugo_diario.depois.toFixed(0)}</div>
+            <div class="card-value">${fmtNum(indicadores.refugo_diario.depois, 0)}</div>
             <div class="card-delta ${indicadores.refugo_diario.delta <= 0 ? 'positivo' : 'negativo'}">
-              ${indicadores.refugo_diario.delta <= 0 ? '▼' : '▲'} ${Math.abs(indicadores.refugo_diario.delta).toFixed(0)} (${indicadores.refugo_diario.percentual <= 0 ? '' : '+'}${indicadores.refugo_diario.percentual.toFixed(0)}%)
+              ${indicadores.refugo_diario.delta <= 0 ? '▼' : '▲'} ${Math.abs(indicadores.refugo_diario.delta).toFixed(0)} (${indicadores.refugo_diario.percentual <= 0 ? '' : '+'}${fmtNum(indicadores.refugo_diario.percentual, 0)}%)
             </div>
-            <div style="font-size: 11px; color:#666;">Antes: ${indicadores.refugo_diario.antes.toFixed(0)}</div>
+            <div style="font-size: 11px; color:#666;">Antes: ${fmtNum(indicadores.refugo_diario.antes, 0)}</div>
           </div>
           <div class="card">
             <div class="card-icon">💰</div>
             <div class="card-label">ROI</div>
-            <div class="card-value">${financeiro.roi.toFixed(0)}%</div>
+            <div class="card-value">${fmtNum(financeiro.roi, 0)}%</div>
             <div class="card-delta positivo">
-              Payback: ${financeiro.payback_meses.toFixed(1)} meses
+              Payback: ${fmtNum(financeiro.payback_meses, 1)} meses
             </div>
             <div style="font-size: 11px; color:#666;">Economia: R$ ${financeiro.economia_anual.toLocaleString('pt-BR')}/ano</div>
           </div>
@@ -319,7 +341,7 @@ export default function ValidacaoResultados() {
               <div class="barra-label">${item.mes}</div>
               <div class="barra">
                 <div class="barra-fill ${item.oee >= 70 ? 'alta' : (item.oee >= 50 ? 'media' : 'baixa')}" style="width: ${Math.min(100, item.oee)}%">
-                  ${item.oee.toFixed(1)}%
+                  ${fmtNum(item.oee, 1)}%
                 </div>
               </div>
             </div>
@@ -330,28 +352,28 @@ export default function ValidacaoResultados() {
         <div class="barra-container">
           <div class="barra-label">Disponibilidade</div>
           <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.disponibilidade.antes}%; background-color: #ef4444;">${indicadores.disponibilidade.antes.toFixed(1)}%</div>
+            <div class="barra-fill" style="width: ${indicadores.disponibilidade.antes}%; background-color: #ef4444;">${fmtPercent(indicadores.disponibilidade.antes)}</div>
           </div>
           <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.disponibilidade.depois}%; background-color: #10b981;">${indicadores.disponibilidade.depois.toFixed(1)}%</div>
+            <div class="barra-fill" style="width: ${indicadores.disponibilidade.depois}%; background-color: #10b981;">${fmtPercent(indicadores.disponibilidade.depois)}</div>
           </div>
         </div>
         <div class="barra-container">
           <div class="barra-label">Performance</div>
           <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.performance.antes}%; background-color: #ef4444;">${indicadores.performance.antes.toFixed(1)}%</div>
+            <div class="barra-fill" style="width: ${indicadores.performance.antes}%; background-color: #ef4444;">${fmtPercent(indicadores.performance.antes)}</div>
           </div>
           <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.performance.depois}%; background-color: #10b981;">${indicadores.performance.depois.toFixed(1)}%</div>
+            <div class="barra-fill" style="width: ${indicadores.performance.depois}%; background-color: #10b981;">${fmtPercent(indicadores.performance.depois)}</div>
           </div>
         </div>
         <div class="barra-container">
           <div class="barra-label">Qualidade</div>
           <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.qualidade.antes}%; background-color: #ef4444;">${indicadores.qualidade.antes.toFixed(1)}%</div>
+            <div class="barra-fill" style="width: ${indicadores.qualidade.antes}%; background-color: #ef4444;">${fmtPercent(indicadores.qualidade.antes)}</div>
           </div>
           <div class="barra">
-            <div class="barra-fill" style="width: ${indicadores.qualidade.depois}%; background-color: #10b981;">${indicadores.qualidade.depois.toFixed(1)}%</div>
+            <div class="barra-fill" style="width: ${indicadores.qualidade.depois}%; background-color: #10b981;">${fmtPercent(indicadores.qualidade.depois)}</div>
           </div>
         </div>
 
@@ -369,52 +391,52 @@ export default function ValidacaoResultados() {
           <tbody>
             <tr>
               <td>OEE Global</td>
-              <td>${indicadores.oee.antes.toFixed(1)}%</td>
-              <td>${indicadores.oee.depois.toFixed(1)}%</td>
-              <td>${indicadores.oee.delta >= 0 ? '+' : ''}${indicadores.oee.delta.toFixed(1)}%</td>
-              <td>${indicadores.oee.percentual >= 0 ? '+' : ''}${indicadores.oee.percentual.toFixed(0)}%</td>
+              <td>${fmtPercent(indicadores.oee.antes)}</td>
+              <td>${fmtPercent(indicadores.oee.depois)}</td>
+              <td>${indicadores.oee.delta >= 0 ? '+' : ''}${fmtNum(indicadores.oee.delta, 1)}%</td>
+              <td>${indicadores.oee.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.oee.percentual, 0)}%</td>
             </tr>
             <tr>
               <td>Disponibilidade</td>
-              <td>${indicadores.disponibilidade.antes.toFixed(1)}%</td>
-              <td>${indicadores.disponibilidade.depois.toFixed(1)}%</td>
-              <td>${indicadores.disponibilidade.delta >= 0 ? '+' : ''}${indicadores.disponibilidade.delta.toFixed(1)}%</td>
-              <td>${indicadores.disponibilidade.percentual >= 0 ? '+' : ''}${indicadores.disponibilidade.percentual.toFixed(0)}%</td>
+              <td>${fmtPercent(indicadores.disponibilidade.antes)}</td>
+              <td>${fmtPercent(indicadores.disponibilidade.depois)}</td>
+              <td>${indicadores.disponibilidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.disponibilidade.delta, 1)}%</td>
+              <td>${indicadores.disponibilidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.disponibilidade.percentual, 0)}%</td>
             </tr>
             <tr>
               <td>Performance</td>
-              <td>${indicadores.performance.antes.toFixed(1)}%</td>
-              <td>${indicadores.performance.depois.toFixed(1)}%</td>
-              <td>${indicadores.performance.delta >= 0 ? '+' : ''}${indicadores.performance.delta.toFixed(1)}%</td>
-              <td>${indicadores.performance.percentual >= 0 ? '+' : ''}${indicadores.performance.percentual.toFixed(0)}%</td>
+              <td>${fmtPercent(indicadores.performance.antes)}</td>
+              <td>${fmtPercent(indicadores.performance.depois)}</td>
+              <td>${indicadores.performance.delta >= 0 ? '+' : ''}${fmtNum(indicadores.performance.delta, 1)}%</td>
+              <td>${indicadores.performance.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.performance.percentual, 0)}%</td>
             </tr>
             <tr>
               <td>Qualidade</td>
-              <td>${indicadores.qualidade.antes.toFixed(1)}%</td>
-              <td>${indicadores.qualidade.depois.toFixed(1)}%</td>
-              <td>${indicadores.qualidade.delta >= 0 ? '+' : ''}${indicadores.qualidade.delta.toFixed(1)}%</td>
-              <td>${indicadores.qualidade.percentual >= 0 ? '+' : ''}${indicadores.qualidade.percentual.toFixed(0)}%</td>
+              <td>${fmtPercent(indicadores.qualidade.antes)}</td>
+              <td>${fmtPercent(indicadores.qualidade.depois)}</td>
+              <td>${indicadores.qualidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.delta, 1)}%</td>
+              <td>${indicadores.qualidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.percentual, 0)}%</td>
             </tr>
             <tr>
               <td>Setup (min)</td>
-              <td>${indicadores.setup.antes.toFixed(0)}</td>
-              <td>${indicadores.setup.depois.toFixed(0)}</td>
-              <td>${indicadores.setup.delta >= 0 ? '+' : ''}${indicadores.setup.delta.toFixed(0)}</td>
-              <td>${indicadores.setup.percentual >= 0 ? '+' : ''}${indicadores.setup.percentual.toFixed(0)}%</td>
+              <td>${fmtNum(indicadores.setup.antes, 0)}</td>
+              <td>${fmtNum(indicadores.setup.depois, 0)}</td>
+              <td>${indicadores.setup.delta >= 0 ? '+' : ''}${fmtNum(indicadores.setup.delta, 0)}</td>
+              <td>${indicadores.setup.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.setup.percentual, 0)}%</td>
             </tr>
             <tr>
               <td>Refugo (pç/dia)</td>
-              <td>${indicadores.refugo_diario.antes.toFixed(0)}</td>
-              <td>${indicadores.refugo_diario.depois.toFixed(0)}</td>
-              <td>${indicadores.refugo_diario.delta >= 0 ? '+' : ''}${indicadores.refugo_diario.delta.toFixed(0)}</td>
-              <td>${indicadores.refugo_diario.percentual >= 0 ? '+' : ''}${indicadores.refugo_diario.percentual.toFixed(0)}%</td>
+              <td>${fmtNum(indicadores.refugo_diario.antes, 0)}</td>
+              <td>${fmtNum(indicadores.refugo_diario.depois, 0)}</td>
+              <td>${indicadores.refugo_diario.delta >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.delta, 0)}</td>
+              <td>${indicadores.refugo_diario.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.percentual, 0)}%</td>
             </tr>
             <tr>
               <td>Produtividade (pç/dia)</td>
-              <td>${indicadores.produtividade.antes.toFixed(0)}</td>
-              <td>${indicadores.produtividade.depois.toFixed(0)}</td>
-              <td>${indicadores.produtividade.delta >= 0 ? '+' : ''}${indicadores.produtividade.delta.toFixed(0)}</td>
-              <td>${indicadores.produtividade.percentual >= 0 ? '+' : ''}${indicadores.produtividade.percentual.toFixed(0)}%</td>
+              <td>${fmtNum(indicadores.produtividade.antes, 0)}</td>
+              <td>${fmtNum(indicadores.produtividade.depois, 0)}</td>
+              <td>${indicadores.produtividade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.delta, 0)}</td>
+              <td>${indicadores.produtividade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.percentual, 0)}%</td>
             </tr>
           </tbody>
         </table>
@@ -430,8 +452,8 @@ export default function ValidacaoResultados() {
           <div class="financeiro-card">
             <h3>📈 Retorno sobre Investimento</h3>
             <div style="display: flex; justify-content: space-between;"><span>Investimento total:</span><span><strong>R$ ${financeiro.investimento_total.toLocaleString('pt-BR')}</strong></span></div>
-            <div style="display: flex; justify-content: space-between;"><span>ROI:</span><span style="color:#10b981; font-size:22px;"><strong>${financeiro.roi.toFixed(0)}%</strong></span></div>
-            <div style="display: flex; justify-content: space-between;"><span>Payback real:</span><span style="color:#10b981; font-size:18px;"><strong>${financeiro.payback_meses.toFixed(1)} meses</strong></span></div>
+            <div style="display: flex; justify-content: space-between;"><span>ROI:</span><span style="color:#10b981; font-size:22px;"><strong>${fmtNum(financeiro.roi, 0)}%</strong></span></div>
+            <div style="display: flex; justify-content: space-between;"><span>Payback real:</span><span style="color:#10b981; font-size:18px;"><strong>${fmtNum(financeiro.payback_meses, 1)} meses</strong></span></div>
           </div>
         </div>
 
@@ -551,9 +573,6 @@ export default function ValidacaoResultados() {
           </Botao>
           <Botao variant="success" onClick={handleGerarRelatorio} disabled={!dados}>
             📄 Gerar Relatório
-          </Botao>
-          <Botao variant="secondary" onClick={handleExportarPDF} disabled={!dados}>
-            🖨️ Exportar PDF
           </Botao>
         </div>
       </Card>
