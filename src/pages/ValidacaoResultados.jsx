@@ -8,7 +8,7 @@ import Input from "../components/ui/Input";
 import IndicatorCard from "../components/IndicatorCard";
 import ComparisonChart from "../components/ComparisonChart";
 import toast from "react-hot-toast";
-import { colors, spacing, typography, borderRadius, shadows } from "../styles/theme";
+import { colors, spacing, typography } from "../styles/theme";
 
 export default function ValidacaoResultados() {
   const { clienteAtual } = useOutletContext();
@@ -255,12 +255,13 @@ export default function ValidacaoResultados() {
           {/* Gráfico de Evolução do OEE */}
           {dados.evolucao_mensal && dados.evolucao_mensal.length > 0 && (
             <Card style={{ marginBottom: spacing["2xl"] }}>
-              <ComparisonChart
-                data={dados.evolucao_mensal}
-                title="📈 Evolução Mensal do OEE"
-                type="line"
-                height={350}
-              />
+              <div style={{ width: '100%', height: '400px' }}>
+                <ComparisonChart
+                  data={dados.evolucao_mensal}
+                  title="📈 Evolução Mensal do OEE"
+                  type="line"
+                />
+              </div>
             </Card>
           )}
 
@@ -342,7 +343,7 @@ export default function ValidacaoResultados() {
                       <th style={{ padding: spacing.md, textAlign: "right", color: "white" }}>Depois (R$/mês)</th>
                       <th style={{ padding: spacing.md, textAlign: "right", color: "white" }}>Economia (R$/mês)</th>
                       <th style={{ padding: spacing.md, textAlign: "center", color: "white" }}>Status</th>
-                    </tr>
+                     </tr>
                   </thead>
                   <tbody>
                     <tr style={{ borderBottom: `1px solid ${colors.border.light}` }}>
