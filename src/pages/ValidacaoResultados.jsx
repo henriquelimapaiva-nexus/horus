@@ -279,11 +279,11 @@ export default function ValidacaoResultados() {
 
           {/* Gráfico de Evolução do OEE */}
           {dados.evolucao_mensal && dados.evolucao_mensal.length > 0 && (
-            <Card style={{ marginBottom: spacing["2xl"] }}>
-              <div style={{ width: '100%', height: '400px' }}>
+            <Card style={{ marginBottom: spacing["2xl"], padding: spacing.lg }}>
+              <div style={{ width: '100%', height: '450px', minHeight: '400px' }}>
                 <ComparisonChart
                   data={dados.evolucao_mensal}
-                  title="📈 Evolução Mensal do OEE"
+                  title="📈 Evolução Mensal dos Indicadores"
                   type="line"
                 />
               </div>
