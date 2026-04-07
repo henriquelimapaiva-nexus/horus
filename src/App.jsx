@@ -59,6 +59,9 @@ import PainelExecutivo from "./pages/PainelExecutivo";
 // Página de Listagem de Postos
 import Postos from "./pages/Postos";
 
+// 🟢 Validação de Resultados (Antes x Depois)
+import ValidacaoResultados from "./pages/ValidacaoResultados";
+
 // 👇 IMPORTS DO CONSULTOR
 import ConsultorLogin from "./pages/consultor/ConsultorLogin";
 import ConsultorPrivateLayout from "./pages/consultor/ConsultorPrivateLayout";
@@ -200,6 +203,9 @@ function App() {
               <Route path="/perdas" element={<Perdas />} />
               <Route path="/painel" element={<PainelExecutivo />} />
               <Route path="/postos" element={<Postos />} />
+              
+              {/* 🟢 NOVA ROTA - VALIDAÇÃO DE RESULTADOS (ANTES X DEPOIS) */}
+              <Route path="/validacao-resultados" element={<ValidacaoResultados />} />
             </Route>
           </Routes>
         </Router>

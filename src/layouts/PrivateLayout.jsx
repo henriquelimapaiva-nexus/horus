@@ -249,6 +249,7 @@ function PrivateLayout() {
                   <Link to="/painel" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Painel Executivo</Link>
                   <Link to="/financeiro" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Financeiro</Link>
                   <Link to="/relatorios" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Relatórios</Link>
+                  <Link to="/validacao-resultados" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Validação de Resultados</Link>
                 </div>
               )}
             </div>
