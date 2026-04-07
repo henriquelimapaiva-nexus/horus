@@ -187,7 +187,7 @@ export default function ValidacaoResultados() {
           </div>
         </div>
 
-        <div style={{ display: "flex", gap: spacing.md, marginTop: spacing.xl, justifyContent: "center" }}>
+        <div style={{ display: "flex", gap: spacing.md, marginTop: spacing.xl, justifyContent: "center", flexWrap: "wrap" }}>
           <Botao variant="primary" onClick={carregarDados} disabled={carregando} loading={carregando}>
             {carregando ? "Carregando..." : "Carregar Dados"}
           </Botao>
