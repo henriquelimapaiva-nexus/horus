@@ -43,16 +43,20 @@ export default function ValidacaoResultados() {
   }, [clienteAtual, mesesAntes, mesesDepois]);
 
   const formatarMoeda = (valor) => {
+    const num = typeof valor === 'number' ? valor : parseFloat(valor);
+    if (isNaN(num)) return "R$ 0,00";
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
       minimumFractionDigits: 2,
-    }).format(valor || 0);
+    }).format(num);
   };
 
   const formatarNumero = (valor, casas = 1) => {
     if (valor === undefined || valor === null) return "0";
-    return valor.toFixed(casas);
+    const num = typeof valor === 'number' ? valor : parseFloat(valor);
+    if (isNaN(num)) return "0";
+    return num.toFixed(casas);
   };
 
   const formatarPercentual = (valor) => {
@@ -114,7 +118,6 @@ export default function ValidacaoResultados() {
   return (
     <div style={{ padding: "clamp(15px, 3vw, 30px)", maxWidth: "1400px", margin: "0 auto" }}>
       
-      {/* Cabeçalho */}
       <div style={{ marginBottom: "30px" }}>
         <h1 style={{ color: "#1E3A8A", marginBottom: "10px", fontSize: "clamp(20px, 4vw, 28px)" }}>
           Validação de Resultados
@@ -125,7 +128,6 @@ export default function ValidacaoResultados() {
         </p>
       </div>
 
-      {/* Cards de Resumo */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))",
@@ -133,7 +135,6 @@ export default function ValidacaoResultados() {
         marginBottom: "clamp(25px, 4vw, 35px)"
       }}>
         
-        {/* Card OEE */}
         <Card>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "clamp(24px, 4vw, 32px)", marginBottom: "10px" }}>📊</div>
@@ -155,7 +156,6 @@ export default function ValidacaoResultados() {
           </div>
         </Card>
 
-        {/* Card Setup */}
         <Card>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "clamp(24px, 4vw, 32px)", marginBottom: "10px" }}>⏱️</div>
@@ -177,7 +177,6 @@ export default function ValidacaoResultados() {
           </div>
         </Card>
 
-        {/* Card Refugo */}
         <Card>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "clamp(24px, 4vw, 32px)", marginBottom: "10px" }}>🔧</div>
@@ -199,7 +198,6 @@ export default function ValidacaoResultados() {
           </div>
         </Card>
 
-        {/* Card ROI */}
         <Card>
           <div style={{ textAlign: "center" }}>
             <div style={{ fontSize: "clamp(24px, 4vw, 32px)", marginBottom: "10px" }}>💰</div>
@@ -222,7 +220,6 @@ export default function ValidacaoResultados() {
         </Card>
       </div>
 
-      {/* Gráfico de Evolução do OEE */}
       {evolucao_mensal_oee && evolucao_mensal_oee.length > 0 && (
         <Card titulo="Evolução do OEE - Últimos Meses" style={{ marginBottom: "clamp(25px, 4vw, 35px)" }}>
           <div style={{ overflowX: "auto" }}>
@@ -256,7 +253,6 @@ export default function ValidacaoResultados() {
         </Card>
       )}
 
-      {/* Pilares do OEE */}
       <Card titulo="Pilares do OEE - Antes x Depois" style={{ marginBottom: "clamp(25px, 4vw, 35px)" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
           <div>
@@ -316,7 +312,6 @@ export default function ValidacaoResultados() {
         </div>
       </Card>
 
-      {/* Tabela Comparativa */}
       <Card titulo="Tabela Comparativa de Indicadores" style={{ marginBottom: "clamp(25px, 4vw, 35px)" }}>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -380,11 +375,10 @@ export default function ValidacaoResultados() {
                 <td style={{ textAlign: "right", padding: "10px", color: getDeltaColor(indicadores.produtividade.percentual) }}>{getDeltaSymbol(indicadores.produtividade.percentual)}{formatarNumero(indicadores.produtividade.percentual, 0)}%</td>
                </tr>
             </tbody>
-           </table>
+          </table>
         </div>
       </Card>
 
-      {/* Cards Financeiros */}
       <div style={{
         display: "grid",
         gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))",
@@ -431,7 +425,6 @@ export default function ValidacaoResultados() {
         </Card>
       </div>
 
-      {/* Rodapé com fontes */}
       <div style={{ fontSize: "11px", color: "#999", textAlign: "center", marginTop: "30px", borderTop: "1px solid #e5e7eb", paddingTop: "15px" }}>
         <p>📌 Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos</p>
         <p>📊 Período analisado: {periodo.antes.meses_analisados} meses antes do diagnóstico | {periodo.depois.meses_analisados} meses após implementação</p>
