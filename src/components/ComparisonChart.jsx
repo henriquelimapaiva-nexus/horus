@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { colors, spacing, typography } from "../styles/theme";
 
-const ComparisonChart = ({ data, title, type = "line", height = 300 }) => {
+const ComparisonChart = ({ data, title, type = "line", height = 400 }) => {
   if (!data || data.length === 0) {
     return (
       <div style={{ 
@@ -158,7 +158,7 @@ const ComparisonChart = ({ data, title, type = "line", height = 300 }) => {
           {title}
         </h3>
       )}
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height={height}>
         {renderChart()}
       </ResponsiveContainer>
     </div>
