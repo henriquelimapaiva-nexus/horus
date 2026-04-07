@@ -1,5 +1,5 @@
 // src/components/ComparisonChart.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -13,6 +13,13 @@ import {
 import { colors, spacing, typography } from "../styles/theme";
 
 const ComparisonChart = ({ data, title, height = 400 }) => {
+  const [containerHeight, setContainerHeight] = useState(height);
+  const [containerWidth, setContainerWidth] = useState('100%');
+
+  useEffect(() => {
+    setContainerHeight(height);
+  }, [height]);
+
   if (!data || data.length === 0) {
     return (
       <div style={{ 
@@ -48,7 +55,7 @@ const ComparisonChart = ({ data, title, height = 400 }) => {
   };
 
   return (
-    <div style={{ width: "100%", height: `${height}px`, minHeight: "400px" }}>
+    <div style={{ width: "100%", height: containerHeight, minHeight: 400 }}>
       {title && (
         <h3 style={{ 
           marginBottom: spacing.lg,
@@ -59,61 +66,63 @@ const ComparisonChart = ({ data, title, height = 400 }) => {
           {title}
         </h3>
       )}
-      <ResponsiveContainer width="100%" height="90%">
-        <LineChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke={colors.border.light} />
-          <XAxis 
-            dataKey="mes" 
-            stroke={colors.text.secondary}
-            tick={{ fontSize: 12 }}
-          />
-          <YAxis 
-            stroke={colors.text.secondary}
-            tick={{ fontSize: 12 }}
-            domain={[0, 100]}
-            label={{ 
-              value: "Percentual (%)", 
-              angle: -90, 
-              position: "insideLeft",
-              style: { fontSize: 12, fill: colors.text.secondary }
-            }}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Legend />
-          <Line 
-            type="monotone" 
-            dataKey="oee" 
-            stroke={colors.primary.blue} 
-            strokeWidth={3}
-            dot={{ fill: colors.primary.blue, strokeWidth: 2 }}
-            name="OEE Global"
-          />
-          <Line 
-            type="monotone" 
-            dataKey="disponibilidade" 
-            stroke={colors.status.info} 
-            strokeWidth={2}
-            dot={{ fill: colors.status.info }}
-            name="Disponibilidade"
-          />
-          <Line 
-            type="monotone" 
-            dataKey="performance" 
-            stroke={colors.status.warning} 
-            strokeWidth={2}
-            dot={{ fill: colors.status.warning }}
-            name="Performance"
-          />
-          <Line 
-            type="monotone" 
-            dataKey="qualidade" 
-            stroke={colors.status.success} 
-            strokeWidth={2}
-            dot={{ fill: colors.status.success }}
-            name="Qualidade"
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      <div style={{ width: "100%", height: containerHeight - 50 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke={colors.border.light} />
+            <XAxis 
+              dataKey="mes" 
+              stroke={colors.text.secondary}
+              tick={{ fontSize: 12 }}
+            />
+            <YAxis 
+              stroke={colors.text.secondary}
+              tick={{ fontSize: 12 }}
+              domain={[0, 100]}
+              label={{ 
+                value: "Percentual (%)", 
+                angle: -90, 
+                position: "insideLeft",
+                style: { fontSize: 12, fill: colors.text.secondary }
+              }}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Legend />
+            <Line 
+              type="monotone" 
+              dataKey="oee" 
+              stroke={colors.primary.blue} 
+              strokeWidth={3}
+              dot={{ fill: colors.primary.blue, strokeWidth: 2 }}
+              name="OEE Global"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="disponibilidade" 
+              stroke={colors.status.info} 
+              strokeWidth={2}
+              dot={{ fill: colors.status.info }}
+              name="Disponibilidade"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="performance" 
+              stroke={colors.status.warning} 
+              strokeWidth={2}
+              dot={{ fill: colors.status.warning }}
+              name="Performance"
+            />
+            <Line 
+              type="monotone" 
+              dataKey="qualidade" 
+              stroke={colors.status.success} 
+              strokeWidth={2}
+              dot={{ fill: colors.status.success }}
+              name="Qualidade"
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
