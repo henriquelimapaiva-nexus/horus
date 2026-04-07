@@ -118,6 +118,12 @@ export default function ValidacaoResultados() {
             body { margin: 0; padding: 20px; }
             .no-print { display: none; }
             * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .page-break-avoid { page-break-inside: avoid; }
+            .pilar-container { page-break-inside: avoid; }
+            .cards-container { page-break-inside: avoid; }
+            .grafico-container { page-break-inside: avoid; }
+            .tabela-container { page-break-inside: avoid; }
+            .financeiro-container { page-break-inside: avoid; }
           }
           body {
             font-family: Arial, sans-serif;
@@ -172,7 +178,7 @@ export default function ValidacaoResultados() {
             border-left: 4px solid #1E3A8A;
           }
           .card-icon {
-            font-size: 32px;
+            font-size: 24px;
             margin-bottom: 10px;
           }
           .card-label {
@@ -273,6 +279,7 @@ export default function ValidacaoResultados() {
           .barra-fill.baixa { background-color: #ef4444; }
           .pilar-container {
             margin-bottom: 15px;
+            page-break-inside: avoid;
           }
           .pilar-header {
             display: flex;
@@ -311,10 +318,14 @@ export default function ValidacaoResultados() {
           .btn-print:hover {
             background-color: #152c6b;
           }
+          h3 {
+            page-break-after: avoid;
+            margin-top: 30px;
+          }
         </style>
       </head>
       <body>
-        <button class="btn-print no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+        <button class="btn-print no-print" onclick="window.print()">Imprimir / Salvar PDF</button>
         
         <div class="header">
           <img src="${logo}" alt="Nexus Engenharia Aplicada" class="logo" style="max-width: 180px;">
@@ -326,10 +337,10 @@ export default function ValidacaoResultados() {
         
         <div class="periodo-info">
           <strong>Período Analisado:</strong><br>
-          📅 Antes: ${periodo.antes.inicio} a ${periodo.antes.fim}<br>
-          📅 Depois: ${periodo.depois.inicio} a ${periodo.depois.fim}<br>
-          📌 Data do Diagnóstico: ${periodo.data_diagnostico} | Implementação: ${periodo.data_implementacao}<br>
-          📊 Gerado em: ${dataAtual}
+          Antes: ${periodo.antes.inicio} a ${periodo.antes.fim}<br>
+          Depois: ${periodo.depois.inicio} a ${periodo.depois.fim}<br>
+          Data do Diagnóstico: ${periodo.data_diagnostico} | Implementação: ${periodo.data_implementacao}<br>
+          Gerado em: ${dataAtual}
         </div>
 
         <div class="cards-container">
@@ -353,7 +364,7 @@ export default function ValidacaoResultados() {
           </div>
           <div class="card">
             <div class="card-icon">🔧</div>
-            <div class="card-label">Refugo (pç/dia)</div>
+            <div class="card-label">Refugo (pecas/dia)</div>
             <div class="card-value">${fmtNum(indicadores.refugo_diario.depois, 0)}</div>
             <div class="card-delta ${indicadores.refugo_diario.delta <= 0 ? 'positivo' : 'negativo'}">
               ${indicadores.refugo_diario.delta <= 0 ? '▼' : '▲'} ${Math.abs(indicadores.refugo_diario.delta).toFixed(0)} (${indicadores.refugo_diario.percentual <= 0 ? '' : '+'}${fmtNum(indicadores.refugo_diario.percentual, 0)}%)
@@ -372,7 +383,7 @@ export default function ValidacaoResultados() {
         </div>
 
         <div class="grafico-container">
-          <h3>📈 Evolução do OEE</h3>
+          <h3>Evolucao do OEE</h3>
           ${evolucao_mensal_oee.map(item => `
             <div class="barra-container">
               <div class="barra-label">${formatarDataMes(item.mes)}</div>
@@ -384,7 +395,7 @@ export default function ValidacaoResultados() {
           `).join('')}
         </div>
 
-        <h3>🎯 Pilares do OEE</h3>
+        <h3 style="page-break-before: avoid;">Pilares do OEE</h3>
         
         <div class="pilar-container">
           <div class="pilar-header">
@@ -443,7 +454,7 @@ export default function ValidacaoResultados() {
           </div>
         </div>
 
-        <h3>📋 Tabela Comparativa de Indicadores</h3>
+        <h3>Indicadores Comparativos</h3>
         <table class="tabela">
           <thead>
             <tr>
@@ -451,72 +462,72 @@ export default function ValidacaoResultados() {
               <th>Antes</th>
               <th>Depois</th>
               <th>Delta</th>
-              <th>% Melhoria</th>
+              <th>Melhoria (%)</th>
             </tr>
           </thead>
           <tbody>
             <tr>
               <td>OEE Global</td>
-              <td>${fmtPercent(indicadores.oee.antes)}</td>
-              <td>${fmtPercent(indicadores.oee.depois)}</td>
-              <td>${indicadores.oee.delta >= 0 ? '+' : ''}${fmtNum(indicadores.oee.delta, 1)}%</td>
-              <td>${indicadores.oee.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.oee.percentual, 0)}%</td>
+              <td style="text-align: right;">${fmtPercent(indicadores.oee.antes)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.oee.depois)}</td>
+              <td style="text-align: right;">${indicadores.oee.delta >= 0 ? '+' : ''}${fmtNum(indicadores.oee.delta, 1)}%</td>
+              <td style="text-align: right;">${indicadores.oee.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.oee.percentual, 0)}%</td>
             </tr>
-            <tr>
+            <tr style="background-color: #f9fafb;">
               <td>Disponibilidade</td>
-              <td>${fmtPercent(indicadores.disponibilidade.antes)}</td>
-              <td>${fmtPercent(indicadores.disponibilidade.depois)}</td>
-              <td>${indicadores.disponibilidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.disponibilidade.delta, 1)}%</td>
-              <td>${indicadores.disponibilidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.disponibilidade.percentual, 0)}%</td>
+              <td style="text-align: right;">${fmtPercent(indicadores.disponibilidade.antes)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.disponibilidade.depois)}</td>
+              <td style="text-align: right;">${indicadores.disponibilidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.disponibilidade.delta, 1)}%</td>
+              <td style="text-align: right;">${indicadores.disponibilidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.disponibilidade.percentual, 0)}%</td>
             </tr>
             <tr>
               <td>Performance</td>
-              <td>${fmtPercent(indicadores.performance.antes)}</td>
-              <td>${fmtPercent(indicadores.performance.depois)}</td>
-              <td>${indicadores.performance.delta >= 0 ? '+' : ''}${fmtNum(indicadores.performance.delta, 1)}%</td>
-              <td>${indicadores.performance.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.performance.percentual, 0)}%</td>
+              <td style="text-align: right;">${fmtPercent(indicadores.performance.antes)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.performance.depois)}</td>
+              <td style="text-align: right;">${indicadores.performance.delta >= 0 ? '+' : ''}${fmtNum(indicadores.performance.delta, 1)}%</td>
+              <td style="text-align: right;">${indicadores.performance.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.performance.percentual, 0)}%</td>
             </tr>
-            <tr>
+            <tr style="background-color: #f9fafb;">
               <td>Qualidade</td>
-              <td>${fmtPercent(indicadores.qualidade.antes)}</td>
-              <td>${fmtPercent(indicadores.qualidade.depois)}</td>
-              <td>${indicadores.qualidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.delta, 1)}%</td>
-              <td>${indicadores.qualidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.percentual, 0)}%</td>
-            </tr>
+              <td style="text-align: right;">${fmtPercent(indicadores.qualidade.antes)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtPercent(indicadores.qualidade.depois)}</td>
+              <td style="text-align: right;">${indicadores.qualidade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.delta, 1)}%</td>
+              <td style="text-align: right;">${indicadores.qualidade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.qualidade.percentual, 0)}%</td>
+             </tr>
             <tr>
-              <td>Setup (min)</td>
-              <td>${fmtNum(indicadores.setup.antes, 0)}</td>
-              <td>${fmtNum(indicadores.setup.depois, 0)}</td>
-              <td>${indicadores.setup.delta >= 0 ? '+' : ''}${fmtNum(indicadores.setup.delta, 0)}</td>
-              <td>${indicadores.setup.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.setup.percentual, 0)}%</td>
-            </tr>
+              <td>Setup (minutos)</td>
+              <td style="text-align: right;">${fmtNum(indicadores.setup.antes, 0)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.setup.depois, 0)}</td>
+              <td style="text-align: right;">${indicadores.setup.delta >= 0 ? '+' : ''}${fmtNum(indicadores.setup.delta, 0)}</td>
+              <td style="text-align: right;">${indicadores.setup.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.setup.percentual, 0)}%</td>
+             </tr>
+            <tr style="background-color: #f9fafb;">
+              <td>Refugo (pecas/dia)</td>
+              <td style="text-align: right;">${fmtNum(indicadores.refugo_diario.antes, 0)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.refugo_diario.depois, 0)}</td>
+              <td style="text-align: right;">${indicadores.refugo_diario.delta >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.delta, 0)}</td>
+              <td style="text-align: right;">${indicadores.refugo_diario.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.percentual, 0)}%</td>
+             </tr>
             <tr>
-              <td>Refugo (pç/dia)</td>
-              <td>${fmtNum(indicadores.refugo_diario.antes, 0)}</td>
-              <td>${fmtNum(indicadores.refugo_diario.depois, 0)}</td>
-              <td>${indicadores.refugo_diario.delta >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.delta, 0)}</td>
-              <td>${indicadores.refugo_diario.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.refugo_diario.percentual, 0)}%</td>
-            </tr>
-            <tr>
-              <td>Produtividade (pç/dia)</td>
-              <td>${fmtNum(indicadores.produtividade.antes, 0)}</td>
-              <td>${fmtNum(indicadores.produtividade.depois, 0)}</td>
-              <td>${indicadores.produtividade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.delta, 0)}</td>
-              <td>${indicadores.produtividade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.percentual, 0)}%</td>
-            </tr>
+              <td>Produtividade (pecas/dia)</td>
+              <td style="text-align: right;">${fmtNum(indicadores.produtividade.antes, 0)}</td>
+              <td style="text-align: right; font-weight: bold; color: #10b981;">${fmtNum(indicadores.produtividade.depois, 0)}</td>
+              <td style="text-align: right;">${indicadores.produtividade.delta >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.delta, 0)}</td>
+              <td style="text-align: right;">${indicadores.produtividade.percentual >= 0 ? '+' : ''}${fmtNum(indicadores.produtividade.percentual, 0)}%</td>
+             </tr>
           </tbody>
         </table>
 
         <div class="financeiro-container">
           <div class="financeiro-card">
-            <h3>💰 Economia Gerada</h3>
+            <h3>Economia Gerada</h3>
             <div style="display: flex; justify-content: space-between;"><span>Perda mensal antes:</span><span style="color:#ef4444;">R$ ${financeiro.perda_mensal_antes.toLocaleString('pt-BR')}</span></div>
             <div style="display: flex; justify-content: space-between;"><span>Perda mensal depois:</span><span style="color:#10b981;">R$ ${financeiro.perda_mensal_depois.toLocaleString('pt-BR')}</span></div>
             <div style="display: flex; justify-content: space-between; border-top:1px solid #ccc; margin-top:10px; padding-top:10px;"><span><strong>Economia mensal:</strong></span><span style="color:#10b981; font-size:18px;"><strong>R$ ${financeiro.economia_mensal.toLocaleString('pt-BR')}</strong></span></div>
             <div style="display: flex; justify-content: space-between;"><span><strong>Economia anual:</strong></span><span style="color:#10b981; font-size:18px;"><strong>R$ ${financeiro.economia_anual.toLocaleString('pt-BR')}</strong></span></div>
           </div>
           <div class="financeiro-card">
-            <h3>📈 Retorno sobre Investimento</h3>
+            <h3>Retorno sobre Investimento</h3>
             <div style="display: flex; justify-content: space-between;"><span>Investimento total:</span><span><strong>R$ ${financeiro.investimento_total.toLocaleString('pt-BR')}</strong></span></div>
             <div style="display: flex; justify-content: space-between;"><span>ROI:</span><span style="color:#10b981; font-size:22px;"><strong>${fmtNum(financeiro.roi, 0)}%</strong></span></div>
             <div style="display: flex; justify-content: space-between;"><span>Payback real:</span><span style="color:#10b981; font-size:18px;"><strong>${fmtNum(financeiro.payback_meses, 1)} meses</strong></span></div>
@@ -524,8 +535,8 @@ export default function ValidacaoResultados() {
         </div>
 
         <div class="footer">
-          <p>📌 Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos</p>
-          <p>✅ Total de registros considerados: ${dados.metadados?.total_registros_antes || 0} (antes) | ${dados.metadados?.total_registros_depois || 0} (depois)</p>
+          <p>Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos</p>
+          <p>Total de registros considerados: ${dados.metadados?.total_registros_antes || 0} (antes) | ${dados.metadados?.total_registros_depois || 0} (depois)</p>
           <p>© ${new Date().getFullYear()} Nexus Engenharia Aplicada - Todos os direitos reservados</p>
         </div>
       </body>
@@ -555,9 +566,9 @@ export default function ValidacaoResultados() {
   };
 
   const getDeltaIcon = (delta) => {
-    if (delta > 0) return "📈";
-    if (delta < 0) return "📉";
-    return "➡️";
+    if (delta > 0) return "▲";
+    if (delta < 0) return "▼";
+    return "◆";
   };
 
   const getDeltaColor = (delta, invert = false) => {
@@ -593,7 +604,7 @@ export default function ValidacaoResultados() {
         </p>
       </div>
 
-      <Card titulo="📅 Configurar Períodos de Análise" style={{ marginBottom: "25px" }}>
+      <Card titulo="Configurar Períodos de Análise" style={{ marginBottom: "25px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "30px" }}>
           
           <div>
@@ -635,10 +646,10 @@ export default function ValidacaoResultados() {
 
         <div style={{ display: "flex", gap: "15px", marginTop: "25px", justifyContent: "center" }}>
           <Botao variant="primary" onClick={carregarDados} disabled={carregando} loading={carregando}>
-            📊 Carregar Dados
+            Carregar Dados
           </Botao>
           <Botao variant="success" onClick={handleGerarRelatorio} disabled={!dados}>
-            📄 Gerar Relatório
+            Gerar Relatório
           </Botao>
         </div>
       </Card>
@@ -739,7 +750,7 @@ export default function ValidacaoResultados() {
                   fontWeight: "bold",
                   marginTop: "5px"
                 }}>
-                  ✅ {formatarMoeda(dados.financeiro.economia_anual)}/ano
+                  {formatarMoeda(dados.financeiro.economia_anual)}/ano
                 </div>
               </div>
             </Card>
@@ -1008,8 +1019,8 @@ export default function ValidacaoResultados() {
           </div>
 
           <div style={{ fontSize: "11px", color: "#999", textAlign: "center", marginTop: "30px", borderTop: "1px solid #e5e7eb", paddingTop: "15px" }}>
-            <p>📌 Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos</p>
-            <p>✅ Total de registros considerados: {dados.metadados?.total_registros_antes || 0} (antes) | {dados.metadados?.total_registros_depois || 0} (depois)</p>
+            <p>Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos</p>
+            <p>Total de registros considerados: {dados.metadados?.total_registros_antes || 0} (antes) | {dados.metadados?.total_registros_depois || 0} (depois)</p>
           </div>
         </>
       )}
