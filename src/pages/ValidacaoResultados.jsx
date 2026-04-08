@@ -10,8 +10,6 @@ import ComparisonChart from "../components/ComparisonChart";
 import toast from "react-hot-toast";
 import logo from "../assets/logo.png";
 import { colors, spacing, typography } from "../styles/theme";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 
 export default function ValidacaoResultados() {
   const { clienteAtual } = useOutletContext();
@@ -98,165 +96,79 @@ export default function ValidacaoResultados() {
     setMostrarModal(false);
   };
 
-  const handleExportarPDF = async () => {
-    const doc = new jsPDF({
-      orientation: "portrait",
-      unit: "mm",
-      format: "a4"
-    });
-
-    // ADICIONAR LOGO
-    const logoImg = new Image();
-    logoImg.src = logo;
+  const handleExportarPDF = () => {
+    const printContent = relatorioRef.current.cloneNode(true);
+    const printWindow = window.open('', '_blank');
     
-    await new Promise((resolve) => {
-      logoImg.onload = resolve;
-    });
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Validação de Resultados - ${empresaNome}</title>
+          <meta charset="utf-8" />
+          <style>
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            body {
+              font-family: Arial, Helvetica, sans-serif;
+              padding: 40px;
+              background: white;
+            }
+            .relatorio-print {
+              max-width: 1000px;
+              margin: 0 auto;
+              position: relative;
+            }
+            .no-print {
+              display: none !important;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 30px;
+            }
+            th {
+              background: #1E3A8A;
+              color: white;
+              padding: 12px;
+              text-align: left;
+            }
+            td {
+              padding: 10px;
+              border-bottom: 1px solid #e5e7eb;
+            }
+            @media print {
+              body {
+                padding: 20px;
+              }
+              @page {
+                size: A4;
+                margin: 1.5cm;
+              }
+              .no-print {
+                display: none !important;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="relatorio-print">
+            ${printContent.innerHTML}
+          </div>
+        </body>
+      </html>
+    `);
     
-    doc.addImage(logoImg, 'PNG', 80, 10, 50, 15);
-
-    // CABEÇALHO
-    doc.setFontSize(16);
-    doc.setTextColor(30, 58, 138);
-    doc.text("NEXUS ENGENHARIA APLICADA", 105, 35, { align: "center" });
+    printWindow.document.close();
+    printWindow.onload = () => {
+      printWindow.print();
+      printWindow.close();
+    };
     
-    doc.setFontSize(12);
-    doc.setTextColor(100, 100, 100);
-    doc.text("Validação de Resultados", 105, 45, { align: "center" });
-    
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Empresa: ${empresaNome}`, 20, 60);
-    doc.text(`Periodo Antes: ${periodoAntes.inicio.split('-').reverse().join('/')} a ${periodoAntes.fim.split('-').reverse().join('/')}`, 20, 67);
-    doc.text(`Periodo Depois: ${periodoDepois.inicio.split('-').reverse().join('/')} a ${periodoDepois.fim.split('-').reverse().join('/')}`, 20, 74);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 81);
-
-    let yPos = 95;
-
-    // 1. INDICADORES DE PERFORMANCE
-    doc.setFontSize(12);
-    doc.setTextColor(30, 58, 138);
-    doc.text("1. INDICADORES DE PERFORMANCE", 20, yPos);
-    yPos += 8;
-
-    doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    
-    doc.text(`OEE Global: ${formatarNumero(dados.indicadores.oee.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.oee.antes, 1)}%) - Melhoria de ${Math.abs(dados.indicadores.oee.delta).toFixed(1)}% (${dados.indicadores.oee.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.oee.percentual, 0)}%)`, 20, yPos);
-    yPos += 6;
-    doc.text(`Disponibilidade: ${formatarNumero(dados.indicadores.disponibilidade.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.disponibilidade.antes, 1)}%) - Melhoria de ${Math.abs(dados.indicadores.disponibilidade.delta).toFixed(1)}% (${dados.indicadores.disponibilidade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.disponibilidade.percentual, 0)}%)`, 20, yPos);
-    yPos += 6;
-    doc.text(`Performance: ${formatarNumero(dados.indicadores.performance.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.performance.antes, 1)}%) - Melhoria de ${Math.abs(dados.indicadores.performance.delta).toFixed(1)}% (${dados.indicadores.performance.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.performance.percentual, 0)}%)`, 20, yPos);
-    yPos += 6;
-    doc.text(`Qualidade: ${formatarNumero(dados.indicadores.qualidade.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.qualidade.antes, 1)}%) - Melhoria de ${Math.abs(dados.indicadores.qualidade.delta).toFixed(1)}% (${dados.indicadores.qualidade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.qualidade.percentual, 0)}%)`, 20, yPos);
-    yPos += 8;
-    
-    doc.text(`Setup Medio: ${formatarNumero(dados.indicadores.setup.depois, 0)} min (Antes: ${formatarNumero(dados.indicadores.setup.antes, 0)} min) - Reducao de ${Math.abs(dados.indicadores.setup.delta).toFixed(0)} min (${dados.indicadores.setup.percentual <= 0 ? "" : "+"}${formatarNumero(dados.indicadores.setup.percentual, 0)}%)`, 20, yPos);
-    yPos += 6;
-    doc.text(`Refugo Diario: ${formatarNumero(dados.indicadores.refugo_diario.depois, 0)} pç (Antes: ${formatarNumero(dados.indicadores.refugo_diario.antes, 0)} pç) - Reducao de ${Math.abs(dados.indicadores.refugo_diario.delta).toFixed(0)} pç (${dados.indicadores.refugo_diario.percentual <= 0 ? "" : "+"}${formatarNumero(dados.indicadores.refugo_diario.percentual, 0)}%)`, 20, yPos);
-    yPos += 6;
-    doc.text(`Produtividade: ${formatarNumero(dados.indicadores.produtividade.depois, 0)} pç/dia (Antes: ${formatarNumero(dados.indicadores.produtividade.antes, 0)} pç/dia) - Aumento de ${Math.abs(dados.indicadores.produtividade.delta).toFixed(0)} pç (${dados.indicadores.produtividade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.produtividade.percentual, 0)}%)`, 20, yPos);
-    yPos += 12;
-
-    // 2. TABELA COMPARATIVA
-    doc.setFontSize(12);
-    doc.setTextColor(30, 58, 138);
-    doc.text("2. TABELA COMPARATIVA DE INDICADORES", 20, yPos);
-    yPos += 6;
-
-    autoTable(doc, {
-      startY: yPos,
-      head: [["Indicador", "Antes", "Depois", "Delta", "Melhoria"]],
-      body: [
-        ["OEE", `${formatarNumero(dados.indicadores.oee.antes, 1)}%`, `${formatarNumero(dados.indicadores.oee.depois, 1)}%`, `${dados.indicadores.oee.delta >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.oee.delta, 1)}%`, `${dados.indicadores.oee.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.oee.percentual, 0)}%`],
-        ["Disponibilidade", `${formatarNumero(dados.indicadores.disponibilidade.antes, 1)}%`, `${formatarNumero(dados.indicadores.disponibilidade.depois, 1)}%`, `${dados.indicadores.disponibilidade.delta >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.disponibilidade.delta, 1)}%`, `${dados.indicadores.disponibilidade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.disponibilidade.percentual, 0)}%`],
-        ["Performance", `${formatarNumero(dados.indicadores.performance.antes, 1)}%`, `${formatarNumero(dados.indicadores.performance.depois, 1)}%`, `${dados.indicadores.performance.delta >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.performance.delta, 1)}%`, `${dados.indicadores.performance.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.performance.percentual, 0)}%`],
-        ["Qualidade", `${formatarNumero(dados.indicadores.qualidade.antes, 1)}%`, `${formatarNumero(dados.indicadores.qualidade.depois, 1)}%`, `${dados.indicadores.qualidade.delta >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.qualidade.delta, 1)}%`, `${dados.indicadores.qualidade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.qualidade.percentual, 0)}%`],
-        ["Setup (min)", `${formatarNumero(dados.indicadores.setup.antes, 0)}`, `${formatarNumero(dados.indicadores.setup.depois, 0)}`, `${dados.indicadores.setup.delta >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.setup.delta, 0)}`, `${dados.indicadores.setup.percentual <= 0 ? "" : "+"}${formatarNumero(dados.indicadores.setup.percentual, 0)}%`],
-        ["Refugo (pç/dia)", `${formatarNumero(dados.indicadores.refugo_diario.antes, 0)}`, `${formatarNumero(dados.indicadores.refugo_diario.depois, 0)}`, `${dados.indicadores.refugo_diario.delta >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.refugo_diario.delta, 0)}`, `${dados.indicadores.refugo_diario.percentual <= 0 ? "" : "+"}${formatarNumero(dados.indicadores.refugo_diario.percentual, 0)}%`],
-        ["Produtividade (pç/dia)", `${formatarNumero(dados.indicadores.produtividade.antes, 0)}`, `${formatarNumero(dados.indicadores.produtividade.depois, 0)}`, `${dados.indicadores.produtividade.delta >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.produtividade.delta, 0)}`, `${dados.indicadores.produtividade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.produtividade.percentual, 0)}%`]
-      ],
-      theme: "striped",
-      headStyles: { fillColor: [30, 58, 138], textColor: 255 },
-      styles: { fontSize: 9, cellPadding: 3 },
-      margin: { left: 20, right: 20 }
-    });
-
-    yPos = doc.lastAutoTable.finalY + 10;
-
-    // 3. DETALHAMENTO DAS PERDAS
-    if (dados.financeiro.detalhamento) {
-      doc.setFontSize(12);
-      doc.setTextColor(30, 58, 138);
-      doc.text("3. DETALHAMENTO DAS PERDAS FINANCEIRAS", 20, yPos);
-      yPos += 6;
-
-      autoTable(doc, {
-        startY: yPos,
-        head: [["Tipo de Perda", "Antes (R$/mes)", "Depois (R$/mes)", "Economia (R$/mes)", "Status"]],
-        body: [
-          ["Refugo", formatarMoeda(dados.financeiro.detalhamento.refugo.antes), formatarMoeda(dados.financeiro.detalhamento.refugo.depois), formatarMoeda(dados.financeiro.detalhamento.refugo.economia), dados.financeiro.detalhamento.refugo.economia > 0 ? "OK" : "ATENCAO"],
-          ["Microparadas", formatarMoeda(dados.financeiro.detalhamento.microparadas.antes), formatarMoeda(dados.financeiro.detalhamento.microparadas.depois), formatarMoeda(dados.financeiro.detalhamento.microparadas.economia), dados.financeiro.detalhamento.microparadas.economia > 0 ? "OK" : "ATENCAO"],
-          ["Setup", formatarMoeda(dados.financeiro.detalhamento.setup.antes), formatarMoeda(dados.financeiro.detalhamento.setup.depois), formatarMoeda(dados.financeiro.detalhamento.setup.economia), dados.financeiro.detalhamento.setup.economia > 0 ? "OK" : "ATENCAO"]
-        ],
-        foot: [["TOTAL", formatarMoeda(dados.financeiro.perda_mensal_antes), formatarMoeda(dados.financeiro.perda_mensal_depois), formatarMoeda(dados.financeiro.economia_mensal), `${((dados.financeiro.economia_mensal / dados.financeiro.perda_mensal_antes) * 100).toFixed(0)}% de reducao`]],
-        theme: "striped",
-        headStyles: { fillColor: [30, 58, 138], textColor: 255 },
-        footStyles: { fillColor: [30, 58, 138], textColor: 255 },
-        styles: { fontSize: 9, cellPadding: 3 },
-        margin: { left: 20, right: 20 }
-      });
-
-      yPos = doc.lastAutoTable.finalY + 10;
-    }
-
-    // 4. ANALISE FINANCEIRA
-    doc.setFontSize(12);
-    doc.setTextColor(30, 58, 138);
-    doc.text("4. ANALISE FINANCEIRA", 20, yPos);
-    yPos += 8;
-
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text(`Perda mensal antes: ${formatarMoeda(dados.financeiro.perda_mensal_antes)}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Perda mensal depois: ${formatarMoeda(dados.financeiro.perda_mensal_depois)}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Economia mensal: ${formatarMoeda(dados.financeiro.economia_mensal)}`, 20, yPos);
-    yPos += 6;
-    doc.text(`Economia anual: ${formatarMoeda(dados.financeiro.economia_anual)}`, 20, yPos);
-    yPos += 8;
-
-    doc.text(`Investimento total: ${formatarMoeda(dados.financeiro.investimento_total)}`, 20, yPos);
-    yPos += 6;
-    doc.text(`ROI: ${formatarNumero(dados.financeiro.roi, 0)}%`, 20, yPos);
-    yPos += 6;
-    doc.text(`Payback real: ${formatarNumero(dados.financeiro.payback_meses, 1)} meses`, 20, yPos);
-    yPos += 12;
-
-    // ASSINATURA
-    doc.setFontSize(10);
-    doc.text("____________________________________", 105, yPos, { align: "center" });
-    yPos += 6;
-    doc.text("Eng. Henrique de Lima Paiva", 105, yPos, { align: "center" });
-    yPos += 5;
-    doc.setFontSize(9);
-    doc.setTextColor(100, 100, 100);
-    doc.text("Consultor Senior - Nexus Engenharia Aplicada", 105, yPos, { align: "center" });
-    yPos += 10;
-
-    // RODAPE
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos`, 105, yPos, { align: "center" });
-    yPos += 5;
-    doc.text(`Total de registros considerados: ${dados.metadados?.total_registros_antes || 0} (antes) | ${dados.metadados?.total_registros_depois || 0} (depois)`, 105, yPos, { align: "center" });
-    yPos += 5;
-    doc.text(`© ${new Date().getFullYear()} Nexus Engenharia Aplicada - Todos os direitos reservados`, 105, yPos, { align: "center" });
-
-    // Salvar PDF
-    doc.save(`validacao_resultados_${empresaNome.replace(/\s/g, "_")}_${new Date().toISOString().split('T')[0]}.pdf`);
-    toast.success("PDF gerado com sucesso!");
+    toast.success("Relatório enviado para impressão!");
   };
 
   if (!clienteAtual) {
@@ -930,8 +842,6 @@ export default function ValidacaoResultados() {
 
 <style>{`
   @media print {
-    /* 1. Reset de Containers Pais - ESSENCIAL */
-    /* Se o seu framework usa root, __next ou containers flex, isso mata a impressão */
     html, body, #root, .App, [data-radix-portal] {
       height: auto !important;
       overflow: visible !important;
@@ -940,12 +850,10 @@ export default function ValidacaoResultados() {
       padding: 0 !important;
     }
 
-    /* 2. Esconde TUDO que não é o relatório */
     body * {
       visibility: hidden;
     }
 
-    /* 3. Força o Relatório a aparecer e ocupar o espaço correto */
     .relatorio-print, .relatorio-print * {
       visibility: visible;
     }
@@ -962,7 +870,6 @@ export default function ValidacaoResultados() {
       margin: 0 !important;
     }
 
-    /* 4. Ajustes de Tabela e Quebra de Página */
     table { 
       page-break-inside: auto; 
       width: 100% !important;
@@ -973,13 +880,11 @@ export default function ValidacaoResultados() {
       page-break-after: auto !important; 
     }
     
-    /* Remove rodapés de URL e data chatos do navegador */
     @page {
       size: auto;
       margin: 15mm;
     }
 
-    /* Garante que cores de fundo (azul do header) apareçam no PDF */
     * {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
