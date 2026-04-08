@@ -780,10 +780,9 @@ export default function ValidacaoResultados() {
             visibility: visible;
           }
           .relatorio-print {
-            position: fixed;
+            position: absolute;
             top: 0;
             left: 0;
-            right: 0;
             width: 100%;
             margin: 0;
             padding: 20px;
@@ -796,16 +795,15 @@ export default function ValidacaoResultados() {
             size: A4;
             margin: 1.5cm;
           }
-          h1, h2, h3, h4, .card, table, .grafico-container {
-            page-break-after: avoid;
-            page-break-inside: avoid;
-          }
           table {
             page-break-inside: auto;
           }
           tr {
             page-break-inside: avoid;
             page-break-after: auto;
+          }
+          thead {
+             display: table-header-group;
           }
         }
       `}</style>
