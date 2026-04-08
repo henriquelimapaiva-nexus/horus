@@ -841,7 +841,7 @@ export default function ValidacaoResultados() {
                 </div>
 
                 {/* ASSINATURA */}
-                <div style={{ marginTop: "270px", textAlign: "center" }}>
+                <div style={{ marginTop: "2500px", textAlign: "center" }}>
                   <p>____________________________________</p>
                   <p style={{ marginTop: "8px" }}><strong>Eng. Henrique de Lima Paiva</strong></p>
                   <p style={{ color: "#666", fontSize: "12px" }}>Consultor Sênior - Nexus Engenharia Aplicada</p>
