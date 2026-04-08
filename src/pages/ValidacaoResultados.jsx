@@ -502,7 +502,7 @@ export default function ValidacaoResultados() {
         </>
       )}
 
-      {/* MODAL DO RELATÓRIO COMPLETO */}
+      {/* MODAL DO RELATÓRIO COMPLETO - CORRIGIDO COM OS MESMOS COMPONENTES */}
       {mostrarModal && dados && (
         <div style={{
           position: "fixed",
@@ -573,69 +573,83 @@ export default function ValidacaoResultados() {
                   <p style={{ color: "#666", fontSize: "13px" }}>Data do Relatório: {new Date().toLocaleDateString('pt-BR')}</p>
                 </div>
 
-                {/* SEÇÃO 1 - CARDS */}
+                {/* SEÇÃO 1 - CARDS - USANDO IndicatorCard */}
                 <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px", fontSize: "18px" }}>1. INDICADORES DE PERFORMANCE</h2>
                 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "15px", marginBottom: "30px" }}>
-                  <div style={{ backgroundColor: "#f0fdf4", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #10b981" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>OEE Global</div>
-                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.oee.depois, 1)}%</div>
-                    <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.oee.antes, 1)}%</div>
-                    <div style={{ fontSize: "12px", color: dados.indicadores.oee.delta >= 0 ? "#10b981" : "#ef4444", marginTop: "5px" }}>
-                      {dados.indicadores.oee.delta >= 0 ? "▲" : "▼"} {Math.abs(dados.indicadores.oee.delta).toFixed(1)}% ({dados.indicadores.oee.percentual >= 0 ? "+" : ""}{dados.indicadores.oee.percentual.toFixed(0)}%)
-                    </div>
-                  </div>
-                  <div style={{ backgroundColor: "#eff6ff", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #3b82f6" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Disponibilidade</div>
-                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.disponibilidade.depois, 1)}%</div>
-                    <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.disponibilidade.antes, 1)}%</div>
-                    <div style={{ fontSize: "12px", color: dados.indicadores.disponibilidade.delta >= 0 ? "#10b981" : "#ef4444", marginTop: "5px" }}>
-                      {dados.indicadores.disponibilidade.delta >= 0 ? "▲" : "▼"} {Math.abs(dados.indicadores.disponibilidade.delta).toFixed(1)}% ({dados.indicadores.disponibilidade.percentual >= 0 ? "+" : ""}{dados.indicadores.disponibilidade.percentual.toFixed(0)}%)
-                    </div>
-                  </div>
-                  <div style={{ backgroundColor: "#fef3c7", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #f59e0b" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Performance</div>
-                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.performance.depois, 1)}%</div>
-                    <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.performance.antes, 1)}%</div>
-                    <div style={{ fontSize: "12px", color: dados.indicadores.performance.delta >= 0 ? "#10b981" : "#ef4444", marginTop: "5px" }}>
-                      {dados.indicadores.performance.delta >= 0 ? "▲" : "▼"} {Math.abs(dados.indicadores.performance.delta).toFixed(1)}% ({dados.indicadores.performance.percentual >= 0 ? "+" : ""}{dados.indicadores.performance.percentual.toFixed(0)}%)
-                    </div>
-                  </div>
-                  <div style={{ backgroundColor: "#f0fdf4", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #10b981" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Qualidade</div>
-                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.qualidade.depois, 1)}%</div>
-                    <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.qualidade.antes, 1)}%</div>
-                    <div style={{ fontSize: "12px", color: dados.indicadores.qualidade.delta >= 0 ? "#10b981" : "#ef4444", marginTop: "5px" }}>
-                      {dados.indicadores.qualidade.delta >= 0 ? "▲" : "▼"} {Math.abs(dados.indicadores.qualidade.delta).toFixed(1)}% ({dados.indicadores.qualidade.percentual >= 0 ? "+" : ""}{dados.indicadores.qualidade.percentual.toFixed(0)}%)
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "15px", marginBottom: "30px" }}>
-                  <div style={{ backgroundColor: "#fef2f2", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #ef4444" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Setup Médio</div>
-                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.setup.depois, 0)} min</div>
-                    <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.setup.antes, 0)} min</div>
-                    <div style={{ fontSize: "12px", color: dados.indicadores.setup.delta <= 0 ? "#10b981" : "#ef4444", marginTop: "5px" }}>
-                      {dados.indicadores.setup.delta <= 0 ? "▼" : "▲"} {Math.abs(dados.indicadores.setup.delta).toFixed(0)} min ({dados.indicadores.setup.percentual <= 0 ? "" : "+"}{dados.indicadores.setup.percentual.toFixed(0)}%)
-                    </div>
-                  </div>
-                  <div style={{ backgroundColor: "#fef2f2", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #ef4444" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Refugo Diário</div>
-                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.refugo_diario.depois, 0)} pç</div>
-                    <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.refugo_diario.antes, 0)} pç</div>
-                    <div style={{ fontSize: "12px", color: dados.indicadores.refugo_diario.delta <= 0 ? "#10b981" : "#ef4444", marginTop: "5px" }}>
-                      {dados.indicadores.refugo_diario.delta <= 0 ? "▼" : "▲"} {Math.abs(dados.indicadores.refugo_diario.delta).toFixed(0)} pç ({dados.indicadores.refugo_diario.percentual <= 0 ? "" : "+"}{dados.indicadores.refugo_diario.percentual.toFixed(0)}%)
-                    </div>
-                  </div>
-                  <div style={{ backgroundColor: "#eff6ff", padding: "15px", borderRadius: "8px", borderLeft: "4px solid #3b82f6" }}>
-                    <div style={{ fontSize: "12px", color: "#666" }}>Produtividade</div>
-                    <div style={{ fontSize: "28px", fontWeight: "bold", color: "#1E3A8A" }}>{formatarNumero(dados.indicadores.produtividade.depois, 0)} pç/dia</div>
-                    <div style={{ fontSize: "11px", color: "#666" }}>Antes: {formatarNumero(dados.indicadores.produtividade.antes, 0)} pç/dia</div>
-                    <div style={{ fontSize: "12px", color: dados.indicadores.produtividade.delta >= 0 ? "#10b981" : "#ef4444", marginTop: "5px" }}>
-                      {dados.indicadores.produtividade.delta >= 0 ? "▲" : "▼"} {Math.abs(dados.indicadores.produtividade.delta).toFixed(0)} pç ({dados.indicadores.produtividade.percentual >= 0 ? "+" : ""}{dados.indicadores.produtividade.percentual.toFixed(0)}%)
-                    </div>
-                  </div>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                  gap: "15px",
+                  marginBottom: "30px"
+                }}>
+                  <IndicatorCard
+                    label="OEE Global"
+                    value={dados.indicadores.oee.depois}
+                    previousValue={dados.indicadores.oee.antes}
+                    unit="%"
+                    type="positive"
+                    icon="📊"
+                  />
+                  <IndicatorCard
+                    label="Disponibilidade"
+                    value={dados.indicadores.disponibilidade.depois}
+                    previousValue={dados.indicadores.disponibilidade.antes}
+                    unit="%"
+                    type="positive"
+                    icon="⏱️"
+                  />
+                  <IndicatorCard
+                    label="Performance"
+                    value={dados.indicadores.performance.depois}
+                    previousValue={dados.indicadores.performance.antes}
+                    unit="%"
+                    type="positive"
+                    icon="⚡"
+                  />
+                  <IndicatorCard
+                    label="Qualidade"
+                    value={dados.indicadores.qualidade.depois}
+                    previousValue={dados.indicadores.qualidade.antes}
+                    unit="%"
+                    type="positive"
+                    icon="✅"
+                  />
+                  <IndicatorCard
+                    label="Setup Médio"
+                    value={dados.indicadores.setup.depois}
+                    previousValue={dados.indicadores.setup.antes}
+                    unit="min"
+                    type="negative"
+                    icon="🔧"
+                    precision={0}
+                  />
+                  <IndicatorCard
+                    label="Refugo Diário"
+                    value={dados.indicadores.refugo_diario.depois}
+                    previousValue={dados.indicadores.refugo_diario.antes}
+                    unit="peças"
+                    type="negative"
+                    icon="🗑️"
+                    precision={0}
+                  />
+                  <IndicatorCard
+                    label="Produtividade"
+                    value={dados.indicadores.produtividade.depois}
+                    previousValue={dados.indicadores.produtividade.antes}
+                    unit="peças/dia"
+                    type="positive"
+                    icon="🏭"
+                    precision={0}
+                  />
+                  <IndicatorCard
+                    label="ROI"
+                    value={dados.financeiro.roi}
+                    previousValue={0}
+                    unit="%"
+                    type="positive"
+                    icon="💰"
+                    precision={0}
+                  />
                 </div>
 
                 {/* SEÇÃO 2 - GRÁFICO */}
@@ -781,7 +795,12 @@ export default function ValidacaoResultados() {
                 {/* SEÇÃO 5 - ANÁLISE FINANCEIRA */}
                 <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px", fontSize: "18px" }}>5. ANÁLISE FINANCEIRA</h2>
                 
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "20px", marginBottom: "30px" }}>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                  gap: "20px",
+                  marginBottom: "30px"
+                }}>
                   <div style={{ backgroundColor: "#f0fdf4", padding: "20px", borderRadius: "8px" }}>
                     <h3 style={{ color: "#166534", marginBottom: "15px", fontSize: "16px" }}>💰 Economia Gerada</h3>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
