@@ -573,84 +573,100 @@ export default function ValidacaoResultados() {
                   <p style={{ color: "#666", fontSize: "13px" }}>Data do Relatório: {new Date().toLocaleDateString('pt-BR')}</p>
                 </div>
 
-                {/* SEÇÃO 1 - CARDS - USANDO IndicatorCard */}
-                <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px", fontSize: "18px" }}>1. INDICADORES DE PERFORMANCE</h2>
-                
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-                  gap: "15px",
-                  marginBottom: "30px"
-                }}>
-                  <IndicatorCard
-                    label="OEE Global"
-                    value={dados.indicadores.oee.depois}
-                    previousValue={dados.indicadores.oee.antes}
-                    unit="%"
-                    type="positive"
-                    icon="📊"
-                  />
-                  <IndicatorCard
-                    label="Disponibilidade"
-                    value={dados.indicadores.disponibilidade.depois}
-                    previousValue={dados.indicadores.disponibilidade.antes}
-                    unit="%"
-                    type="positive"
-                    icon="⏱️"
-                  />
-                  <IndicatorCard
-                    label="Performance"
-                    value={dados.indicadores.performance.depois}
-                    previousValue={dados.indicadores.performance.antes}
-                    unit="%"
-                    type="positive"
-                    icon="⚡"
-                  />
-                  <IndicatorCard
-                    label="Qualidade"
-                    value={dados.indicadores.qualidade.depois}
-                    previousValue={dados.indicadores.qualidade.antes}
-                    unit="%"
-                    type="positive"
-                    icon="✅"
-                  />
-                  <IndicatorCard
-                    label="Setup Médio"
-                    value={dados.indicadores.setup.depois}
-                    previousValue={dados.indicadores.setup.antes}
-                    unit="min"
-                    type="negative"
-                    icon="🔧"
-                    precision={0}
-                  />
-                  <IndicatorCard
-                    label="Refugo Diário"
-                    value={dados.indicadores.refugo_diario.depois}
-                    previousValue={dados.indicadores.refugo_diario.antes}
-                    unit="peças"
-                    type="negative"
-                    icon="🗑️"
-                    precision={0}
-                  />
-                  <IndicatorCard
-                    label="Produtividade"
-                    value={dados.indicadores.produtividade.depois}
-                    previousValue={dados.indicadores.produtividade.antes}
-                    unit="peças/dia"
-                    type="positive"
-                    icon="🏭"
-                    precision={0}
-                  />
-                  <IndicatorCard
-                    label="ROI"
-                    value={dados.financeiro.roi}
-                    previousValue={0}
-                    unit="%"
-                    type="positive"
-                    icon="💰"
-                    precision={0}
-                  />
-                </div>
+{/* SEÇÃO 1 - CARDS - USANDO IndicatorCard */}
+<h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px", fontSize: "18px" }}>1. INDICADORES DE PERFORMANCE</h2>
+
+<div style={{
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+  gap: "15px",
+  marginBottom: "30px"
+}}>
+  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+    <IndicatorCard
+      label="OEE Global"
+      value={dados.indicadores.oee.depois}
+      previousValue={dados.indicadores.oee.antes}
+      unit="%"
+      type="positive"
+      icon="📊"
+    />
+  </div>
+  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+    <IndicatorCard
+      label="Disponibilidade"
+      value={dados.indicadores.disponibilidade.depois}
+      previousValue={dados.indicadores.disponibilidade.antes}
+      unit="%"
+      type="positive"
+      icon="⏱️"
+    />
+  </div>
+  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+    <IndicatorCard
+      label="Performance"
+      value={dados.indicadores.performance.depois}
+      previousValue={dados.indicadores.performance.antes}
+      unit="%"
+      type="positive"
+      icon="⚡"
+    />
+  </div>
+  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+    <IndicatorCard
+      label="Qualidade"
+      value={dados.indicadores.qualidade.depois}
+      previousValue={dados.indicadores.qualidade.antes}
+      unit="%"
+      type="positive"
+      icon="✅"
+    />
+  </div>
+  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+    <IndicatorCard
+      label="Setup Médio"
+      value={dados.indicadores.setup.depois}
+      previousValue={dados.indicadores.setup.antes}
+      unit="min"
+      type="negative"
+      icon="🔧"
+      precision={0}
+    />
+  </div>
+  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+    <IndicatorCard
+      label="Refugo Diário"
+      value={dados.indicadores.refugo_diario.depois}
+      previousValue={dados.indicadores.refugo_diario.antes}
+      unit="peças"
+      type="negative"
+      icon="🗑️"
+      precision={0}
+    />
+  </div>
+  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+    <IndicatorCard
+      label="Produtividade"
+      value={dados.indicadores.produtividade.depois}
+      previousValue={dados.indicadores.produtividade.antes}
+      unit="peças/dia"
+      type="positive"
+      icon="🏭"
+      precision={0}
+    />
+  </div>
+  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+    <IndicatorCard
+      label="ROI"
+      value={dados.financeiro.roi}
+      previousValue={0}
+      unit="%"
+      type="positive"
+      icon="💰"
+      precision={0}
+    />
+  </div>
+</div>
 
                 {/* SEÇÃO 2 - GRÁFICO */}
                 {dados.evolucao_mensal && dados.evolucao_mensal.length > 0 && (
