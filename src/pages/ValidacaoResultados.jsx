@@ -98,30 +98,40 @@ export default function ValidacaoResultados() {
     setMostrarModal(false);
   };
 
-  const handleExportarPDF = () => {
+  const handleExportarPDF = async () => {
     const doc = new jsPDF({
       orientation: "portrait",
       unit: "mm",
       format: "a4"
     });
 
+    // ADICIONAR LOGO
+    const logoImg = new Image();
+    logoImg.src = logo;
+    
+    await new Promise((resolve) => {
+      logoImg.onload = resolve;
+    });
+    
+    doc.addImage(logoImg, 'PNG', 80, 10, 50, 15);
+
     // CABEÇALHO
     doc.setFontSize(16);
     doc.setTextColor(30, 58, 138);
-    doc.text("NEXUS ENGENHARIA APLICADA", 105, 20, { align: "center" });
+    doc.text("NEXUS ENGENHARIA APLICADA", 105, 35, { align: "center" });
     
     doc.setFontSize(12);
     doc.setTextColor(100, 100, 100);
-    doc.text("Validação de Resultados", 105, 30, { align: "center" });
+    doc.text("Validação de Resultados", 105, 45, { align: "center" });
     
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
-    doc.text(`Empresa: ${empresaNome}`, 20, 45);
-    doc.text(`Período Antes: ${periodoAntes.inicio.split('-').reverse().join('/')} a ${periodoAntes.fim.split('-').reverse().join('/')}`, 20, 52);
-    doc.text(`Período Depois: ${periodoDepois.inicio.split('-').reverse().join('/')} a ${periodoDepois.fim.split('-').reverse().join('/')}`, 20, 59);
-    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 66);
+    doc.text(`Empresa: ${empresaNome}`, 20, 60);
+    doc.text(`Periodo Antes: ${periodoAntes.inicio.split('-').reverse().join('/')} a ${periodoAntes.fim.split('-').reverse().join('/')}`, 20, 67);
+    doc.text(`Periodo Depois: ${periodoDepois.inicio.split('-').reverse().join('/')} a ${periodoDepois.fim.split('-').reverse().join('/')}`, 20, 74);
+    doc.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 20, 81);
 
-    let yPos = 80;
+    let yPos = 95;
 
     // 1. INDICADORES DE PERFORMANCE
     doc.setFontSize(12);
@@ -132,20 +142,20 @@ export default function ValidacaoResultados() {
     doc.setFontSize(9);
     doc.setTextColor(0, 0, 0);
     
-    doc.text(`OEE Global: ${formatarNumero(dados.indicadores.oee.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.oee.antes, 1)}%) ▲ ${Math.abs(dados.indicadores.oee.delta).toFixed(1)}% (${dados.indicadores.oee.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.oee.percentual, 0)}%)`, 20, yPos);
+    doc.text(`OEE Global: ${formatarNumero(dados.indicadores.oee.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.oee.antes, 1)}%) - Melhoria de ${Math.abs(dados.indicadores.oee.delta).toFixed(1)}% (${dados.indicadores.oee.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.oee.percentual, 0)}%)`, 20, yPos);
     yPos += 6;
-    doc.text(`Disponibilidade: ${formatarNumero(dados.indicadores.disponibilidade.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.disponibilidade.antes, 1)}%) ▲ ${Math.abs(dados.indicadores.disponibilidade.delta).toFixed(1)}% (${dados.indicadores.disponibilidade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.disponibilidade.percentual, 0)}%)`, 20, yPos);
+    doc.text(`Disponibilidade: ${formatarNumero(dados.indicadores.disponibilidade.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.disponibilidade.antes, 1)}%) - Melhoria de ${Math.abs(dados.indicadores.disponibilidade.delta).toFixed(1)}% (${dados.indicadores.disponibilidade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.disponibilidade.percentual, 0)}%)`, 20, yPos);
     yPos += 6;
-    doc.text(`Performance: ${formatarNumero(dados.indicadores.performance.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.performance.antes, 1)}%) ▲ ${Math.abs(dados.indicadores.performance.delta).toFixed(1)}% (${dados.indicadores.performance.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.performance.percentual, 0)}%)`, 20, yPos);
+    doc.text(`Performance: ${formatarNumero(dados.indicadores.performance.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.performance.antes, 1)}%) - Melhoria de ${Math.abs(dados.indicadores.performance.delta).toFixed(1)}% (${dados.indicadores.performance.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.performance.percentual, 0)}%)`, 20, yPos);
     yPos += 6;
-    doc.text(`Qualidade: ${formatarNumero(dados.indicadores.qualidade.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.qualidade.antes, 1)}%) ▲ ${Math.abs(dados.indicadores.qualidade.delta).toFixed(1)}% (${dados.indicadores.qualidade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.qualidade.percentual, 0)}%)`, 20, yPos);
+    doc.text(`Qualidade: ${formatarNumero(dados.indicadores.qualidade.depois, 1)}% (Antes: ${formatarNumero(dados.indicadores.qualidade.antes, 1)}%) - Melhoria de ${Math.abs(dados.indicadores.qualidade.delta).toFixed(1)}% (${dados.indicadores.qualidade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.qualidade.percentual, 0)}%)`, 20, yPos);
     yPos += 8;
     
-    doc.text(`Setup Médio: ${formatarNumero(dados.indicadores.setup.depois, 0)} min (Antes: ${formatarNumero(dados.indicadores.setup.antes, 0)} min) ▼ ${Math.abs(dados.indicadores.setup.delta).toFixed(0)} min (${dados.indicadores.setup.percentual <= 0 ? "" : "+"}${formatarNumero(dados.indicadores.setup.percentual, 0)}%)`, 20, yPos);
+    doc.text(`Setup Medio: ${formatarNumero(dados.indicadores.setup.depois, 0)} min (Antes: ${formatarNumero(dados.indicadores.setup.antes, 0)} min) - Reducao de ${Math.abs(dados.indicadores.setup.delta).toFixed(0)} min (${dados.indicadores.setup.percentual <= 0 ? "" : "+"}${formatarNumero(dados.indicadores.setup.percentual, 0)}%)`, 20, yPos);
     yPos += 6;
-    doc.text(`Refugo Diário: ${formatarNumero(dados.indicadores.refugo_diario.depois, 0)} pç (Antes: ${formatarNumero(dados.indicadores.refugo_diario.antes, 0)} pç) ▼ ${Math.abs(dados.indicadores.refugo_diario.delta).toFixed(0)} pç (${dados.indicadores.refugo_diario.percentual <= 0 ? "" : "+"}${formatarNumero(dados.indicadores.refugo_diario.percentual, 0)}%)`, 20, yPos);
+    doc.text(`Refugo Diario: ${formatarNumero(dados.indicadores.refugo_diario.depois, 0)} pç (Antes: ${formatarNumero(dados.indicadores.refugo_diario.antes, 0)} pç) - Reducao de ${Math.abs(dados.indicadores.refugo_diario.delta).toFixed(0)} pç (${dados.indicadores.refugo_diario.percentual <= 0 ? "" : "+"}${formatarNumero(dados.indicadores.refugo_diario.percentual, 0)}%)`, 20, yPos);
     yPos += 6;
-    doc.text(`Produtividade: ${formatarNumero(dados.indicadores.produtividade.depois, 0)} pç/dia (Antes: ${formatarNumero(dados.indicadores.produtividade.antes, 0)} pç/dia) ▲ ${Math.abs(dados.indicadores.produtividade.delta).toFixed(0)} pç (${dados.indicadores.produtividade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.produtividade.percentual, 0)}%)`, 20, yPos);
+    doc.text(`Produtividade: ${formatarNumero(dados.indicadores.produtividade.depois, 0)} pç/dia (Antes: ${formatarNumero(dados.indicadores.produtividade.antes, 0)} pç/dia) - Aumento de ${Math.abs(dados.indicadores.produtividade.delta).toFixed(0)} pç (${dados.indicadores.produtividade.percentual >= 0 ? "+" : ""}${formatarNumero(dados.indicadores.produtividade.percentual, 0)}%)`, 20, yPos);
     yPos += 12;
 
     // 2. TABELA COMPARATIVA
@@ -183,13 +193,13 @@ export default function ValidacaoResultados() {
 
       autoTable(doc, {
         startY: yPos,
-        head: [["Tipo de Perda", "Antes (R$/mês)", "Depois (R$/mês)", "Economia (R$/mês)", "Status"]],
+        head: [["Tipo de Perda", "Antes (R$/mes)", "Depois (R$/mes)", "Economia (R$/mes)", "Status"]],
         body: [
-          ["Refugo", formatarMoeda(dados.financeiro.detalhamento.refugo.antes), formatarMoeda(dados.financeiro.detalhamento.refugo.depois), formatarMoeda(dados.financeiro.detalhamento.refugo.economia), dados.financeiro.detalhamento.refugo.economia > 0 ? "✅" : "⚠️"],
-          ["Microparadas", formatarMoeda(dados.financeiro.detalhamento.microparadas.antes), formatarMoeda(dados.financeiro.detalhamento.microparadas.depois), formatarMoeda(dados.financeiro.detalhamento.microparadas.economia), dados.financeiro.detalhamento.microparadas.economia > 0 ? "✅" : "⚠️"],
-          ["Setup", formatarMoeda(dados.financeiro.detalhamento.setup.antes), formatarMoeda(dados.financeiro.detalhamento.setup.depois), formatarMoeda(dados.financeiro.detalhamento.setup.economia), dados.financeiro.detalhamento.setup.economia > 0 ? "✅" : "⚠️"]
+          ["Refugo", formatarMoeda(dados.financeiro.detalhamento.refugo.antes), formatarMoeda(dados.financeiro.detalhamento.refugo.depois), formatarMoeda(dados.financeiro.detalhamento.refugo.economia), dados.financeiro.detalhamento.refugo.economia > 0 ? "OK" : "ATENCAO"],
+          ["Microparadas", formatarMoeda(dados.financeiro.detalhamento.microparadas.antes), formatarMoeda(dados.financeiro.detalhamento.microparadas.depois), formatarMoeda(dados.financeiro.detalhamento.microparadas.economia), dados.financeiro.detalhamento.microparadas.economia > 0 ? "OK" : "ATENCAO"],
+          ["Setup", formatarMoeda(dados.financeiro.detalhamento.setup.antes), formatarMoeda(dados.financeiro.detalhamento.setup.depois), formatarMoeda(dados.financeiro.detalhamento.setup.economia), dados.financeiro.detalhamento.setup.economia > 0 ? "OK" : "ATENCAO"]
         ],
-        foot: [["TOTAL", formatarMoeda(dados.financeiro.perda_mensal_antes), formatarMoeda(dados.financeiro.perda_mensal_depois), formatarMoeda(dados.financeiro.economia_mensal), `${((dados.financeiro.economia_mensal / dados.financeiro.perda_mensal_antes) * 100).toFixed(0)}% ↓`]],
+        foot: [["TOTAL", formatarMoeda(dados.financeiro.perda_mensal_antes), formatarMoeda(dados.financeiro.perda_mensal_depois), formatarMoeda(dados.financeiro.economia_mensal), `${((dados.financeiro.economia_mensal / dados.financeiro.perda_mensal_antes) * 100).toFixed(0)}% de reducao`]],
         theme: "striped",
         headStyles: { fillColor: [30, 58, 138], textColor: 255 },
         footStyles: { fillColor: [30, 58, 138], textColor: 255 },
@@ -200,10 +210,10 @@ export default function ValidacaoResultados() {
       yPos = doc.lastAutoTable.finalY + 10;
     }
 
-    // 4. ANÁLISE FINANCEIRA
+    // 4. ANALISE FINANCEIRA
     doc.setFontSize(12);
     doc.setTextColor(30, 58, 138);
-    doc.text("4. ANÁLISE FINANCEIRA", 20, yPos);
+    doc.text("4. ANALISE FINANCEIRA", 20, yPos);
     yPos += 8;
 
     doc.setFontSize(10);
@@ -232,10 +242,10 @@ export default function ValidacaoResultados() {
     yPos += 5;
     doc.setFontSize(9);
     doc.setTextColor(100, 100, 100);
-    doc.text("Consultor Sênior - Nexus Engenharia Aplicada", 105, yPos, { align: "center" });
+    doc.text("Consultor Senior - Nexus Engenharia Aplicada", 105, yPos, { align: "center" });
     yPos += 10;
 
-    // RODAPÉ
+    // RODAPE
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
     doc.text(`Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos`, 105, yPos, { align: "center" });
