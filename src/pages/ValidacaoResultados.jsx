@@ -656,8 +656,7 @@ export default function ValidacaoResultados() {
                 {dados.evolucao_mensal && dados.evolucao_mensal.length > 0 && (
                   <>
                     <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px", fontSize: "18px" }}>2. EVOLUÇÃO MENSAL DOS INDICADORES</h2>
-                    <div style={{ marginBottom: "30px", height: "320px", width: "100%", overflowX: "auto" }}>
-                      <div style={{ minWidth: "600px", height: "300px" }}></div>
+                    <div style={{ marginBottom: "30px", width: "100%" }}>
                       <ComparisonChart
                         data={dados.evolucao_mensal}
                         title=""
