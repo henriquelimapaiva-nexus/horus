@@ -660,7 +660,7 @@ export default function ValidacaoResultados() {
                       <ComparisonChart
                         data={dados.evolucao_mensal}
                         title=""
-                        width={650}
+                        width={625}
                         height={280}
                       />
                     </div>
