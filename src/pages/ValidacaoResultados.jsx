@@ -771,42 +771,64 @@ export default function ValidacaoResultados() {
         </div>
       )}
 
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .relatorio-print, .relatorio-print * {
-            visibility: visible;
-          }
-          .relatorio-print {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            margin: 0;
-            padding: 20px;
-            background: white;
-          }
-          .no-print {
-            display: none !important;
-          }
-          @page {
-            size: A4;
-            margin: 1.5cm;
-          }
-          table {
-            page-break-inside: auto;
-          }
-          tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
-          thead {
-             display: table-header-group;
-          }
-        }
-      `}</style>
+<style>{`
+  @media print {
+    /* 1. Reset de Containers Pais - ESSENCIAL */
+    /* Se o seu framework usa root, __next ou containers flex, isso mata a impressão */
+    html, body, #root, .App, [data-radix-portal] {
+      height: auto !important;
+      overflow: visible !important;
+      position: static !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+
+    /* 2. Esconde TUDO que não é o relatório */
+    body * {
+      visibility: hidden;
+    }
+
+    /* 3. Força o Relatório a aparecer e ocupar o espaço correto */
+    .relatorio-print, .relatorio-print * {
+      visibility: visible;
+    }
+
+    .relatorio-print {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      height: auto !important;
+      display: block !important;
+      background: white !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+
+    /* 4. Ajustes de Tabela e Quebra de Página */
+    table { 
+      page-break-inside: auto; 
+      width: 100% !important;
+      table-layout: auto !important;
+    }
+    tr { 
+      page-break-inside: avoid !important; 
+      page-break-after: auto !important; 
+    }
+    
+    /* Remove rodapés de URL e data chatos do navegador */
+    @page {
+      size: auto;
+      margin: 15mm;
+    }
+
+    /* Garante que cores de fundo (azul do header) apareçam no PDF */
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
+`}</style>
     </div>
   );
 }
