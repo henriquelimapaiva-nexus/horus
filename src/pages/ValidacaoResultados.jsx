@@ -841,14 +841,14 @@ export default function ValidacaoResultados() {
                 </div>
 
                 {/* ASSINATURA */}
-                <div style={{ marginTop: "250px", textAlign: "center" }}>
+                <div style={{ marginTop: "270px", textAlign: "center" }}>
                   <p>____________________________________</p>
                   <p style={{ marginTop: "8px" }}><strong>Eng. Henrique de Lima Paiva</strong></p>
                   <p style={{ color: "#666", fontSize: "12px" }}>Consultor Sênior - Nexus Engenharia Aplicada</p>
                 </div>
 
                 {/* RODAPÉ */}
-                <div style={{ marginTop: "180px", textAlign: "center", fontSize: "10px", color: "#999", borderTop: "1px solid #e5e7eb", paddingTop: "15px" }}>
+                <div style={{ marginTop: "155px", textAlign: "center", fontSize: "10px", color: "#999", borderTop: "1px solid #e5e7eb", paddingTop: "15px" }}>
                   <p>Fonte dos dados: Tabelas producao_oee, posto_trabalho, perdas_linha, linha_produto, produtos</p>
                   <p>Total de registros considerados: {dados.metadados?.total_registros_antes || 0} (antes) | {dados.metadados?.total_registros_depois || 0} (depois)</p>
                   <p>© {new Date().getFullYear()} Nexus Engenharia Aplicada - Todos os direitos reservados</p>
