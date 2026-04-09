@@ -540,6 +540,7 @@ const excluirInteracao = async (interacaoId) => {
                           ✏️
                         </button>
                         <button
+                          type="button"
                           onClick={() => excluirInteracao(interacao.id)}
                           style={{
                             background: "none",
