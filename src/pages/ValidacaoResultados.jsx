@@ -495,6 +495,61 @@ export default function ValidacaoResultados() {
             </div>
           </Card>
 
+          {/* Detalhamento das Perdas Financeiras */}
+          {dados.financeiro.detalhamento && (
+            <Card titulo="🔍 Detalhamento das Perdas Financeiras" style={{ marginBottom: spacing["2xl"] }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ backgroundColor: colors.primary.blue }}>
+                      <th style={{ padding: "12px", textAlign: "left", color: "white" }}>Tipo de Perda</th>
+                      <th style={{ padding: "12px", textAlign: "right", color: "white" }}>Antes (R$/mês)</th>
+                      <th style={{ padding: "12px", textAlign: "right", color: "white" }}>Depois (R$/mês)</th>
+                      <th style={{ padding: "12px", textAlign: "right", color: "white" }}>Economia (R$/mês)</th>
+                      <th style={{ padding: "12px", textAlign: "center", color: "white" }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr style={{ borderBottom: `1px solid ${colors.border.light}` }}>
+                      <td style={{ padding: "10px" }}>Refugo</td>
+                      <td style={{ textAlign: "right" }}>{formatarMoeda(dados.financeiro.detalhamento.refugo.antes)}</td>
+                      <td style={{ textAlign: "right" }}>{formatarMoeda(dados.financeiro.detalhamento.refugo.depois)}</td>
+                      <td style={{ textAlign: "right", color: colors.status.success }}>{formatarMoeda(dados.financeiro.detalhamento.refugo.economia)}</td>
+                      <td style={{ textAlign: "center" }}>{dados.financeiro.detalhamento.refugo.economia > 0 ? "✅" : "⚠️"}</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${colors.border.light}`, backgroundColor: colors.background.tertiary }}>
+                      <td style={{ padding: "10px" }}>Microparadas</td>
+                      <td style={{ textAlign: "right" }}>{formatarMoeda(dados.financeiro.detalhamento.microparadas.antes)}</td>
+                      <td style={{ textAlign: "right" }}>{formatarMoeda(dados.financeiro.detalhamento.microparadas.depois)}</td>
+                      <td style={{ textAlign: "right", color: colors.status.success }}>{formatarMoeda(dados.financeiro.detalhamento.microparadas.economia)}</td>
+                      <td style={{ textAlign: "center" }}>{dados.financeiro.detalhamento.microparadas.economia > 0 ? "✅" : "⚠️"}</td>
+                    </tr>
+                    <tr style={{ borderBottom: `1px solid ${colors.border.light}` }}>
+                      <td style={{ padding: "10px" }}>Setup</td>
+                      <td style={{ textAlign: "right" }}>{formatarMoeda(dados.financeiro.detalhamento.setup.antes)}</td>
+                      <td style={{ textAlign: "right" }}>{formatarMoeda(dados.financeiro.detalhamento.setup.depois)}</td>
+                      <td style={{ textAlign: "right", color: colors.status.success }}>{formatarMoeda(dados.financeiro.detalhamento.setup.economia)}</td>
+                      <td style={{ textAlign: "center" }}>{dados.financeiro.detalhamento.setup.economia > 0 ? "✅" : "⚠️"}</td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ backgroundColor: colors.primary.blue }}>
+                      <td style={{ padding: "12px", fontWeight: "bold", color: "white" }}>TOTAL</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold", color: "white" }}>{formatarMoeda(dados.financeiro.perda_mensal_antes)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold", color: "white" }}>{formatarMoeda(dados.financeiro.perda_mensal_depois)}</td>
+                      <td style={{ textAlign: "right", fontWeight: "bold", color: colors.status.success }}>{formatarMoeda(dados.financeiro.economia_mensal)}</td>
+                      <td style={{ textAlign: "center" }}>
+                        <span style={{ color: colors.status.success, fontWeight: "bold" }}>
+                          {((dados.financeiro.economia_mensal / dados.financeiro.perda_mensal_antes) * 100).toFixed(0)}% ↓
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Card>
+          )}
+
           {/* Footer */}
           <div style={{ fontSize: typography.fontSize.xs, color: colors.text.tertiary, textAlign: "center", marginTop: spacing["2xl"] }}>
             <p>📊 Dados baseados em {dados.metadados?.total_registros_antes || 0} registros (antes) e {dados.metadados?.total_registros_depois || 0} registros (depois)</p>
@@ -573,100 +628,100 @@ export default function ValidacaoResultados() {
                   <p style={{ color: "#666", fontSize: "13px" }}>Data do Relatório: {new Date().toLocaleDateString('pt-BR')}</p>
                 </div>
 
-{/* SEÇÃO 1 - CARDS - USANDO IndicatorCard */}
-<h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px", fontSize: "18px" }}>1. INDICADORES DE PERFORMANCE</h2>
+                {/* SEÇÃO 1 - CARDS - USANDO IndicatorCard */}
+                <h2 style={{ color: "#1E3A8A", borderBottom: "2px solid #1E3A8A", paddingBottom: "5px", marginBottom: "20px", fontSize: "18px" }}>1. INDICADORES DE PERFORMANCE</h2>
 
-<div style={{
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-  gap: "15px",
-  marginBottom: "30px"
-}}>
-  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-    <IndicatorCard
-      label="OEE Global"
-      value={dados.indicadores.oee.depois}
-      previousValue={dados.indicadores.oee.antes}
-      unit="%"
-      type="positive"
-      icon="📊"
-    />
-  </div>
-  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-    <IndicatorCard
-      label="Disponibilidade"
-      value={dados.indicadores.disponibilidade.depois}
-      previousValue={dados.indicadores.disponibilidade.antes}
-      unit="%"
-      type="positive"
-      icon="⏱️"
-    />
-  </div>
-  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-    <IndicatorCard
-      label="Performance"
-      value={dados.indicadores.performance.depois}
-      previousValue={dados.indicadores.performance.antes}
-      unit="%"
-      type="positive"
-      icon="⚡"
-    />
-  </div>
-  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-    <IndicatorCard
-      label="Qualidade"
-      value={dados.indicadores.qualidade.depois}
-      previousValue={dados.indicadores.qualidade.antes}
-      unit="%"
-      type="positive"
-      icon="✅"
-    />
-  </div>
-  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-    <IndicatorCard
-      label="Setup Médio"
-      value={dados.indicadores.setup.depois}
-      previousValue={dados.indicadores.setup.antes}
-      unit="min"
-      type="negative"
-      icon="🔧"
-      precision={0}
-    />
-  </div>
-  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-    <IndicatorCard
-      label="Refugo Diário"
-      value={dados.indicadores.refugo_diario.depois}
-      previousValue={dados.indicadores.refugo_diario.antes}
-      unit="peças"
-      type="negative"
-      icon="🗑️"
-      precision={0}
-    />
-  </div>
-  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-    <IndicatorCard
-      label="Produtividade"
-      value={dados.indicadores.produtividade.depois}
-      previousValue={dados.indicadores.produtividade.antes}
-      unit="peças/dia"
-      type="positive"
-      icon="🏭"
-      precision={0}
-    />
-  </div>
-  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
-    <IndicatorCard
-      label="ROI"
-      value={dados.financeiro.roi}
-      previousValue={0}
-      unit="%"
-      type="positive"
-      icon="💰"
-      precision={0}
-    />
-  </div>
-</div>
+                <div style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                  gap: "15px",
+                  marginBottom: "30px"
+                }}>
+                  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <IndicatorCard
+                      label="OEE Global"
+                      value={dados.indicadores.oee.depois}
+                      previousValue={dados.indicadores.oee.antes}
+                      unit="%"
+                      type="positive"
+                      icon="📊"
+                    />
+                  </div>
+                  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <IndicatorCard
+                      label="Disponibilidade"
+                      value={dados.indicadores.disponibilidade.depois}
+                      previousValue={dados.indicadores.disponibilidade.antes}
+                      unit="%"
+                      type="positive"
+                      icon="⏱️"
+                    />
+                  </div>
+                  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <IndicatorCard
+                      label="Performance"
+                      value={dados.indicadores.performance.depois}
+                      previousValue={dados.indicadores.performance.antes}
+                      unit="%"
+                      type="positive"
+                      icon="⚡"
+                    />
+                  </div>
+                  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <IndicatorCard
+                      label="Qualidade"
+                      value={dados.indicadores.qualidade.depois}
+                      previousValue={dados.indicadores.qualidade.antes}
+                      unit="%"
+                      type="positive"
+                      icon="✅"
+                    />
+                  </div>
+                  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <IndicatorCard
+                      label="Setup Médio"
+                      value={dados.indicadores.setup.depois}
+                      previousValue={dados.indicadores.setup.antes}
+                      unit="min"
+                      type="negative"
+                      icon="🔧"
+                      precision={0}
+                    />
+                  </div>
+                  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <IndicatorCard
+                      label="Refugo Diário"
+                      value={dados.indicadores.refugo_diario.depois}
+                      previousValue={dados.indicadores.refugo_diario.antes}
+                      unit="peças"
+                      type="negative"
+                      icon="🗑️"
+                      precision={0}
+                    />
+                  </div>
+                  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <IndicatorCard
+                      label="Produtividade"
+                      value={dados.indicadores.produtividade.depois}
+                      previousValue={dados.indicadores.produtividade.antes}
+                      unit="peças/dia"
+                      type="positive"
+                      icon="🏭"
+                      precision={0}
+                    />
+                  </div>
+                  <div style={{ pageBreakInside: "avoid", breakInside: "avoid" }}>
+                    <IndicatorCard
+                      label="ROI"
+                      value={dados.financeiro.roi}
+                      previousValue={0}
+                      unit="%"
+                      type="positive"
+                      icon="💰"
+                      precision={0}
+                    />
+                  </div>
+                </div>
 
                 {/* SEÇÃO 2 - GRÁFICO */}
                 {dados.evolucao_mensal && dados.evolucao_mensal.length > 0 && (
@@ -876,57 +931,57 @@ export default function ValidacaoResultados() {
         </div>
       )}
 
-<style>{`
-  @media print {
-    html, body, #root, .App, [data-radix-portal] {
-      height: auto !important;
-      overflow: visible !important;
-      position: static !important;
-      margin: 0 !important;
-      padding: 0 !important;
-    }
+      <style>{`
+        @media print {
+          html, body, #root, .App, [data-radix-portal] {
+            height: auto !important;
+            overflow: visible !important;
+            position: static !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
 
-    body * {
-      visibility: hidden;
-    }
+          body * {
+            visibility: hidden;
+          }
 
-    .relatorio-print, .relatorio-print * {
-      visibility: visible;
-    }
+          .relatorio-print, .relatorio-print * {
+            visibility: visible;
+          }
 
-    .relatorio-print {
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      height: auto !important;
-      display: block !important;
-      background: white !important;
-      padding: 0 !important;
-      margin: 0 !important;
-    }
+          .relatorio-print {
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            display: block !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
 
-    table { 
-      page-break-inside: auto; 
-      width: 100% !important;
-      table-layout: auto !important;
-    }
-    tr { 
-      page-break-inside: avoid !important; 
-      page-break-after: auto !important; 
-    }
-    
-    @page {
-      size: auto;
-      margin: 15mm;
-    }
+          table { 
+            page-break-inside: auto; 
+            width: 100% !important;
+            table-layout: auto !important;
+          }
+          tr { 
+            page-break-inside: avoid !important; 
+            page-break-after: auto !important; 
+          }
+          
+          @page {
+            size: auto;
+            margin: 15mm;
+          }
 
-    * {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
-  }
-`}</style>
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }
