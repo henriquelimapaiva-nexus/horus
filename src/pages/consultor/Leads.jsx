@@ -27,12 +27,12 @@ export default function Leads() {
     proximo_contato: new Date().toISOString().split('T')[0],
     observacoes: ""
   });
-  const [interacaoForm, setInteracaoForm] = useState({
-    tipo: "",
-    data: new Date().toISOString().split('T')[0],  // data atual como padrão
-    hora: "",
-    descricao: ""
-  });
+const [interacaoForm, setInteracaoForm] = useState({
+  tipo: "",
+  data: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD sem timezone
+  hora: "",
+  descricao: ""
+});
   const [editandoId, setEditandoId] = useState(null);
   const [interacoes, setInteracoes] = useState([]);
   const [carregandoInteracoes, setCarregandoInteracoes] = useState(false);
@@ -100,29 +100,39 @@ export default function Leads() {
     }
   };
 
-  const handleInteracao = async (e) => {
-    e.preventDefault();
+const handleInteracao = async (e) => {
+  e.preventDefault();
+  
+  setCarregando(true);
+  try {
+    // Forçar a data no formato YYYY-MM-DD sem timezone
+    const dataEnvio = interacaoForm.data.split('T')[0];
     
-    setCarregando(true);
-    try {
-      await api.post(`/leads/${modalInteracao.id}/interacoes`, interacaoForm);
-      toast.success("Interação registrada com sucesso!");
-      setModalInteracao(null);
-      setInteracaoForm({
-        tipo: "",
-        data: "",
-        hora: "",
-        descricao: ""
-      });
-      carregarLeads();
-      carregarMetrics();
-    } catch (error) {
-      console.error("Erro ao registrar interação:", error);
-      toast.error("Erro ao registrar interação");
-    } finally {
-      setCarregando(false);
-    }
-  };
+    const payload = {
+      tipo: interacaoForm.tipo,
+      data: dataEnvio,
+      hora: interacaoForm.hora,
+      descricao: interacaoForm.descricao
+    };
+    
+    await api.post(`/leads/${modalInteracao.id}/interacoes`, payload);
+    toast.success("Interação registrada com sucesso!");
+    setModalInteracao(null);
+    setInteracaoForm({
+      tipo: "",
+      data: new Date().toLocaleDateString('en-CA'), // Formato YYYY-MM-DD local
+      hora: "",
+      descricao: ""
+    });
+    carregarLeads();
+    carregarMetrics();
+  } catch (error) {
+    console.error("Erro ao registrar interação:", error);
+    toast.error("Erro ao registrar interação");
+  } finally {
+    setCarregando(false);
+  }
+};
 
   const handleDelete = async (id, nome) => {
     if (!window.confirm(`Tem certeza que deseja excluir o lead "${nome}"?`)) {
