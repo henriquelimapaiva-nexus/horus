@@ -298,7 +298,7 @@ export default function Leads() {
                     {formatarMoeda(lead.potencial_faturamento)}
                     </td>
                   <td style={tdStyle}>
-                    {lead.proximo_contato ? lead.proximo_contato.split('-').reverse().join('/') : "-"}
+                    {lead.proximo_contato ? lead.proximo_contato.split('T')[0].split('-').reverse().join('/') : "-"}
                     </td>
                   <td style={tdStyle}>
                     <div style={{ display: "flex", gap: "8px" }}>
