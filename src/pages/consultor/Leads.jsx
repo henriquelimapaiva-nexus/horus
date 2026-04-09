@@ -228,7 +228,6 @@ export default function Leads() {
         }}>
           <MetricCard titulo="Total Leads" valor={metrics.total_leads} cor="#1E3A8A" />
           <MetricCard titulo="Pipeline" valor={formatarMoeda(metrics.pipeline_total)} cor="#f59e0b" />
-          <MetricCard titulo="Pipeline Ponderado" valor={formatarMoeda(metrics.pipeline_ponderado)} cor="#10b981" />
           <MetricCard titulo="Em Negociação" valor={metrics.negociacao} cor="#8b5cf6" />
           <MetricCard titulo="Fechados (mês)" valor={metrics.fechados} cor="#10b981" />
         </div>
