@@ -29,7 +29,7 @@ export default function Leads() {
   });
   const [interacaoForm, setInteracaoForm] = useState({
     tipo: "",
-    data: "",
+    data: new Date().toISOString().split('T')[0],  // data atual como padrão
     hora: "",
     descricao: ""
   });
@@ -266,7 +266,7 @@ export default function Leads() {
                 <th style={thStyle}>Contato</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Potencial</th>
-                <th style={thStyle}>Próx. Contato</th>
+                <th style={thStyle}>1º Contato</th>
                 <th style={thStyle}>Ações</th>
               </tr>
             </thead>
@@ -400,12 +400,13 @@ export default function Leads() {
               value={form.potencial_faturamento}
               onChange={(e) => setForm({...form, potencial_faturamento: e.target.value})}
             />
-            <Input
-              label="Próximo Contato"
-              type="date"
-              value={form.proximo_contato}
-              onChange={(e) => setForm({...form, proximo_contato: e.target.value})}
-            />
+            <div style={{ gridColumn: "span 1" }}></div>
+              <Input
+                label="Data do primeiro contato"
+                type="date"
+                value={form.proximo_contato}
+                onChange={(e) => setForm({...form, proximo_contato: e.target.value})}
+              />
           </div>
           <div style={{ marginTop: "15px" }}>
             <Input
