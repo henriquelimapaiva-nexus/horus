@@ -14,6 +14,8 @@ export default function Leads() {
   const [metrics, setMetrics] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [modalInteracao, setModalInteracao] = useState(null);
+  const [modalInteracaoEdicao, setModalInteracaoEdicao] = useState(false);
+  const [editandoInteracao, setEditandoInteracao] = useState(null);
   const [filtro, setFiltro] = useState({ status: "", consultor_id: "" });
   const [form, setForm] = useState({
     nome: "",
@@ -27,12 +29,12 @@ export default function Leads() {
     proximo_contato: new Date().toLocaleDateString('en-CA'),
     observacoes: ""
   });
-const [interacaoForm, setInteracaoForm] = useState({
-  tipo: "",
-  data: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD sem timezone
-  hora: "",
-  descricao: ""
-});
+  const [interacaoForm, setInteracaoForm] = useState({
+    tipo: "",
+    data: new Date().toLocaleDateString('en-CA'),
+    hora: "",
+    descricao: ""
+  });
   const [editandoId, setEditandoId] = useState(null);
   const [interacoes, setInteracoes] = useState([]);
   const [carregandoInteracoes, setCarregandoInteracoes] = useState(false);
@@ -100,39 +102,38 @@ const [interacaoForm, setInteracaoForm] = useState({
     }
   };
 
-const handleInteracao = async (e) => {
-  e.preventDefault();
-  
-  setCarregando(true);
-  try {
-    // Forçar a data no formato YYYY-MM-DD sem timezone
-    const dataEnvio = interacaoForm.data.split('T')[0];
+  const handleInteracao = async (e) => {
+    e.preventDefault();
     
-    const payload = {
-      tipo: interacaoForm.tipo,
-      data: dataEnvio,
-      hora: interacaoForm.hora,
-      descricao: interacaoForm.descricao
-    };
-    
-    await api.post(`/leads/${modalInteracao.id}/interacoes`, payload);
-    toast.success("Interação registrada com sucesso!");
-    setModalInteracao(null);
-    setInteracaoForm({
-      tipo: "",
-      data: new Date().toLocaleDateString('en-CA'), // Formato YYYY-MM-DD local
-      hora: "",
-      descricao: ""
-    });
-    carregarLeads();
-    carregarMetrics();
-  } catch (error) {
-    console.error("Erro ao registrar interação:", error);
-    toast.error("Erro ao registrar interação");
-  } finally {
-    setCarregando(false);
-  }
-};
+    setCarregando(true);
+    try {
+      const dataEnvio = interacaoForm.data.split('T')[0];
+      
+      const payload = {
+        tipo: interacaoForm.tipo,
+        data: dataEnvio,
+        hora: interacaoForm.hora,
+        descricao: interacaoForm.descricao
+      };
+      
+      await api.post(`/leads/${modalInteracao.id}/interacoes`, payload);
+      toast.success("Interação registrada com sucesso!");
+      setModalInteracao(null);
+      setInteracaoForm({
+        tipo: "",
+        data: new Date().toLocaleDateString('en-CA'),
+        hora: "",
+        descricao: ""
+      });
+      carregarLeads();
+      carregarMetrics();
+    } catch (error) {
+      console.error("Erro ao registrar interação:", error);
+      toast.error("Erro ao registrar interação");
+    } finally {
+      setCarregando(false);
+    }
+  };
 
   const handleDelete = async (id, nome) => {
     if (!window.confirm(`Tem certeza que deseja excluir o lead "${nome}"?`)) {
@@ -177,6 +178,71 @@ const handleInteracao = async (e) => {
     }
     
     setModalAberto(true);
+  };
+
+  const abrirEditarInteracao = (interacao) => {
+    setEditandoInteracao(interacao);
+    setInteracaoForm({
+      tipo: interacao.tipo,
+      data: interacao.data ? interacao.data.split('T')[0] : "",
+      hora: interacao.hora || "",
+      descricao: interacao.descricao || ""
+    });
+    setModalInteracaoEdicao(true);
+  };
+
+  const salvarEdicaoInteracao = async (e) => {
+    e.preventDefault();
+    setCarregando(true);
+    try {
+      const dataEnvio = interacaoForm.data.split('T')[0];
+      const payload = {
+        tipo: interacaoForm.tipo,
+        data: dataEnvio,
+        hora: interacaoForm.hora,
+        descricao: interacaoForm.descricao
+      };
+      await api.put(`/leads/interacoes/${editandoInteracao.id}`, payload);
+      toast.success("Interação atualizada com sucesso!");
+      setModalInteracaoEdicao(false);
+      setEditandoInteracao(null);
+      setInteracaoForm({
+        tipo: "",
+        data: new Date().toLocaleDateString('en-CA'),
+        hora: "",
+        descricao: ""
+      });
+      // Recarregar interações
+      if (editandoId) {
+        const res = await api.get(`/leads/${editandoId}`);
+        setInteracoes(res.data.interacoes || []);
+      }
+      carregarLeads();
+      carregarMetrics();
+    } catch (error) {
+      console.error("Erro ao editar interação:", error);
+      toast.error("Erro ao editar interação");
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  const excluirInteracao = async (interacaoId) => {
+    if (!confirm("Tem certeza que deseja excluir esta interação?")) return;
+    
+    try {
+      await api.delete(`/leads/interacoes/${interacaoId}`);
+      toast.success("Interação excluída com sucesso!");
+      if (editandoId) {
+        const res = await api.get(`/leads/${editandoId}`);
+        setInteracoes(res.data.interacoes || []);
+      }
+      carregarLeads();
+      carregarMetrics();
+    } catch (error) {
+      console.error("Erro ao excluir interação:", error);
+      toast.error("Erro ao excluir interação");
+    }
   };
 
   const formatarMoeda = (valor) => {
@@ -338,8 +404,8 @@ const handleInteracao = async (e) => {
                 <tr>
                   <td colSpan="6" style={{ textAlign: "center", padding: "40px", color: "#666" }}>
                     Nenhum lead encontrado. Clique em "Novo Lead" para começar.
-                    </td>
-                 </tr>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -411,12 +477,12 @@ const handleInteracao = async (e) => {
               onChange={(e) => setForm({...form, potencial_faturamento: e.target.value})}
             />
             <div style={{ gridColumn: "span 1" }}></div>
-              <Input
-                label="Data do primeiro contato"
-                type="date"
-                value={form.proximo_contato}
-                onChange={(e) => setForm({...form, proximo_contato: e.target.value})}
-              />
+            <Input
+              label="Data do primeiro contato"
+              type="date"
+              value={form.proximo_contato}
+              onChange={(e) => setForm({...form, proximo_contato: e.target.value})}
+            />
           </div>
           <div style={{ marginTop: "15px" }}>
             <Input
@@ -439,9 +505,9 @@ const handleInteracao = async (e) => {
             ) : interacoes.length === 0 ? (
               <p style={{ color: "#666", fontSize: "12px" }}>Nenhuma interação registrada ainda.</p>
             ) : (
-              <div style={{ maxHeight: "200px", overflowY: "auto" }}>
-                {interacoes.map((interacao, index) => (
-                  <div key={interacao.id || index} style={{
+              <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                {interacoes.map((interacao) => (
+                  <div key={interacao.id} style={{
                     backgroundColor: "#f9fafb",
                     padding: "10px",
                     borderRadius: "6px",
@@ -454,10 +520,36 @@ const handleInteracao = async (e) => {
                          interacao.tipo === "reuniao" ? "👥 Reunião" :
                          interacao.tipo === "whatsapp" ? "💬 WhatsApp" : "🏢 Visita"}
                       </span>
-                      <span style={{ fontSize: "11px", color: "#666" }}>
-                        {interacao.data.split('T')[0].split('-').reverse().join('/')}
-                        {interacao.hora && ` às ${interacao.hora}`}
-                      </span>
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <span style={{ fontSize: "11px", color: "#666" }}>
+                          {interacao.data ? interacao.data.split('T')[0].split('-').reverse().join('/') : ""}
+                          {interacao.hora && ` às ${interacao.hora}`}
+                        </span>
+                        <button
+                          onClick={() => abrirEditarInteracao(interacao)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#3b82f6",
+                            cursor: "pointer",
+                            fontSize: "12px"
+                          }}
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={() => excluirInteracao(interacao.id)}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: "#ef4444",
+                            cursor: "pointer",
+                            fontSize: "12px"
+                          }}
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                     <div style={{ fontSize: "12px", color: "#374151" }}>
                       {interacao.descricao}
@@ -475,7 +567,7 @@ const handleInteracao = async (e) => {
         </form>
       </Modal>
 
-      {/* Modal de Interação */}
+      {/* Modal de Interação (Registrar) */}
       <Modal isOpen={modalInteracao !== null} onClose={() => setModalInteracao(null)} title={`Registrar Interação - ${modalInteracao?.nome || ""}`}>
         <form onSubmit={handleInteracao}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
@@ -495,7 +587,6 @@ const handleInteracao = async (e) => {
             <Input
               label="Data"
               type="date"
-              placeholder="dd/mm/aaaa"
               value={interacaoForm.data}
               onChange={(e) => setInteracaoForm({...interacaoForm, data: e.target.value})}
               required
@@ -520,6 +611,53 @@ const handleInteracao = async (e) => {
           <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
             <Botao variant="outline" onClick={() => setModalInteracao(null)}>Cancelar</Botao>
             <Botao type="submit" loading={carregando}>Registrar</Botao>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal de Edição de Interação */}
+      <Modal isOpen={modalInteracaoEdicao} onClose={() => setModalInteracaoEdicao(false)} title="Editar Interação">
+        <form onSubmit={salvarEdicaoInteracao}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "15px" }}>
+            <Select
+              label="Tipo"
+              value={interacaoForm.tipo}
+              onChange={(e) => setInteracaoForm({...interacaoForm, tipo: e.target.value})}
+              options={[
+                { value: "", label: "Selecione..." },
+                { value: "ligacao", label: "Ligação" },
+                { value: "email", label: "E-mail" },
+                { value: "reuniao", label: "Reunião" },
+                { value: "whatsapp", label: "WhatsApp" },
+                { value: "visita", label: "Visita" }
+              ]}
+            />
+            <Input
+              label="Data"
+              type="date"
+              value={interacaoForm.data}
+              onChange={(e) => setInteracaoForm({...interacaoForm, data: e.target.value})}
+              required
+            />
+            <Input
+              label="Hora"
+              type="time"
+              value={interacaoForm.hora}
+              onChange={(e) => setInteracaoForm({...interacaoForm, hora: e.target.value})}
+            />
+          </div>
+          <div style={{ marginTop: "15px" }}>
+            <Input
+              label="Descrição"
+              as="textarea"
+              rows={3}
+              value={interacaoForm.descricao}
+              onChange={(e) => setInteracaoForm({...interacaoForm, descricao: e.target.value})}
+            />
+          </div>
+          <div style={{ marginTop: "20px", display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <Botao variant="outline" onClick={() => setModalInteracaoEdicao(false)}>Cancelar</Botao>
+            <Botao type="submit" loading={carregando}>Salvar</Botao>
           </div>
         </form>
       </Modal>
