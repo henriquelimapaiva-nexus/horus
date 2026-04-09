@@ -24,7 +24,7 @@ export default function Leads() {
     fonte: "",
     status: "",
     potencial_faturamento: "",
-    proximo_contato: new Date().toISOString().split('T')[0],
+    proximo_contato: new Date().toLocaleDateString('en-CA'),
     observacoes: ""
   });
 const [interacaoForm, setInteracaoForm] = useState({
@@ -223,7 +223,7 @@ const handleInteracao = async (e) => {
             Gerencie empresas em prospecção e acompanhe o funil de vendas
           </p>
         </div>
-        <Botao onClick={() => { setEditandoId(null); setForm({ nome: "", cnpj: "", contato_nome: "", contato_email: "", contato_telefone: "", fonte: "", status: "", potencial_faturamento: "", proximo_contato: new Date().toISOString().split('T')[0], observacoes: "" }); setModalAberto(true); }}>
+        <Botao onClick={() => { setEditandoId(null); setForm({ nome: "", cnpj: "", contato_nome: "", contato_email: "", contato_telefone: "", fonte: "", status: "", potencial_faturamento: "", proximo_contato: new Date().toLocaleDateString('en-CA'), observacoes: "" }); setModalAberto(true); }}>
           + Novo Lead
         </Botao>
       </div>
