@@ -234,15 +234,13 @@ const excluirInteracao = async (interacaoId) => {
     await api.delete(`/leads/interacoes/${interacaoId}`);
     toast.success("Interação excluída com sucesso!");
     
-    // Recarregar as interações do lead atual sem fechar o modal
+    // Apenas recarregar as interações do lead atual
     if (editandoId) {
       const res = await api.get(`/leads/${editandoId}`);
       setInteracoes(res.data.interacoes || []);
     }
     
-    // Também recarregar a lista de leads para atualizar métricas
-    carregarLeads();
-    carregarMetrics();
+    // Não chamar carregarLeads() nem carregarMetrics() aqui
   } catch (error) {
     console.error("Erro ao excluir interação:", error);
     toast.error("Erro ao excluir interação");
