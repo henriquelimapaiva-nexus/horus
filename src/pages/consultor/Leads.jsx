@@ -455,7 +455,7 @@ const handleInteracao = async (e) => {
                          interacao.tipo === "whatsapp" ? "💬 WhatsApp" : "🏢 Visita"}
                       </span>
                       <span style={{ fontSize: "11px", color: "#666" }}>
-                        {interacao.data.split('-').reverse().join('/')}
+                        {interacao.data.split('T')[0].split('-').reverse().join('/')}
                         {interacao.hora && ` às ${interacao.hora}`}
                       </span>
                     </div>
