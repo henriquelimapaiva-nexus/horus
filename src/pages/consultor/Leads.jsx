@@ -24,7 +24,6 @@ export default function Leads() {
     fonte: "",
     status: "",
     potencial_faturamento: "",
-    probabilidade_fechamento: "",
     proximo_contato: "",
     observacoes: ""
   });
@@ -35,7 +34,6 @@ export default function Leads() {
     descricao: ""
   });
   const [editandoId, setEditandoId] = useState(null);
-  // 🔧 NOVO: Estados para histórico de interações
   const [interacoes, setInteracoes] = useState([]);
   const [carregandoInteracoes, setCarregandoInteracoes] = useState(false);
 
@@ -90,7 +88,7 @@ export default function Leads() {
       setForm({
         nome: "", cnpj: "", contato_nome: "", contato_email: "", contato_telefone: "",
         fonte: "", status: "", potencial_faturamento: "",
-        probabilidade_fechamento: "", proximo_contato: "", observacoes: ""
+        proximo_contato: "", observacoes: ""
       });
       carregarLeads();
       carregarMetrics();
@@ -142,7 +140,6 @@ export default function Leads() {
     }
   };
 
-  // 🔧 NOVO: Função abrirEdicao modificada para carregar interações
   const abrirEdicao = async (lead) => {
     setEditandoId(lead.id);
     setForm({
@@ -154,12 +151,10 @@ export default function Leads() {
       fonte: lead.fonte || "indicação",
       status: lead.status || "prospecção",
       potencial_faturamento: lead.potencial_faturamento || "",
-      probabilidade_fechamento: lead.probabilidade_fechamento || 30,
       proximo_contato: lead.proximo_contato ? lead.proximo_contato.split('T')[0] : "",
       observacoes: lead.observacoes || ""
     });
     
-    // Carregar interações do lead
     setCarregandoInteracoes(true);
     try {
       const res = await api.get(`/leads/${lead.id}`);
@@ -184,10 +179,10 @@ export default function Leads() {
   const getStatusColor = (status) => {
     const cores = {
       prospecção: "#6b7280",
-      contato_inicial: "#3b82f6",
-      proposta_enviada: "#f59e0b",
-      negociação: "#8b5cf6",
-      fechado: "#10b981",
+      diagnostico_autorizado: "#3b82f6",
+      diagnostico_entregue: "#f59e0b",
+      negociacao: "#8b5cf6",
+      contrato_assinado: "#10b981",
       perdido: "#ef4444"
     };
     return cores[status] || "#6b7280";
@@ -196,10 +191,10 @@ export default function Leads() {
   const getStatusLabel = (status) => {
     const labels = {
       prospecção: "Prospecção",
-      contato_inicial: "Contato Inicial",
-      proposta_enviada: "Proposta Enviada",
-      negociação: "Negociação",
-      fechado: "Fechado",
+      diagnostico_autorizado: "Diagnóstico Autorizado",
+      diagnostico_entregue: "Diagnóstico Entregue",
+      negociacao: "Negociação",
+      contrato_assinado: "Contrato Assinado",
       perdido: "Perdido"
     };
     return labels[status] || status;
@@ -218,7 +213,7 @@ export default function Leads() {
             Gerencie empresas em prospecção e acompanhe o funil de vendas
           </p>
         </div>
-        <Botao onClick={() => { setEditandoId(null); setForm({ nome: "", cnpj: "", contato_nome: "", contato_email: "", contato_telefone: "", fonte: "", status: "", potencial_faturamento: "", probabilidade_fechamento: "", proximo_contato: "", observacoes: "" }); setModalAberto(true); }}>
+        <Botao onClick={() => { setEditandoId(null); setForm({ nome: "", cnpj: "", contato_nome: "", contato_email: "", contato_telefone: "", fonte: "", status: "", potencial_faturamento: "", proximo_contato: "", observacoes: "" }); setModalAberto(true); }}>
           + Novo Lead
         </Botao>
       </div>
@@ -249,10 +244,10 @@ export default function Leads() {
             options={[
               { value: "", label: "Todos" },
               { value: "prospecção", label: "Prospecção" },
-              { value: "contato_inicial", label: "Contato Inicial" },
-              { value: "proposta_enviada", label: "Proposta Enviada" },
-              { value: "negociação", label: "Negociação" },
-              { value: "fechado", label: "Fechado" },
+              { value: "diagnostico_autorizado", label: "Diagnóstico Autorizado" },
+              { value: "diagnostico_entregue", label: "Diagnóstico Entregue" },
+              { value: "negociacao", label: "Negociação" },
+              { value: "contrato_assinado", label: "Contrato Assinado" },
               { value: "perdido", label: "Perdido" }
             ]}
           />
@@ -272,10 +267,9 @@ export default function Leads() {
                 <th style={thStyle}>Contato</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Potencial</th>
-                <th style={thStyle}>Prob.</th>
                 <th style={thStyle}>Próx. Contato</th>
                 <th style={thStyle}>Ações</th>
-                </tr>
+              </tr>
             </thead>
             <tbody>
               {leads.map(lead => (
@@ -288,7 +282,7 @@ export default function Leads() {
                     {lead.contato_nome && <div>{lead.contato_nome}</div>}
                     {lead.contato_telefone && <div style={{ fontSize: "12px", color: "#666" }}>{lead.contato_telefone}</div>}
                     {lead.contato_email && <div style={{ fontSize: "12px", color: "#666" }}>{lead.contato_email}</div>}
-                   </td>
+                    </td>
                   <td style={tdStyle}>
                     <span style={{
                       padding: "4px 10px",
@@ -300,32 +294,13 @@ export default function Leads() {
                     }}>
                       {getStatusLabel(lead.status)}
                     </span>
-                   </td>
+                    </td>
                   <td style={tdStyle}>
                     {formatarMoeda(lead.potencial_faturamento)}
-                   </td>
-                  <td style={tdStyle}>
-                    <div style={{
-                      width: "60px",
-                      background: "#e5e7eb",
-                      borderRadius: "10px",
-                      overflow: "hidden"
-                    }}>
-                      <div style={{
-                        width: `${lead.probabilidade_fechamento}%`,
-                        background: "#10b981",
-                        color: "white",
-                        fontSize: "10px",
-                        textAlign: "center",
-                        padding: "2px 0"
-                      }}>
-                        {lead.probabilidade_fechamento}%
-                      </div>
-                    </div>
-                   </td>
+                    </td>
                   <td style={tdStyle}>
                     {lead.proximo_contato ? new Date(lead.proximo_contato).toLocaleDateString('pt-BR') : "-"}
-                   </td>
+                    </td>
                   <td style={tdStyle}>
                     <div style={{ display: "flex", gap: "8px" }}>
                       <button
@@ -347,18 +322,18 @@ export default function Leads() {
                         Excluir
                       </button>
                     </div>
-                   </td>
+                    </td>
                  </tr>
               ))}
               {leads.length === 0 && (
                 <tr>
-                  <td colSpan="7" style={{ textAlign: "center", padding: "40px", color: "#666" }}>
+                  <td colSpan="6" style={{ textAlign: "center", padding: "40px", color: "#666" }}>
                     Nenhum lead encontrado. Clique em "Novo Lead" para começar.
-                   </td>
+                    </td>
                  </tr>
               )}
             </tbody>
-           </table>
+          </table>
         </div>
       </Card>
 
@@ -413,10 +388,10 @@ export default function Leads() {
               options={[
                 { value: "", label: "Selecione..." },
                 { value: "prospecção", label: "Prospecção" },
-                { value: "contato_inicial", label: "Contato Inicial" },
-                { value: "proposta_enviada", label: "Proposta Enviada" },
-                { value: "negociação", label: "Negociação" },
-                { value: "fechado", label: "Fechado" },
+                { value: "diagnostico_autorizado", label: "Diagnóstico Autorizado" },
+                { value: "diagnostico_entregue", label: "Diagnóstico Entregue" },
+                { value: "negociacao", label: "Negociação" },
+                { value: "contrato_assinado", label: "Contrato Assinado" },
                 { value: "perdido", label: "Perdido" }
               ]}
             />
@@ -425,15 +400,6 @@ export default function Leads() {
               type="number"
               value={form.potencial_faturamento}
               onChange={(e) => setForm({...form, potencial_faturamento: e.target.value})}
-            />
-            <Input
-              label="Probabilidade de Fechamento (%)"
-              type="number"
-              placeholder="valor porcentagem"
-              min="0"
-              max="100"
-              value={form.probabilidade_fechamento}
-              onChange={(e) => setForm({...form, probabilidade_fechamento: e.target.value})}
             />
             <Input
               label="Próximo Contato"
@@ -452,7 +418,7 @@ export default function Leads() {
             />
           </div>
           
-          {/* 🔧 NOVO: Histórico de Interações */}
+          {/* Histórico de Interações */}
           <div style={{ marginTop: "20px", borderTop: "1px solid #e5e7eb", paddingTop: "15px" }}>
             <h4 style={{ color: "#1E3A8A", marginBottom: "10px", fontSize: "14px" }}>
               📞 Histórico de Interações
