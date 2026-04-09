@@ -227,23 +227,27 @@ export default function Leads() {
     }
   };
 
-  const excluirInteracao = async (interacaoId) => {
-    if (!confirm("Tem certeza que deseja excluir esta interação?")) return;
+const excluirInteracao = async (interacaoId) => {
+  if (!confirm("Tem certeza que deseja excluir esta interação?")) return;
+  
+  try {
+    await api.delete(`/leads/interacoes/${interacaoId}`);
+    toast.success("Interação excluída com sucesso!");
     
-    try {
-      await api.delete(`/leads/interacoes/${interacaoId}`);
-      toast.success("Interação excluída com sucesso!");
-      if (editandoId) {
-        const res = await api.get(`/leads/${editandoId}`);
-        setInteracoes(res.data.interacoes || []);
-      }
-      carregarLeads();
-      carregarMetrics();
-    } catch (error) {
-      console.error("Erro ao excluir interação:", error);
-      toast.error("Erro ao excluir interação");
+    // Recarregar as interações do lead atual sem fechar o modal
+    if (editandoId) {
+      const res = await api.get(`/leads/${editandoId}`);
+      setInteracoes(res.data.interacoes || []);
     }
-  };
+    
+    // Também recarregar a lista de leads para atualizar métricas
+    carregarLeads();
+    carregarMetrics();
+  } catch (error) {
+    console.error("Erro ao excluir interação:", error);
+    toast.error("Erro ao excluir interação");
+  }
+};
 
   const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', {
