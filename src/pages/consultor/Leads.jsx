@@ -455,7 +455,7 @@ const handleInteracao = async (e) => {
                          interacao.tipo === "whatsapp" ? "💬 WhatsApp" : "🏢 Visita"}
                       </span>
                       <span style={{ fontSize: "11px", color: "#666" }}>
-                        {new Date(interacao.data).toLocaleDateString('pt-BR')}
+                        {interacao.data.split('-').reverse().join('/')}
                         {interacao.hora && ` às ${interacao.hora}`}
                       </span>
                     </div>
