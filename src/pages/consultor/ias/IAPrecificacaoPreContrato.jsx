@@ -13,6 +13,7 @@ export default function IAPrecificacaoPreContrato() {
   const [resultado, setResultado] = useState(null);
   const [modalNegociacao, setModalNegociacao] = useState(false);
   const [modalParcelamento, setModalParcelamento] = useState(false);
+  const [modalDadosContrato, setModalDadosContrato] = useState(false); // NOVO
   
   // Dados da negociação
   const [negociacao, setNegociacao] = useState({
@@ -22,7 +23,35 @@ export default function IAPrecificacaoPreContrato() {
     num_parcelas: 0,
     valor_parcela: 0,
     entrada_percentual: 50,
-    valor_entrada: 0
+    valor_entrada: 0,
+    desconto: 0,           // NOVO
+    motivo_desconto: ""    // NOVO
+  });
+  
+  // NOVO: Dados do contrato (empresa, representante, contato)
+  const [dadosContrato, setDadosContrato] = useState({
+    empresa: {
+      nome: "",
+      cnpj: "",
+      endereco: "",
+      cidade: "",
+      estado: ""
+    },
+    representante: {
+      nome: "",
+      cargo: "",
+      nacionalidade: "brasileira",
+      estado_civil: "",
+      profissao: "",
+      rg: "",
+      cpf: "",
+      endereco: ""
+    },
+    contato: {
+      email_contratante: "",
+      email_contratada: "contato@nexusengenharia.com.br"
+    },
+    data_assinatura: new Date().toLocaleDateString('pt-BR')
   });
   
   // Formulário de precificação
@@ -59,6 +88,30 @@ export default function IAPrecificacaoPreContrato() {
     { value: "rh", label: "RH / Treinamento / Rotatividade" }
   ];
 
+  // NOVO: Função para calcular prazos baseado na urgência
+  const calcularPrazosPorUrgencia = (urgencia) => {
+    switch (urgencia) {
+      case 'baixa':
+        return {
+          semanas_diagnostico: 8,
+          meses_vigencia: 4,
+          prazo_entrega_semanas: 10
+        };
+      case 'alta':
+        return {
+          semanas_diagnostico: 2,
+          meses_vigencia: 1,
+          prazo_entrega_semanas: 3
+        };
+      default: // normal ou vazio
+        return {
+          semanas_diagnostico: 4,
+          meses_vigencia: 2,
+          prazo_entrega_semanas: 6
+        };
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCarregando(true);
@@ -93,54 +146,95 @@ export default function IAPrecificacaoPreContrato() {
       num_parcelas: 0,
       valor_parcela: 0,
       entrada_percentual: 50,
-      valor_entrada: valorOriginal * 0.5
+      valor_entrada: valorOriginal * 0.5,
+      desconto: 0,           // NOVO
+      motivo_desconto: ""    // NOVO
     });
     setModalNegociacao(true);
   };
 
+  // ALTERADO: Agora abre modal de dados do contrato antes de gerar
   const confirmarNegociacao = () => {
     setModalNegociacao(false);
     
-    if (negociacao.forma_pagamento === "parcelado") {
-      setModalParcelamento(true);
-    } else {
-      gerarContrato();
-    }
+    // Preencher nome da empresa nos dados do contrato
+    setDadosContrato(prev => ({
+      ...prev,
+      empresa: {
+        ...prev.empresa,
+        nome: formData.empresa_nome
+      }
+    }));
+    
+    // Abrir modal para preencher dados do contrato
+    setModalDadosContrato(true);
   };
 
+  const calcularValorComDesconto = () => {
+    const valorBase = parseFloat(negociacao.novo_valor) || 0;
+    const desconto = parseFloat(negociacao.desconto) || 0;
+    return valorBase - desconto;
+  };
+
+  // ALTERADO: Agora envia todos os dados do contrato + prazos + desconto
   const gerarContrato = async () => {
     setCarregando(true);
     try {
+      const valorComDesconto = calcularValorComDesconto();
+      const prazos = calcularPrazosPorUrgencia(formData.urgencia);
+      
+      // Montar motivo completo (incluindo desconto se houver)
+      let motivoCompleto = negociacao.motivo || "";
+      if (negociacao.desconto > 0 && negociacao.motivo_desconto) {
+        motivoCompleto += motivoCompleto ? `; ${negociacao.motivo_desconto}` : negociacao.motivo_desconto;
+      }
+      
       const response = await api.post("/ia/gerar-contrato-pre-diagnostico", {
-        empresa: {
-          nome: formData.empresa_nome,
-          cnpj: "",
-          endereco: "",
-          cidade: "",
-          estado: ""
-        },
-        representante: {
-          nome: "",
-          nacionalidade: "",
-          estado_civil: "",
-          profissao: "",
-          rg: "",
-          cpf: "",
-          endereco: ""
-        },
-        valor_negociado: parseFloat(negociacao.novo_valor),
+        empresa: dadosContrato.empresa,
+        representante: dadosContrato.representante,
+        contato: dadosContrato.contato,
+        prazos: prazos,
+        valor_negociado: valorComDesconto,
         valor_original_ia: resultado?.precos.diagnostico,
+        valor_base_negociacao: parseFloat(negociacao.novo_valor),
+        desconto: parseFloat(negociacao.desconto) || 0,
+        motivo_desconto: negociacao.motivo_desconto || "",
         forma_pagamento: negociacao.forma_pagamento,
-        motivo_negociacao: negociacao.motivo,
+        motivo_negociacao: motivoCompleto,
         num_parcelas: negociacao.num_parcelas,
         valor_parcela: negociacao.valor_parcela,
-        valor_entrada: negociacao.valor_entrada
+        valor_entrada: negociacao.valor_entrada,
+        data_assinatura: dadosContrato.data_assinatura
       });
       
       const win = window.open();
-      win.document.write(`<pre>${response.data.contrato}</pre>`);
+      win.document.write(`
+        <html>
+          <head>
+            <title>Contrato - ${dadosContrato.empresa.nome}</title>
+            <style>
+              body { font-family: 'Courier New', monospace; margin: 40px; line-height: 1.4; }
+              pre { white-space: pre-wrap; font-family: inherit; }
+              @media print {
+                body { margin: 0; padding: 20px; }
+                button { display: none; }
+              }
+            </style>
+          </head>
+          <body>
+            <pre>${response.data.contrato}</pre>
+            <div style="text-align: center; margin-top: 40px;">
+              <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+              <button onclick="window.close()">❌ Fechar</button>
+            </div>
+          </body>
+        </html>
+      `);
+      win.document.close();
+      
       toast.success("Contrato gerado com sucesso!");
       setModalParcelamento(false);
+      setModalDadosContrato(false);
     } catch (error) {
       console.error("Erro ao gerar contrato:", error);
       toast.error("Erro ao gerar contrato");
@@ -348,7 +442,7 @@ export default function IAPrecificacaoPreContrato() {
         </div>
         
         <Input
-          label="Novo valor do diagnóstico (R$)"
+          label="Novo valor base do diagnóstico (R$)"
           type="number"
           placeholder="Digite o novo valor"
           value={negociacao.novo_valor}
@@ -369,8 +463,37 @@ export default function IAPrecificacaoPreContrato() {
           rows={2}
           value={negociacao.motivo}
           onChange={(e) => setNegociacao({...negociacao, motivo: e.target.value})}
-          placeholder="Ex: Cliente pediu desconto por ser primeiro projeto, pagamento à vista, etc."
+          placeholder="Ex: Cliente pediu desconto por ser primeiro projeto, etc."
         />
+        
+        {/* NOVO: Seção de Desconto */}
+        <div style={{ 
+          marginTop: "15px", 
+          padding: "15px", 
+          backgroundColor: "#fef3c7", 
+          borderRadius: "8px",
+          border: "1px solid #f59e0b"
+        }}>
+          <h4 style={{ marginBottom: "10px", color: "#92400e" }}>🎁 Desconto (opcional)</h4>
+          <Input
+            label="Valor do desconto (R$)"
+            type="number"
+            placeholder="Ex: 1500"
+            value={negociacao.desconto}
+            onChange={(e) => setNegociacao({...negociacao, desconto: e.target.value})}
+          />
+          <Input
+            label="Motivo do desconto"
+            placeholder="Ex: Pagamento à vista, Cliente antigo, etc."
+            value={negociacao.motivo_desconto}
+            onChange={(e) => setNegociacao({...negociacao, motivo_desconto: e.target.value})}
+          />
+          {negociacao.desconto > 0 && (
+            <p style={{ marginTop: "10px", fontSize: "14px", color: "#92400e" }}>
+              💡 Valor final com desconto: <strong>{formatarMoeda(parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto))}</strong>
+            </p>
+          )}
+        </div>
         
         <div style={{ marginTop: "15px" }}>
           <label style={{ display: "block", marginBottom: "10px", fontWeight: "500" }}>Forma de Pagamento</label>
@@ -388,7 +511,7 @@ export default function IAPrecificacaoPreContrato() {
                   valor_parcela: 0
                 })}
               />
-              <span><strong>À vista</strong> - 100% na assinatura (10% de desconto)</span>
+              <span><strong>À vista</strong> - 100% na assinatura</span>
             </label>
             
             <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
@@ -414,9 +537,9 @@ export default function IAPrecificacaoPreContrato() {
                 value="parcelado"
                 checked={negociacao.forma_pagamento === "parcelado"}
                 onChange={(e) => {
-                  const valorDiagnostico = parseFloat(negociacao.novo_valor);
-                  const entrada = valorDiagnostico * 0.5;
-                  const saldo = valorDiagnostico - entrada;
+                  const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
+                  const entrada = valorComDesconto * 0.5;
+                  const saldo = valorComDesconto - entrada;
                   const parcelaMaxima = 5000;
                   let numParcelas = Math.ceil(saldo / parcelaMaxima);
                   numParcelas = Math.min(numParcelas, 12);
@@ -447,9 +570,9 @@ export default function IAPrecificacaoPreContrato() {
             border: "1px solid #10b981"
           }}>
             <h4 style={{ marginBottom: "10px", color: "#166534" }}>📋 Detalhes do Parcelamento</h4>
-            <p><strong>Valor do diagnóstico:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor))}</p>
+            <p><strong>Valor do diagnóstico (com desconto):</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto))}</p>
             <p><strong>Entrada (50%):</strong> {formatarMoeda(negociacao.valor_entrada)}</p>
-            <p><strong>Saldo a parcelar:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) - negociacao.valor_entrada)}</p>
+            <p><strong>Saldo a parcelar:</strong> {formatarMoeda((parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto)) - negociacao.valor_entrada)}</p>
             
             <div style={{ marginTop: "10px" }}>
               <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>Número de parcelas:</label>
@@ -457,7 +580,8 @@ export default function IAPrecificacaoPreContrato() {
                 value={negociacao.num_parcelas}
                 onChange={(e) => {
                   const numParcelas = parseInt(e.target.value);
-                  const saldo = parseFloat(negociacao.novo_valor) - negociacao.valor_entrada;
+                  const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
+                  const saldo = valorComDesconto - negociacao.valor_entrada;
                   const valorParcela = numParcelas > 0 ? Math.ceil(saldo / numParcelas / 100) * 100 : 0;
                   setNegociacao({...negociacao, num_parcelas: numParcelas, valor_parcela: valorParcela});
                 }}
@@ -488,7 +612,7 @@ export default function IAPrecificacaoPreContrato() {
         
         <div style={{ marginTop: "20px", display: "flex", gap: "10px", justifyContent: "flex-end" }}>
           <Botao variant="outline" onClick={() => setModalNegociacao(false)}>Cancelar</Botao>
-          <Botao onClick={confirmarNegociacao}>Confirmar Negociação</Botao>
+          <Botao onClick={confirmarNegociacao}>Continuar</Botao>
         </div>
       </Modal>
 
@@ -496,11 +620,14 @@ export default function IAPrecificacaoPreContrato() {
       {resultado && (
         <Modal isOpen={modalParcelamento} onClose={() => setModalParcelamento(false)} title="Confirmação de Parcelamento">
           <div style={{ backgroundColor: "#f0fdf4", padding: "15px", borderRadius: "8px", marginBottom: "15px" }}>
-            <p><strong>Valor do diagnóstico negociado:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor))}</p>
+            <p><strong>Valor do diagnóstico negociado:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto))}</p>
             <p><strong>Entrada (50%):</strong> {formatarMoeda(negociacao.valor_entrada)}</p>
-            <p><strong>Saldo parcelado:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) - negociacao.valor_entrada)}</p>
+            <p><strong>Saldo parcelado:</strong> {formatarMoeda((parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto)) - negociacao.valor_entrada)}</p>
             <p><strong>Parcelas:</strong> {negociacao.num_parcelas}x de {formatarMoeda(negociacao.valor_parcela)}</p>
             <p><strong>Motivo da negociação:</strong> {negociacao.motivo || "Não informado"}</p>
+            {negociacao.desconto > 0 && (
+              <p><strong>Desconto aplicado:</strong> {formatarMoeda(negociacao.desconto)} - {negociacao.motivo_desconto}</p>
+            )}
           </div>
           
           <div style={{ marginTop: "20px", display: "flex", gap: "10px", justifyContent: "flex-end" }}>
@@ -509,6 +636,218 @@ export default function IAPrecificacaoPreContrato() {
           </div>
         </Modal>
       )}
+
+      {/* NOVO: Modal de Dados do Contrato */}
+      <Modal isOpen={modalDadosContrato} onClose={() => setModalDadosContrato(false)} title="📄 Dados para o Contrato">
+        <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "10px" }}>
+          <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>🏢 Dados da Empresa</h3>
+          
+          <Input
+            label="Nome da Empresa"
+            value={dadosContrato.empresa.nome}
+            disabled
+            style={{ backgroundColor: "#f3f4f6" }}
+          />
+          
+          <Input
+            label="CNPJ"
+            placeholder="00.000.000/0001-00"
+            value={dadosContrato.empresa.cnpj}
+            onChange={(e) => setDadosContrato({
+              ...dadosContrato,
+              empresa: {...dadosContrato.empresa, cnpj: e.target.value}
+            })}
+          />
+          
+          <Input
+            label="Endereço da Empresa"
+            placeholder="Rua, número, bairro"
+            value={dadosContrato.empresa.endereco}
+            onChange={(e) => setDadosContrato({
+              ...dadosContrato,
+              empresa: {...dadosContrato.empresa, endereco: e.target.value}
+            })}
+          />
+          
+          <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "10px" }}>
+            <Input
+              label="Cidade"
+              placeholder="Cidade"
+              value={dadosContrato.empresa.cidade}
+              onChange={(e) => setDadosContrato({
+                ...dadosContrato,
+                empresa: {...dadosContrato.empresa, cidade: e.target.value}
+              })}
+            />
+            <Input
+              label="UF"
+              placeholder="SP"
+              maxLength={2}
+              value={dadosContrato.empresa.estado}
+              onChange={(e) => setDadosContrato({
+                ...dadosContrato,
+                empresa: {...dadosContrato.empresa, estado: e.target.value.toUpperCase()}
+              })}
+            />
+          </div>
+
+          <h3 style={{ color: "#1E3A8A", marginTop: "20px", marginBottom: "15px" }}>👤 Dados do Representante</h3>
+          
+          <Input
+            label="Nome Completo"
+            placeholder="Nome do representante legal"
+            value={dadosContrato.representante.nome}
+            onChange={(e) => setDadosContrato({
+              ...dadosContrato,
+              representante: {...dadosContrato.representante, nome: e.target.value}
+            })}
+          />
+          
+          <Input
+            label="Cargo"
+            placeholder="Ex: Diretor, Gerente, etc."
+            value={dadosContrato.representante.cargo}
+            onChange={(e) => setDadosContrato({
+              ...dadosContrato,
+              representante: {...dadosContrato.representante, cargo: e.target.value}
+            })}
+          />
+          
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <Input
+              label="Nacionalidade"
+              placeholder="Brasileira"
+              value={dadosContrato.representante.nacionalidade}
+              onChange={(e) => setDadosContrato({
+                ...dadosContrato,
+                representante: {...dadosContrato.representante, nacionalidade: e.target.value}
+              })}
+            />
+            <Input
+              label="Estado Civil"
+              placeholder="Casado, Solteiro, etc."
+              value={dadosContrato.representante.estado_civil}
+              onChange={(e) => setDadosContrato({
+                ...dadosContrato,
+                representante: {...dadosContrato.representante, estado_civil: e.target.value}
+              })}
+            />
+          </div>
+          
+          <Input
+            label="Profissão"
+            placeholder="Ex: Engenheiro, Administrador, etc."
+            value={dadosContrato.representante.profissao}
+            onChange={(e) => setDadosContrato({
+              ...dadosContrato,
+              representante: {...dadosContrato.representante, profissao: e.target.value}
+            })}
+          />
+          
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+            <Input
+              label="RG"
+              placeholder="Número do RG"
+              value={dadosContrato.representante.rg}
+              onChange={(e) => setDadosContrato({
+                ...dadosContrato,
+                representante: {...dadosContrato.representante, rg: e.target.value}
+              })}
+            />
+            <Input
+              label="CPF"
+              placeholder="000.000.000-00"
+              value={dadosContrato.representante.cpf}
+              onChange={(e) => setDadosContrato({
+                ...dadosContrato,
+                representante: {...dadosContrato.representante, cpf: e.target.value}
+              })}
+            />
+          </div>
+          
+          <Input
+            label="Endereço do Representante"
+            placeholder="Endereço residencial"
+            value={dadosContrato.representante.endereco}
+            onChange={(e) => setDadosContrato({
+              ...dadosContrato,
+              representante: {...dadosContrato.representante, endereco: e.target.value}
+            })}
+          />
+
+          <h3 style={{ color: "#1E3A8A", marginTop: "20px", marginBottom: "15px" }}>📧 Contato</h3>
+          
+          <Input
+            label="E-mail da CONTRATANTE"
+            type="email"
+            placeholder="contato@empresa.com.br"
+            value={dadosContrato.contato.email_contratante}
+            onChange={(e) => setDadosContrato({
+              ...dadosContrato,
+              contato: {...dadosContrato.contato, email_contratante: e.target.value}
+            })}
+          />
+          
+          <Input
+            label="E-mail da CONTRATADA (seu)"
+            type="email"
+            placeholder="contato@nexusengenharia.com.br"
+            value={dadosContrato.contato.email_contratada}
+            onChange={(e) => setDadosContrato({
+              ...dadosContrato,
+              contato: {...dadosContrato.contato, email_contratada: e.target.value}
+            })}
+          />
+
+          <h3 style={{ color: "#1E3A8A", marginTop: "20px", marginBottom: "15px" }}>⏱️ Prazos (baseados na Urgência)</h3>
+          
+          <div style={{ 
+            backgroundColor: "#eff6ff", 
+            padding: "15px", 
+            borderRadius: "8px",
+            marginBottom: "10px"
+          }}>
+            <p><strong>Urgência selecionada:</strong> {
+              formData.urgencia === 'baixa' ? 'Baixa (mais de 6 meses)' :
+              formData.urgencia === 'alta' ? 'Alta (até 3 meses)' :
+              'Normal (3-6 meses)'
+            }</p>
+            <p><strong>Semanas para diagnóstico:</strong> {calcularPrazosPorUrgencia(formData.urgencia).semanas_diagnostico} semanas</p>
+            <p><strong>Meses de vigência:</strong> {calcularPrazosPorUrgencia(formData.urgencia).meses_vigencia} meses</p>
+            <p><strong>Prazo para entrega:</strong> {calcularPrazosPorUrgencia(formData.urgencia).prazo_entrega_semanas} semanas</p>
+          </div>
+
+          <h3 style={{ color: "#1E3A8A", marginTop: "20px", marginBottom: "15px" }}>💰 Resumo da Negociação</h3>
+          
+          <div style={{ backgroundColor: "#f9fafb", padding: "15px", borderRadius: "8px" }}>
+            <p><strong>Valor original da IA:</strong> {formatarMoeda(resultado?.precos.diagnostico)}</p>
+            <p><strong>Valor base negociado:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor))}</p>
+            {negociacao.desconto > 0 && (
+              <>
+                <p><strong>Desconto aplicado:</strong> {formatarMoeda(negociacao.desconto)}</p>
+                <p><strong>Motivo do desconto:</strong> {negociacao.motivo_desconto || "Não informado"}</p>
+                <p><strong style={{ color: "#10b981" }}>Valor final do contrato:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto))}</p>
+              </>
+            )}
+            <p><strong>Forma de pagamento:</strong> {
+              negociacao.forma_pagamento === 'a_vista' ? 'À vista' :
+              negociacao.forma_pagamento === 'cinquenta_cinquenta' ? '50/50' :
+              'Parcelado'
+            }</p>
+            {negociacao.forma_pagamento === 'parcelado' && (
+              <p><strong>Parcelas:</strong> {negociacao.num_parcelas}x de {formatarMoeda(negociacao.valor_parcela)}</p>
+            )}
+            <p><strong>Motivo da negociação:</strong> {negociacao.motivo || "Não informado"}</p>
+          </div>
+        </div>
+        
+        <div style={{ marginTop: "20px", display: "flex", gap: "10px", justifyContent: "flex-end" }}>
+          <Botao variant="outline" onClick={() => setModalDadosContrato(false)}>Voltar</Botao>
+          <Botao onClick={gerarContrato} loading={carregando}>
+            {carregando ? "Gerando..." : "✅ Gerar Contrato"}
+          </Botao>
+        </div>
+      </Modal>
     </div>
   );
 }
