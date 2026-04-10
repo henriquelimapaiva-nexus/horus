@@ -18,7 +18,11 @@ export default function IAPrecificacaoPreContrato() {
   const [negociacao, setNegociacao] = useState({
     novo_valor: "",
     motivo: "",
-    forma_pagamento: "a_vista" // a_vista ou parcelado
+    forma_pagamento: "cinquenta_cinquenta",
+    num_parcelas: 0,
+    valor_parcela: 0,
+    entrada_percentual: 50,
+    valor_entrada: 0
   });
   
   // Formulário de precificação
@@ -80,10 +84,17 @@ export default function IAPrecificacaoPreContrato() {
   };
 
   const abrirNegociacao = () => {
+    const valorOriginal = resultado?.precos.diagnostico || 0;
+    const entrada = valorOriginal * 0.5;
+    
     setNegociacao({
-      novo_valor: resultado?.precos.diagnostico || "",
+      novo_valor: valorOriginal,
       motivo: "",
-      forma_pagamento: "a_vista"
+      forma_pagamento: "cinquenta_cinquenta",
+      num_parcelas: 0,
+      valor_parcela: 0,
+      entrada_percentual: 50,
+      valor_entrada: entrada
     });
     setModalNegociacao(true);
   };
@@ -94,7 +105,6 @@ export default function IAPrecificacaoPreContrato() {
     if (negociacao.forma_pagamento === "parcelado") {
       setModalParcelamento(true);
     } else {
-      // Gerar contrato com valores negociados
       gerarContrato();
     }
   };
@@ -123,10 +133,11 @@ export default function IAPrecificacaoPreContrato() {
         valor_original_ia: resultado?.precos.diagnostico,
         forma_pagamento: negociacao.forma_pagamento,
         motivo_negociacao: negociacao.motivo,
-        parcelas: resultado?.parcelamento
+        num_parcelas: negociacao.num_parcelas,
+        valor_parcela: negociacao.valor_parcela,
+        valor_entrada: negociacao.valor_entrada
       });
       
-      // Abrir contrato em nova janela
       const win = window.open();
       win.document.write(`<pre>${response.data.contrato}</pre>`);
       toast.success("Contrato gerado com sucesso!");
@@ -158,20 +169,12 @@ export default function IAPrecificacaoPreContrato() {
               onChange={(e) => setFormData({...formData, empresa_nome: e.target.value})}
               required
             />
-<Select
-  label="Setor Industrial *"
-  value={formData.setor}
-  onChange={(e) => setFormData({...formData, setor: e.target.value})}
-  options={[
-    { value: "", label: "Selecione..." },
-    { value: "automotivo", label: "Automotivo" },
-    { value: "metalurgico", label: "Metalúrgico" },
-    { value: "alimenticio", label: "Alimentício" },
-    { value: "quimico", label: "Químico" },
-    { value: "farmaceutico", label: "Farmacêutico" },
-    { value: "outros", label: "Outros" }
-  ]}
-  required
+            <Select
+              label="Setor Industrial *"
+              value={formData.setor}
+              onChange={(e) => setFormData({...formData, setor: e.target.value})}
+              options={setores}
+              required
             />
             <Input
               label="Número de Funcionários"
@@ -348,6 +351,7 @@ export default function IAPrecificacaoPreContrato() {
         <Input
           label="Novo valor do diagnóstico (R$)"
           type="number"
+          placeholder="Digite o novo valor"
           value={negociacao.novo_valor}
           onChange={(e) => setNegociacao({...negociacao, novo_valor: e.target.value})}
         />
@@ -358,18 +362,122 @@ export default function IAPrecificacaoPreContrato() {
           rows={2}
           value={negociacao.motivo}
           onChange={(e) => setNegociacao({...negociacao, motivo: e.target.value})}
-          placeholder="Ex: Cliente pediu desconto por ser primeiro projeto"
+          placeholder="Ex: Cliente pediu desconto por ser primeiro projeto, pagamento à vista, etc."
         />
         
-        <Select
-          label="Forma de pagamento"
-          value={negociacao.forma_pagamento}
-          onChange={(e) => setNegociacao({...negociacao, forma_pagamento: e.target.value})}
-          options={[
-            { value: "a_vista", label: "À vista (50% entrada + 50% entrega)" },
-            { value: "parcelado", label: "Parcelado (50% entrada + parcelas mensais)" }
-          ]}
-        />
+        <div style={{ marginTop: "15px" }}>
+          <label style={{ display: "block", marginBottom: "10px", fontWeight: "500" }}>Forma de Pagamento</label>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <input
+                type="radio"
+                name="forma_pagamento"
+                value="a_vista"
+                checked={negociacao.forma_pagamento === "a_vista"}
+                onChange={(e) => setNegociacao({
+                  ...negociacao, 
+                  forma_pagamento: e.target.value,
+                  num_parcelas: 0,
+                  valor_parcela: 0
+                })}
+              />
+              <span><strong>À vista</strong> - 100% na assinatura (10% de desconto)</span>
+            </label>
+            
+            <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <input
+                type="radio"
+                name="forma_pagamento"
+                value="cinquenta_cinquenta"
+                checked={negociacao.forma_pagamento === "cinquenta_cinquenta"}
+                onChange={(e) => setNegociacao({
+                  ...negociacao, 
+                  forma_pagamento: e.target.value,
+                  num_parcelas: 0,
+                  valor_parcela: 0
+                })}
+              />
+              <span><strong>50/50</strong> - 50% na assinatura + 50% na entrega do relatório</span>
+            </label>
+            
+            <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <input
+                type="radio"
+                name="forma_pagamento"
+                value="parcelado"
+                checked={negociacao.forma_pagamento === "parcelado"}
+                onChange={(e) => {
+                  const valorDiagnostico = parseFloat(negociacao.novo_valor);
+                  const entrada = valorDiagnostico * 0.5;
+                  const saldo = valorDiagnostico - entrada;
+                  const parcelaMaxima = 5000;
+                  let numParcelas = Math.ceil(saldo / parcelaMaxima);
+                  numParcelas = Math.min(numParcelas, 12);
+                  const valorParcela = Math.ceil(saldo / numParcelas / 100) * 100;
+                  
+                  setNegociacao({
+                    ...negociacao,
+                    forma_pagamento: e.target.value,
+                    num_parcelas: numParcelas,
+                    valor_parcela: valorParcela,
+                    entrada_percentual: 50,
+                    valor_entrada: entrada
+                  });
+                }}
+              />
+              <span><strong>Parcelado</strong> - 50% entrada + parcelas mensais (máx R$ 5.000/parcela)</span>
+            </label>
+          </div>
+        </div>
+        
+        {/* Campos de Parcelamento (aparecem só se selecionado) */}
+        {negociacao.forma_pagamento === "parcelado" && (
+          <div style={{ 
+            marginTop: "15px", 
+            padding: "15px", 
+            backgroundColor: "#f0fdf4", 
+            borderRadius: "8px",
+            border: "1px solid #10b981"
+          }}>
+            <h4 style={{ marginBottom: "10px", color: "#166534" }}>📋 Detalhes do Parcelamento</h4>
+            <p><strong>Valor do diagnóstico:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor))}</p>
+            <p><strong>Entrada (50%):</strong> {formatarMoeda(negociacao.valor_entrada)}</p>
+            <p><strong>Saldo a parcelar:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) - negociacao.valor_entrada)}</p>
+            
+            <div style={{ marginTop: "10px" }}>
+              <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>Número de parcelas:</label>
+              <select
+                value={negociacao.num_parcelas}
+                onChange={(e) => {
+                  const numParcelas = parseInt(e.target.value);
+                  const saldo = parseFloat(negociacao.novo_valor) - negociacao.valor_entrada;
+                  const valorParcela = Math.ceil(saldo / numParcelas / 100) * 100;
+                  setNegociacao({...negociacao, num_parcelas: numParcelas, valor_parcela: valorParcela});
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #ccc",
+                  fontSize: "14px"
+                }}
+              >
+                {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                  <option key={n} value={n}>{n} parcela{n > 1 ? 's' : ''}</option>
+                ))}
+              </select>
+            </div>
+            
+            <p style={{ marginTop: "10px" }}>
+              <strong>Valor da parcela:</strong> {formatarMoeda(negociacao.valor_parcela)}
+            </p>
+            <p style={{ fontSize: "12px", color: "#666", marginTop: "10px" }}>
+              ✓ Parcela máxima de R$ 5.000<br />
+              ✓ Máximo de 12 parcelas<br />
+              ✓ Sem juros
+            </p>
+          </div>
+        )}
         
         <div style={{ marginTop: "20px", display: "flex", gap: "10px", justifyContent: "flex-end" }}>
           <Botao variant="outline" onClick={() => setModalNegociacao(false)}>Cancelar</Botao>
@@ -377,23 +485,20 @@ export default function IAPrecificacaoPreContrato() {
         </div>
       </Modal>
 
-      {/* Modal de Parcelamento */}
+      {/* Modal de Parcelamento - Confirmação */}
       {resultado && (
-        <Modal isOpen={modalParcelamento} onClose={() => setModalParcelamento(false)} title="Parcelamento">
-          <div style={{ marginBottom: "15px" }}>
-            <p><strong>Valor do diagnóstico negociado:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor))}</p>
-          </div>
-          
+        <Modal isOpen={modalParcelamento} onClose={() => setModalParcelamento(false)} title="Confirmação de Parcelamento">
           <div style={{ backgroundColor: "#f0fdf4", padding: "15px", borderRadius: "8px", marginBottom: "15px" }}>
-            <p><strong>Entrada (50%):</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) * 0.5)}</p>
-            <p><strong>Saldo a parcelar:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) * 0.5)}</p>
-            <p><strong>Parcelas:</strong> {resultado.parcelamento.num_parcelas}x de {formatarMoeda(resultado.parcelamento.valor_parcela)}</p>
-            <p style={{ fontSize: "12px", color: "#666", marginTop: "10px" }}>Máximo de 12 parcelas | Parcela máxima de R$ 5.000</p>
+            <p><strong>Valor do diagnóstico negociado:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor))}</p>
+            <p><strong>Entrada (50%):</strong> {formatarMoeda(negociacao.valor_entrada)}</p>
+            <p><strong>Saldo parcelado:</strong> {formatarMoeda(parseFloat(negociacao.novo_valor) - negociacao.valor_entrada)}</p>
+            <p><strong>Parcelas:</strong> {negociacao.num_parcelas}x de {formatarMoeda(negociacao.valor_parcela)}</p>
+            <p><strong>Motivo da negociação:</strong> {negociacao.motivo || "Não informado"}</p>
           </div>
           
           <div style={{ marginTop: "20px", display: "flex", gap: "10px", justifyContent: "flex-end" }}>
-            <Botao variant="outline" onClick={() => setModalParcelamento(false)}>Cancelar</Botao>
-            <Botao onClick={gerarContrato}>Gerar Contrato</Botao>
+            <Botao variant="outline" onClick={() => setModalParcelamento(false)}>Voltar</Botao>
+            <Botao onClick={gerarContrato}>Confirmar e Gerar Contrato</Botao>
           </div>
         </Modal>
       )}
