@@ -85,7 +85,6 @@ export default function IAPrecificacaoPreContrato() {
 
   const abrirNegociacao = () => {
     const valorOriginal = resultado?.precos.diagnostico || 0;
-    const entrada = valorOriginal * 0.5;
     
     setNegociacao({
       novo_valor: valorOriginal,
@@ -94,7 +93,7 @@ export default function IAPrecificacaoPreContrato() {
       num_parcelas: 0,
       valor_parcela: 0,
       entrada_percentual: 50,
-      valor_entrada: entrada
+      valor_entrada: valorOriginal * 0.5
     });
     setModalNegociacao(true);
   };
@@ -353,7 +352,15 @@ export default function IAPrecificacaoPreContrato() {
           type="number"
           placeholder="Digite o novo valor"
           value={negociacao.novo_valor}
-          onChange={(e) => setNegociacao({...negociacao, novo_valor: e.target.value})}
+          onChange={(e) => {
+            const novoValor = parseFloat(e.target.value) || 0;
+            const entrada = novoValor * 0.5;
+            setNegociacao({
+              ...negociacao,
+              novo_valor: e.target.value,
+              valor_entrada: entrada
+            });
+          }}
         />
         
         <Input
@@ -413,7 +420,7 @@ export default function IAPrecificacaoPreContrato() {
                   const parcelaMaxima = 5000;
                   let numParcelas = Math.ceil(saldo / parcelaMaxima);
                   numParcelas = Math.min(numParcelas, 12);
-                  const valorParcela = Math.ceil(saldo / numParcelas / 100) * 100;
+                  const valorParcela = numParcelas > 0 ? Math.ceil(saldo / numParcelas / 100) * 100 : 0;
                   
                   setNegociacao({
                     ...negociacao,
@@ -451,7 +458,7 @@ export default function IAPrecificacaoPreContrato() {
                 onChange={(e) => {
                   const numParcelas = parseInt(e.target.value);
                   const saldo = parseFloat(negociacao.novo_valor) - negociacao.valor_entrada;
-                  const valorParcela = Math.ceil(saldo / numParcelas / 100) * 100;
+                  const valorParcela = numParcelas > 0 ? Math.ceil(saldo / numParcelas / 100) * 100 : 0;
                   setNegociacao({...negociacao, num_parcelas: numParcelas, valor_parcela: valorParcela});
                 }}
                 style={{
