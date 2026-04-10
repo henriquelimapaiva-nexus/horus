@@ -207,25 +207,157 @@ export default function IAPrecificacaoPreContrato() {
         data_assinatura: dadosContrato.data_assinatura
       });
       
+      // Converte o texto do contrato para HTML com formatação profissional
+      const contratoTexto = response.data.contrato;
+      const contratoHtml = contratoTexto
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>')
+        .replace(/\-\-\-/g, '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ccc;">')
+        .replace(/CLÁUSULA (\d+) –/g, '<h3 style="color: #1E3A8A; margin-top: 25px; margin-bottom: 10px;">CLÁUSULA $1 –</h3>')
+        .replace(/ANEXO I/g, '<h3 style="color: #1E3A8A; margin-top: 25px; margin-bottom: 10px;">ANEXO I</h3>')
+        .replace(/CONTRATANTE:/g, '<strong>CONTRATANTE:</strong>')
+        .replace(/CONTRATADA:/g, '<strong>CONTRATADA:</strong>');
+      
       const win = window.open();
       win.document.write(`
+        <!DOCTYPE html>
         <html>
           <head>
+            <meta charset="UTF-8">
             <title>Contrato - ${dadosContrato.empresa.nome}</title>
             <style>
-              body { font-family: 'Courier New', monospace; margin: 40px; line-height: 1.4; }
-              pre { white-space: pre-wrap; font-family: inherit; }
+              * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+              }
+              body {
+                font-family: 'Arial', sans-serif;
+                margin: 0;
+                padding: 40px;
+                line-height: 1.5;
+                color: #000000;
+                background-color: #ffffff;
+              }
+              .container {
+                max-width: 1100px;
+                margin: 0 auto;
+                background: white;
+              }
+              .header {
+                text-align: center;
+                margin-bottom: 40px;
+                padding-bottom: 20px;
+                border-bottom: 2px solid #1E3A8A;
+              }
+              .logo {
+                max-width: 180px;
+                margin-bottom: 15px;
+              }
+              .empresa-nome {
+                color: #1E3A8A;
+                font-size: 28px;
+                margin: 10px 0 5px 0;
+                font-weight: bold;
+              }
+              .subtitulo {
+                color: #666;
+                font-size: 16px;
+                font-weight: normal;
+                margin-top: 5px;
+              }
+              .conteudo {
+                font-size: 14px;
+                line-height: 1.6;
+              }
+              .conteudo h3 {
+                color: #1E3A8A;
+                margin-top: 25px;
+                margin-bottom: 10px;
+                font-size: 18px;
+              }
+              .conteudo hr {
+                margin: 20px 0;
+                border: none;
+                border-top: 1px solid #ccc;
+              }
+              .conteudo strong {
+                color: #1E3A8A;
+              }
+              .assinatura {
+                margin-top: 50px;
+                text-align: center;
+              }
+              .linha-assinatura {
+                margin-top: 40px;
+                display: flex;
+                justify-content: space-between;
+                gap: 40px;
+              }
+              .assinatura-box {
+                flex: 1;
+                text-align: center;
+              }
+              .linha {
+                border-top: 1px solid #000;
+                margin: 30px 0 10px 0;
+                width: 100%;
+              }
+              .btn-container {
+                text-align: center;
+                margin-top: 40px;
+                padding: 20px;
+                border-top: 1px solid #ccc;
+              }
+              button {
+                background-color: #1E3A8A;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                margin: 0 10px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+              }
+              button:hover {
+                background-color: #152C6B;
+              }
               @media print {
-                body { margin: 0; padding: 20px; }
-                button { display: none; }
+                body {
+                  padding: 20px;
+                  margin: 0;
+                }
+                .btn-container {
+                  display: none;
+                }
+                .header {
+                  border-bottom: 2px solid #1E3A8A;
+                }
+                .conteudo h3 {
+                  page-break-after: avoid;
+                }
+                .assinatura-box {
+                  page-break-inside: avoid;
+                }
               }
             </style>
           </head>
           <body>
-            <pre>${response.data.contrato}</pre>
-            <div style="text-align: center; margin-top: 40px;">
-              <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-              <button onclick="window.close()">❌ Fechar</button>
+            <div class="container">
+              <div class="header">
+                <img src="/src/assets/logo.png" alt="Nexus Engenharia Aplicada" class="logo" onerror="this.style.display='none'">
+                <div class="empresa-nome">NEXUS ENGENHARIA APLICADA</div>
+                <div class="subtitulo">CONTRATO DE PRESTAÇÃO DE SERVIÇOS - FASE 1 (DIAGNÓSTICO)</div>
+              </div>
+              <div class="conteudo">
+                ${contratoHtml}
+              </div>
+              <div class="btn-container">
+                <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+                <button onclick="window.close()">❌ Fechar</button>
+              </div>
             </div>
           </body>
         </html>
