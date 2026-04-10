@@ -27,18 +27,19 @@ export default function IAPrecificacaoPreContrato() {
     setor: "",
     numero_funcionarios: "",
     faturamento_anual: "",
-    numero_linhas: "1",
+    numero_linhas: "",
     problemas: [],
-    urgencia: "normal",
-    complexidade: "media",
-    gestor_dedicado: "parcial",
-    acesso_dados: "imediato",
+    urgencia: "",
+    complexidade: "",
+    gestor_dedicado: "",
+    acesso_dados: "",
     projeto_piloto: false,
     tem_viagem: false
   });
 
   // Opções para selects
   const setores = [
+    { value: "", label: "Selecione..." },
     { value: "automotivo", label: "Automotivo" },
     { value: "metalurgico", label: "Metalúrgico" },
     { value: "alimenticio", label: "Alimentício" },
@@ -157,12 +158,20 @@ export default function IAPrecificacaoPreContrato() {
               onChange={(e) => setFormData({...formData, empresa_nome: e.target.value})}
               required
             />
-            <Select
-              label="Setor Industrial *"
-              value={formData.setor}
-              onChange={(e) => setFormData({...formData, setor: e.target.value})}
-              options={setores}
-              required
+<Select
+  label="Setor Industrial *"
+  value={formData.setor}
+  onChange={(e) => setFormData({...formData, setor: e.target.value})}
+  options={[
+    { value: "", label: "Selecione..." },
+    { value: "automotivo", label: "Automotivo" },
+    { value: "metalurgico", label: "Metalúrgico" },
+    { value: "alimenticio", label: "Alimentício" },
+    { value: "quimico", label: "Químico" },
+    { value: "farmaceutico", label: "Farmacêutico" },
+    { value: "outros", label: "Outros" }
+  ]}
+  required
             />
             <Input
               label="Número de Funcionários"
@@ -180,6 +189,7 @@ export default function IAPrecificacaoPreContrato() {
             <Input
               label="Número de Linhas"
               type="number"
+              placeholder="Ex: 1"
               value={formData.numero_linhas}
               onChange={(e) => setFormData({...formData, numero_linhas: e.target.value})}
             />
@@ -214,6 +224,7 @@ export default function IAPrecificacaoPreContrato() {
               value={formData.urgencia}
               onChange={(e) => setFormData({...formData, urgencia: e.target.value})}
               options={[
+                { value: "", label: "Selecione..." },
                 { value: "baixa", label: "Baixa (mais de 6 meses)" },
                 { value: "normal", label: "Normal (3-6 meses)" },
                 { value: "alta", label: "Alta (até 3 meses)" }
@@ -224,6 +235,7 @@ export default function IAPrecificacaoPreContrato() {
               value={formData.complexidade}
               onChange={(e) => setFormData({...formData, complexidade: e.target.value})}
               options={[
+                { value: "", label: "Selecione..." },
                 { value: "baixa", label: "Baixa" },
                 { value: "media", label: "Média" },
                 { value: "alta", label: "Alta" }
@@ -234,6 +246,7 @@ export default function IAPrecificacaoPreContrato() {
               value={formData.gestor_dedicado}
               onChange={(e) => setFormData({...formData, gestor_dedicado: e.target.value})}
               options={[
+                { value: "", label: "Selecione..." },
                 { value: "nao", label: "Não" },
                 { value: "parcial", label: "Parcial" },
                 { value: "sim", label: "Sim, dedicado" }
@@ -244,6 +257,7 @@ export default function IAPrecificacaoPreContrato() {
               value={formData.acesso_dados}
               onChange={(e) => setFormData({...formData, acesso_dados: e.target.value})}
               options={[
+                { value: "", label: "Selecione..." },
                 { value: "restrito", label: "Restrito" },
                 { value: "mediado", label: "Mediado" },
                 { value: "imediato", label: "Imediato" }
