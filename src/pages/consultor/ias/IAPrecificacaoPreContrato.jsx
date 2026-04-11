@@ -212,7 +212,7 @@ export default function IAPrecificacaoPreContrato() {
       const contratoTexto = response.data.contrato;
       const contratoHtmlFormatado = contratoTexto
         .replace(/\n/g, "<br>")
-        .replace(/\-\-\-/g, "<hr>")
+        .replace(/^\s*---\s*$/gm, '<hr>')
         .replace(/CLÁUSULA (\d+) –/g, '<h3>CLÁUSULA $1 –</h3>');
       
       // Salva no estado e ativa o modo contrato (PASSO 2)
