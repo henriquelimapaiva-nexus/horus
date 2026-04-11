@@ -7,6 +7,7 @@ import Select from "../../../components/ui/Select";
 import Card from "../../../components/ui/Card";
 import Modal from "../../../components/ui/Modal";
 import toast from "react-hot-toast";
+import logo from "../../../assets/logo.png";
 
 export default function IAPrecificacaoPreContrato() {
   const [carregando, setCarregando] = useState(false);
@@ -259,7 +260,7 @@ export default function IAPrecificacaoPreContrato() {
             
             {/* LOGO */}
             <img
-              src="/logo.png"
+              src={logo}
               alt="Nexus Engenharia Aplicada"
               style={{
                 width: "180px",
