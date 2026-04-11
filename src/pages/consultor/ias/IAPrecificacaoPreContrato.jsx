@@ -13,7 +13,11 @@ export default function IAPrecificacaoPreContrato() {
   const [resultado, setResultado] = useState(null);
   const [modalNegociacao, setModalNegociacao] = useState(false);
   const [modalParcelamento, setModalParcelamento] = useState(false);
-  const [modalDadosContrato, setModalDadosContrato] = useState(false); // NOVO
+  const [modalDadosContrato, setModalDadosContrato] = useState(false);
+  
+  // NOVOS ESTADOS PARA O FLUXO DE CONTRATO (PASSO 1)
+  const [contratoHtml, setContratoHtml] = useState(null);
+  const [modoContrato, setModoContrato] = useState(false);
   
   // Dados da negociação
   const [negociacao, setNegociacao] = useState({
@@ -24,11 +28,11 @@ export default function IAPrecificacaoPreContrato() {
     valor_parcela: 0,
     entrada_percentual: 50,
     valor_entrada: 0,
-    desconto: 0,           // NOVO
-    motivo_desconto: ""    // NOVO
+    desconto: 0,
+    motivo_desconto: ""
   });
   
-  // NOVO: Dados do contrato (empresa, representante, contato)
+  // Dados do contrato (empresa, representante, contato)
   const [dadosContrato, setDadosContrato] = useState({
     empresa: {
       nome: "",
@@ -88,7 +92,7 @@ export default function IAPrecificacaoPreContrato() {
     { value: "rh", label: "RH / Treinamento / Rotatividade" }
   ];
 
-  // NOVO: Função para calcular prazos baseado na urgência
+  // Função para calcular prazos baseado na urgência
   const calcularPrazosPorUrgencia = (urgencia) => {
     switch (urgencia) {
       case 'baixa':
@@ -103,7 +107,7 @@ export default function IAPrecificacaoPreContrato() {
           meses_vigencia: 1,
           prazo_entrega_semanas: 3
         };
-      default: // normal ou vazio
+      default:
         return {
           semanas_diagnostico: 4,
           meses_vigencia: 2,
@@ -147,17 +151,15 @@ export default function IAPrecificacaoPreContrato() {
       valor_parcela: 0,
       entrada_percentual: 50,
       valor_entrada: valorOriginal * 0.5,
-      desconto: 0,           // NOVO
-      motivo_desconto: ""    // NOVO
+      desconto: 0,
+      motivo_desconto: ""
     });
     setModalNegociacao(true);
   };
 
-  // ALTERADO: Agora abre modal de dados do contrato antes de gerar
   const confirmarNegociacao = () => {
     setModalNegociacao(false);
     
-    // Preencher nome da empresa nos dados do contrato
     setDadosContrato(prev => ({
       ...prev,
       empresa: {
@@ -166,7 +168,6 @@ export default function IAPrecificacaoPreContrato() {
       }
     }));
     
-    // Abrir modal para preencher dados do contrato
     setModalDadosContrato(true);
   };
 
@@ -176,14 +177,13 @@ export default function IAPrecificacaoPreContrato() {
     return valorBase - desconto;
   };
 
-  // ALTERADO: Agora envia todos os dados do contrato + prazos + desconto
+  // FUNÇÃO GERAR CONTRATO MODIFICADA (PASSO 2)
   const gerarContrato = async () => {
     setCarregando(true);
     try {
       const valorComDesconto = calcularValorComDesconto();
       const prazos = calcularPrazosPorUrgencia(formData.urgencia);
       
-      // Montar motivo completo (incluindo desconto se houver)
       let motivoCompleto = negociacao.motivo || "";
       if (negociacao.desconto > 0 && negociacao.motivo_desconto) {
         motivoCompleto += motivoCompleto ? `; ${negociacao.motivo_desconto}` : negociacao.motivo_desconto;
@@ -207,165 +207,18 @@ export default function IAPrecificacaoPreContrato() {
         data_assinatura: dadosContrato.data_assinatura
       });
       
-      // Converte o texto do contrato para HTML com formatação profissional
+      // Converte o texto do contrato para HTML (PASSO 2 - formatação)
       const contratoTexto = response.data.contrato;
-      const contratoHtml = contratoTexto
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>')
-        .replace(/\-\-\-/g, '<hr style="margin: 20px 0; border: none; border-top: 1px solid #ccc;">')
-        .replace(/CLÁUSULA (\d+) –/g, '<h3 style="color: #1E3A8A; margin-top: 25px; margin-bottom: 10px;">CLÁUSULA $1 –</h3>')
-        .replace(/ANEXO I/g, '<h3 style="color: #1E3A8A; margin-top: 25px; margin-bottom: 10px;">ANEXO I</h3>')
-        .replace(/CONTRATANTE:/g, '<strong>CONTRATANTE:</strong>')
-        .replace(/CONTRATADA:/g, '<strong>CONTRATADA:</strong>');
+      const contratoHtmlFormatado = contratoTexto
+        .replace(/\n/g, "<br>")
+        .replace(/\-\-\-/g, "<hr>")
+        .replace(/CLÁUSULA (\d+) –/g, '<h3>CLÁUSULA $1 –</h3>');
       
-      const win = window.open();
-      win.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>Contrato - ${dadosContrato.empresa.nome}</title>
-            <style>
-              * {
-                margin: 0;
-                padding: 0;
-                box-sizing: border-box;
-              }
-              body {
-                font-family: 'Arial', sans-serif;
-                margin: 0;
-                padding: 40px;
-                line-height: 1.5;
-                color: #000000;
-                background-color: #ffffff;
-              }
-              .container {
-                max-width: 1100px;
-                margin: 0 auto;
-                background: white;
-              }
-              .header {
-                text-align: center;
-                margin-bottom: 40px;
-                padding-bottom: 20px;
-                border-bottom: 2px solid #1E3A8A;
-              }
-              .logo {
-                max-width: 180px;
-                margin-bottom: 15px;
-              }
-              .empresa-nome {
-                color: #1E3A8A;
-                font-size: 28px;
-                margin: 10px 0 5px 0;
-                font-weight: bold;
-              }
-              .subtitulo {
-                color: #666;
-                font-size: 16px;
-                font-weight: normal;
-                margin-top: 5px;
-              }
-              .conteudo {
-                font-size: 14px;
-                line-height: 1.6;
-              }
-              .conteudo h3 {
-                color: #1E3A8A;
-                margin-top: 25px;
-                margin-bottom: 10px;
-                font-size: 18px;
-              }
-              .conteudo hr {
-                margin: 20px 0;
-                border: none;
-                border-top: 1px solid #ccc;
-              }
-              .conteudo strong {
-                color: #1E3A8A;
-              }
-              .assinatura {
-                margin-top: 50px;
-                text-align: center;
-              }
-              .linha-assinatura {
-                margin-top: 40px;
-                display: flex;
-                justify-content: space-between;
-                gap: 40px;
-              }
-              .assinatura-box {
-                flex: 1;
-                text-align: center;
-              }
-              .linha {
-                border-top: 1px solid #000;
-                margin: 30px 0 10px 0;
-                width: 100%;
-              }
-              .btn-container {
-                text-align: center;
-                margin-top: 40px;
-                padding: 20px;
-                border-top: 1px solid #ccc;
-              }
-              button {
-                background-color: #1E3A8A;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                margin: 0 10px;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 14px;
-              }
-              button:hover {
-                background-color: #152C6B;
-              }
-              @media print {
-                body {
-                  padding: 20px;
-                  margin: 0;
-                }
-                .btn-container {
-                  display: none;
-                }
-                .header {
-                  border-bottom: 2px solid #1E3A8A;
-                }
-                .conteudo h3 {
-                  page-break-after: avoid;
-                }
-                .assinatura-box {
-                  page-break-inside: avoid;
-                }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <img src="/src/assets/logo.png" alt="Nexus Engenharia Aplicada" class="logo" onerror="this.style.display='none'">
-                <div class="empresa-nome">NEXUS ENGENHARIA APLICADA</div>
-                <div class="subtitulo">CONTRATO DE PRESTAÇÃO DE SERVIÇOS - FASE 1 (DIAGNÓSTICO)</div>
-              </div>
-              <div class="conteudo">
-                ${contratoHtml}
-              </div>
-              <div class="btn-container">
-                <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-                <button onclick="window.close()">❌ Fechar</button>
-              </div>
-            </div>
-          </body>
-        </html>
-      `);
-      win.document.close();
+      // Salva no estado e ativa o modo contrato (PASSO 2)
+      setContratoHtml(contratoHtmlFormatado);
+      setModoContrato(true);
       
       toast.success("Contrato gerado com sucesso!");
-      setModalParcelamento(false);
       setModalDadosContrato(false);
     } catch (error) {
       console.error("Erro ao gerar contrato:", error);
@@ -375,6 +228,95 @@ export default function IAPrecificacaoPreContrato() {
     }
   };
 
+  // TELA DE CONTRATO (PASSO 3) - ANTES DO RETURN PRINCIPAL
+  if (modoContrato && contratoHtml) {
+    return (
+      <div style={{ backgroundColor: "#f3f4f6", minHeight: "100vh", padding: "40px" }}>
+        
+        {/* BOTÃO VOLTAR */}
+        <div style={{ marginBottom: "20px" }}>
+          <Botao onClick={() => setModoContrato(false)}>
+            ← Voltar
+          </Botao>
+        </div>
+
+        {/* CONTRATO */}
+        <div
+          style={{
+            backgroundColor: "#ffffff",
+            maxWidth: "900px",
+            margin: "0 auto",
+            padding: "50px",
+            borderRadius: "10px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+            fontFamily: "Arial, sans-serif",
+            lineHeight: "1.6",
+            color: "#000"
+          }}
+        >
+          {/* HEADER */}
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+            
+            {/* LOGO - CAMINHO CORRETO /logo.png (PASSO 4) */}
+            <img
+              src="/logo.png"
+              alt="Nexus Engenharia Aplicada"
+              style={{
+                width: "180px",
+                marginBottom: "15px",
+                objectFit: "contain"
+              }}
+            />
+
+            {/* NOME DA EMPRESA */}
+            <h1 style={{
+              color: "#1E3A8A",
+              fontSize: "26px",
+              marginBottom: "5px"
+            }}>
+              NEXUS ENGENHARIA APLICADA
+            </h1>
+
+            <p style={{ color: "#666" }}>
+              CONTRATO DE PRESTAÇÃO DE SERVIÇOS - DIAGNÓSTICO
+            </p>
+          </div>
+
+          {/* CONTEÚDO */}
+          <div
+            dangerouslySetInnerHTML={{ __html: contratoHtml }}
+          />
+
+          {/* ASSINATURA */}
+          <div style={{ marginTop: "50px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: "40px" }}>
+              
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ borderTop: "1px solid #000", marginTop: "40px" }} />
+                <p>CONTRATANTE</p>
+              </div>
+
+              <div style={{ flex: 1, textAlign: "center" }}>
+                <div style={{ borderTop: "1px solid #000", marginTop: "40px" }} />
+                <p>CONTRATADA</p>
+              </div>
+
+            </div>
+          </div>
+
+          {/* BOTÃO IMPRIMIR (PASSO 6) */}
+          <div style={{ marginTop: "30px", textAlign: "center" }}>
+            <Botao onClick={() => window.print()}>
+              🖨️ Imprimir / Salvar PDF
+            </Botao>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // RENDER PRINCIPAL (INALTERADO)
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       <h1 style={{ color: "#1E3A8A", marginBottom: "20px" }}>
@@ -598,7 +540,6 @@ export default function IAPrecificacaoPreContrato() {
           placeholder="Ex: Cliente pediu desconto por ser primeiro projeto, etc."
         />
         
-        {/* NOVO: Seção de Desconto */}
         <div style={{ 
           marginTop: "15px", 
           padding: "15px", 
@@ -692,7 +633,6 @@ export default function IAPrecificacaoPreContrato() {
           </div>
         </div>
         
-        {/* Campos de Parcelamento (aparecem só se selecionado) */}
         {negociacao.forma_pagamento === "parcelado" && (
           <div style={{ 
             marginTop: "15px", 
@@ -769,7 +709,7 @@ export default function IAPrecificacaoPreContrato() {
         </Modal>
       )}
 
-      {/* NOVO: Modal de Dados do Contrato */}
+      {/* Modal de Dados do Contrato */}
       <Modal isOpen={modalDadosContrato} onClose={() => setModalDadosContrato(false)} title="📄 Dados para o Contrato">
         <div style={{ maxHeight: "60vh", overflowY: "auto", paddingRight: "10px" }}>
           <h3 style={{ color: "#1E3A8A", marginBottom: "15px" }}>🏢 Dados da Empresa</h3>
