@@ -228,7 +228,7 @@ export default function IAPrecificacaoPreContrato() {
     }
   };
 
-  // TELA DE CONTRATO (PASSO 3) - ANTES DO RETURN PRINCIPAL
+  // TELA DE CONTRATO (PASSO 3) - SEM ASSINATURA DUPLICADA
   if (modoContrato && contratoHtml) {
     return (
       <div style={{ backgroundColor: "#f3f4f6", minHeight: "100vh", padding: "40px" }}>
@@ -257,7 +257,7 @@ export default function IAPrecificacaoPreContrato() {
           {/* HEADER */}
           <div style={{ textAlign: "center", marginBottom: "40px" }}>
             
-            {/* LOGO - CAMINHO CORRETO /logo.png (PASSO 4) */}
+            {/* LOGO */}
             <img
               src="/logo.png"
               alt="Nexus Engenharia Aplicada"
@@ -266,6 +266,7 @@ export default function IAPrecificacaoPreContrato() {
                 marginBottom: "15px",
                 objectFit: "contain"
               }}
+              onError={(e) => { e.target.style.display = 'none' }}
             />
 
             {/* NOME DA EMPRESA */}
@@ -282,27 +283,10 @@ export default function IAPrecificacaoPreContrato() {
             </p>
           </div>
 
-          {/* CONTEÚDO */}
+          {/* CONTEÚDO (JÁ INCLUI ASSINATURA DO BACKEND) */}
           <div
             dangerouslySetInnerHTML={{ __html: contratoHtml }}
           />
-
-          {/* ASSINATURA */}
-          <div style={{ marginTop: "50px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: "40px" }}>
-              
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <div style={{ borderTop: "1px solid #000", marginTop: "40px" }} />
-                <p>CONTRATANTE</p>
-              </div>
-
-              <div style={{ flex: 1, textAlign: "center" }}>
-                <div style={{ borderTop: "1px solid #000", marginTop: "40px" }} />
-                <p>CONTRATADA</p>
-              </div>
-
-            </div>
-          </div>
 
           {/* BOTÃO IMPRIMIR (PASSO 6) */}
           <div style={{ marginTop: "30px", textAlign: "center" }}>
