@@ -211,9 +211,21 @@ export default function IAPrecificacaoPreContrato() {
       // Converte o texto do contrato para HTML (PASSO 2 - formatação)
       const contratoTexto = response.data.contrato;
       const contratoHtmlFormatado = contratoTexto
-        .replace(/\n/g, "<br>")
-        .replace(/^\s*---\s*$/gm, '<hr>')
-        .replace(/CLÁUSULA (\d+) –/g, '<h3>CLÁUSULA $1 –</h3>');
+  .split('\n\n')
+  .map(p => {
+    const texto = p.trim();
+
+    if (/^CLÁUSULA \d+ –/.test(texto)) {
+      return `<h3>${texto}</h3>`;
+    }
+
+    if (texto === '---') {
+      return '<hr>';
+    }
+
+    return `<p>${texto}</p>`;
+  })
+  .join('');
       
       // Salva no estado e ativa o modo contrato (PASSO 2)
       setContratoHtml(contratoHtmlFormatado);
