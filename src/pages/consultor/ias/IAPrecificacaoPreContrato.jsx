@@ -255,13 +255,15 @@ export default function IAPrecificacaoPreContrato() {
 
         {/* CONTRATO */}
         <div
+          className="contrato-print"
           style={{
             backgroundColor: "#ffffff",
-            maxWidth: "900px",
-            margin: "0 auto",
-            padding: "50px",
-            borderRadius: "10px",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+            width: "100%",
+            maxWidth: "100%",
+            margin: "0",
+            padding: "40px",
+            borderRadius: "0",
+            boxShadow: "none",
             fontFamily: "Arial, sans-serif",
             lineHeight: "1.6",
             color: "#000"
