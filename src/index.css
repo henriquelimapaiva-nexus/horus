@@ -134,51 +134,66 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-  /* 1. MATA TUDO QUE NÃO É CONTRATO */
+  /* 1. EXTERMÍNIO TOTAL DA INTERFACE */
   header, nav, aside, footer, .sidebar, .sidebar-container, .no-print,
   [class*="sidebar"], [class*="menu"], [class*="nav"],
   button, select, input, textarea {
     display: none !important;
-    height: 0 !important;
-    width: 0 !important;
   }
 
-  /* 2. EXPLODE AS MARGENS E LARGURA (O fim do 'esmagado') */
-  html, body, #root, main, [class*="container"], [class*="layout"] {
+  /* 2. RESET DE HIERARQUIA (A CHAVE DO PROBLEMA) */
+  /* Forçamos TODOS os pais a serem blocos simples sem margens ou limites */
+  html, body, #root, main, div[class*="container"], div[class*="layout"] {
     display: block !important;
     width: 100% !important;
-    max-width: none !important; /* Isso abre as laterais à força */
+    max-width: none !important; /* Remove o limite que esmaga o texto */
     height: auto !important;
-    min-height: 0 !important;   /* Isso mata o 100vh da linha 39 */
+    min-height: 0 !important; /* Mata o 100vh da linha 39 que centraliza o logo */
     margin: 0 !important;
     padding: 0 !important;
     position: static !important;
   }
 
-  /* 3. CONFIGURAÇÃO DA FOLHA A4 */
+  /* 3. CONFIGURAÇÃO DA FOLHA (Idêntica ao relatório da foto) */
   @page {
     size: A4;
-    /* Topo: 0.5cm (Logo no teto) | Laterais: 1.0cm (Texto largo) */
-    margin: 0.5cm 1.0cm 1.5cm 1.0cm !important;
+    /* Margens equilibradas: 1cm topo/base, 1.5cm laterais para furos/grampos */
+    margin: 1.0cm 1.5cm 1.5cm 1.5cm !important;
   }
 
-  /* 4. O CONTRATO (Nexus Engenharia) */
+  /* 4. O COMPONENTE (Nexus Engenharia) */
   .relatorio-print {
     display: block !important;
     width: 100% !important;
+    max-width: 100% !important;
+    background: white !important;
+    padding: 0 !important; /* Remove o padding que empurra o logo pra baixo */
     margin: 0 !important;
-    padding: 0 !important; /* Remove o padding de 30px da tela */
   }
 
-  /* 5. FORÇA O LOGO NO TOPO */
-  .relatorio-print img, .relatorio-print h1 {
+  /* 5. LOGOTIPO E TÍTULOS */
+  .relatorio-print img {
+    display: block !important;
+    margin: 0 auto 10pt auto !important; /* Centraliza o logo como na foto */
+    max-height: 120px !important;
+    margin-top: 0 !important;
+  }
+
+  .relatorio-print h1, 
+  .relatorio-print h2, 
+  .relatorio-print .header-title {
+    text-align: center !important; /* Alinhamento central igual à sua imagem */
     margin-top: 0 !important;
     padding-top: 0 !important;
   }
 
-  /* Ajustes de tabela para ocupar 100% */
-  table { width: 100% !important; border-collapse: collapse; }
-  th, td { border: 1pt solid black; padding: 4pt; }
+  /* 6. CORPO DO TEXTO (Largo e Profissional) */
+  .relatorio-print p, 
+  .relatorio-print li {
+    text-align: justify !important;
+    line-height: 1.6;
+    margin-bottom: 8pt;
+  }
 }
 
 /* ========================================
