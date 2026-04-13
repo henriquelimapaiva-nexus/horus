@@ -245,6 +245,11 @@ button:focus {
   margin: 5px 0 !important;
 }
 
+.assinatura-rodape,
+div[style*="textAlign: center"] {
+  text-align: center !important;
+}
+
 }
 
 /* ========================================

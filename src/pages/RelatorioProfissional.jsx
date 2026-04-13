@@ -1426,11 +1426,20 @@ export default function RelatorioProfissional() {
             )}
 
 {/* SEÇÃO FINAL - ASSINATURA */}
-<div style={{ textAlign: "center", marginTop: "50px" }}>
-  <div style={{ borderTop: "1px solid #000", width: "300px", margin: "0 auto 20px auto" }}></div>
-  <p style={{ margin: "5px 0", fontWeight: "bold" }}>Eng. Henrique de Lima Paiva</p>
-  <p style={{ margin: "5px 0" }}>Consultor Sênior - Nexus Engenharia Aplicada</p>
-  <p style={{ margin: "5px 0", color: "#666", fontSize: "12px" }}>
+<div style={{ 
+  textAlign: "center", 
+  marginTop: "50px", 
+  width: "100%", 
+  display: "block" 
+}}>
+  <div style={{ 
+    borderTop: "1px solid black", 
+    width: "300px", 
+    margin: "0 auto 20px auto" 
+  }}></div>
+  <p style={{ margin: "5px 0", fontWeight: "bold", textAlign: "center" }}>Eng. Henrique de Lima Paiva</p>
+  <p style={{ margin: "5px 0", textAlign: "center" }}>Consultor Sênior - Nexus Engenharia Aplicada</p>
+  <p style={{ margin: "5px 0", color: "#666", fontSize: "12px", textAlign: "center" }}>
     Contato: henrique@nexus.com.br | (11) 99999-9999
   </p>
 </div>
