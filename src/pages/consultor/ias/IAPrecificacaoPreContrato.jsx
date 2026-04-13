@@ -209,22 +209,36 @@ export default function IAPrecificacaoPreContrato() {
       });
       
       // Converte o texto do contrato para HTML (PASSO 2 - formatação)
-      const contratoTexto = response.data.contrato;
-      const contratoHtmlFormatado = contratoTexto
+const contratoTexto = response.data.contrato;
+const contratoHtmlFormatado = contratoTexto
   .split('\n\n')
   .map(p => {
     const texto = p.trim();
 
+    // Ignora linhas que são apenas separadores (---)
+    if (texto === '---' || texto === '------------' || texto.match(/^-+$/)) {
+      return '';
+    }
+
+    // Transforma títulos de cláusulas
     if (/^CLÁUSULA \d+ –/.test(texto)) {
-      return `<h3>${texto}</h3>`;
+      return `<h3 style="margin-top: 20px; margin-bottom: 10px;">${texto}</h3>`;
     }
 
-    if (texto === '---') {
-      return '<hr>';
+    // Transforma títulos de cláusulas com letra (ex: 3-A)
+    if (/^CLÁUSULA \d+-[A-Z] –/.test(texto)) {
+      return `<h3 style="margin-top: 20px; margin-bottom: 10px;">${texto}</h3>`;
     }
 
-    return `<p>${texto}</p>`;
+    // Transforma títulos do ANEXO
+    if (/^ANEXO /i.test(texto)) {
+      return `<h3 style="margin-top: 30px; margin-bottom: 10px;">${texto}</h3>`;
+    }
+
+    // Parágrafos normais
+    return `<p style="margin-bottom: 8px;">${texto}</p>`;
   })
+  .filter(line => line !== '') // Remove linhas vazias
   .join('');
       
       // Salva no estado e ativa o modo contrato (PASSO 2)
@@ -242,79 +256,121 @@ export default function IAPrecificacaoPreContrato() {
   };
 
   // TELA DE CONTRATO (PASSO 3) - SEM ASSINATURA DUPLICADA
-  if (modoContrato && contratoHtml) {
-    return (
-      <div style={{ backgroundColor: "#f3f4f6", minHeight: "100vh", padding: "40px" }}>
-        
-        {/* BOTÃO VOLTAR */}
-        <div style={{ marginBottom: "20px" }}>
-          <Botao onClick={() => setModoContrato(false)}>
-            ← Voltar
+if (modoContrato && contratoHtml) {
+  return (
+    <div style={{ backgroundColor: "#f3f4f6", minHeight: "100vh", padding: "40px" }}>
+      
+      {/* BOTÃO VOLTAR */}
+      <div style={{ marginBottom: "20px" }}>
+        <Botao onClick={() => setModoContrato(false)}>
+          ← Voltar
+        </Botao>
+      </div>
+
+      {/* CONTRATO */}
+      <div
+        id="contrato-print"
+        className="contrato-print"
+        style={{
+          backgroundColor: "#ffffff",
+          width: "100%",
+          maxWidth: "100%",
+          margin: "0",
+          padding: "40px",
+          borderRadius: "0",
+          boxShadow: "none",
+          fontFamily: "Arial, sans-serif",
+          lineHeight: "1.6",
+          color: "#000"
+        }}
+      >
+        {/* HEADER */}
+        <div style={{ textAlign: "center", marginBottom: "40px" }}>
+          
+          {/* LOGO */}
+          <img
+            src={logo}
+            alt="Nexus Engenharia Aplicada"
+            style={{
+              width: "180px",
+              marginBottom: "15px",
+              objectFit: "contain"
+            }}
+            onError={(e) => { e.target.style.display = 'none' }}
+          />
+
+          {/* NOME DA EMPRESA */}
+          <h1 style={{
+            color: "#1E3A8A",
+            fontSize: "26px",
+            marginBottom: "5px"
+          }}>
+            NEXUS ENGENHARIA APLICADA
+          </h1>
+
+          <p style={{ color: "#666" }}>
+            CONTRATO DE PRESTAÇÃO DE SERVIÇOS - DIAGNÓSTICO
+          </p>
+        </div>
+
+        {/* CONTEÚDO (JÁ INCLUI ASSINATURA DO BACKEND) */}
+        <div
+          dangerouslySetInnerHTML={{ __html: contratoHtml }}
+        />
+
+        {/* BOTÃO IMPRIMIR (PASSO 6) */}
+        <div style={{ marginTop: "30px", textAlign: "center" }}>
+          <Botao onClick={() => window.print()}>
+            🖨️ Imprimir / Salvar PDF
           </Botao>
         </div>
 
-        {/* CONTRATO */}
-        <div
-          id="contrato-print"
-          className="contrato-print"
-          style={{
-            backgroundColor: "#ffffff",
-            width: "100%",
-            maxWidth: "100%",
-            margin: "0",
-            padding: "40px",
-            borderRadius: "0",
-            boxShadow: "none",
-            fontFamily: "Arial, sans-serif",
-            lineHeight: "1.6",
-            color: "#000"
-          }}
-        >
-          {/* HEADER */}
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+        {/* CSS PARA CONTROLE DE QUEBRAS DE PÁGINA NA IMPRESSÃO */}
+        <style>{`
+          @media print {
+            /* Garante que cada cláusula não seja cortada no meio */
+            h3 {
+              page-break-after: avoid;
+              page-break-inside: avoid;
+              margin-top: 20px;
+              margin-bottom: 10px;
+            }
             
-            {/* LOGO */}
-            <img
-              src={logo}
-              alt="Nexus Engenharia Aplicada"
-              style={{
-                width: "180px",
-                marginBottom: "15px",
-                objectFit: "contain"
-              }}
-              onError={(e) => { e.target.style.display = 'none' }}
-            />
+            /* Evita quebras dentro de parágrafos */
+            p {
+              page-break-inside: avoid;
+              orphans: 3;
+              widows: 3;
+            }
+            
+            /* Tabelas inteiras na mesma página */
+            table {
+              page-break-inside: avoid;
+            }
+            
+            /* Evita que a assinatura seja cortada */
+            .assinatura {
+              page-break-inside: avoid;
+            }
+            
+            /* Configuração da página */
+            @page {
+              size: A4;
+              margin: 2cm;
+            }
+            
+            /* Ajuste geral do contrato */
+            .contrato-print {
+              font-size: 11pt;
+              line-height: 1.4;
+            }
+          }
+        `}</style>
 
-            {/* NOME DA EMPRESA */}
-            <h1 style={{
-              color: "#1E3A8A",
-              fontSize: "26px",
-              marginBottom: "5px"
-            }}>
-              NEXUS ENGENHARIA APLICADA
-            </h1>
-
-            <p style={{ color: "#666" }}>
-              CONTRATO DE PRESTAÇÃO DE SERVIÇOS - DIAGNÓSTICO
-            </p>
-          </div>
-
-          {/* CONTEÚDO (JÁ INCLUI ASSINATURA DO BACKEND) */}
-          <div
-            dangerouslySetInnerHTML={{ __html: contratoHtml }}
-          />
-
-          {/* BOTÃO IMPRIMIR (PASSO 6) */}
-          <div style={{ marginTop: "30px", textAlign: "center" }}>
-            <Botao onClick={() => window.print()}>
-              🖨️ Imprimir / Salvar PDF
-            </Botao>
-          </div>
-
-        </div>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   // RENDER PRINCIPAL (INALTERADO)
   return (
