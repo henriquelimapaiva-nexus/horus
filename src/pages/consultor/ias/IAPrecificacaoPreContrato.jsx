@@ -433,7 +433,7 @@ if (modoContrato && contratoHtml) {
   return (
     <div style={{ padding: "20px", maxWidth: "1200px", margin: "0 auto" }}>
       <h1 style={{ color: "#1E3A8A", marginBottom: "20px" }}>
-        🤖 IA de Precificação
+        Sistema de Inteligência Comercial (SIC)
       </h1>
       <p style={{ color: "#666", marginBottom: "30px" }}>
         Preencha os dados da empresa para calcular o preço do projeto
