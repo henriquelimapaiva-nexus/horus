@@ -1425,14 +1425,14 @@ export default function RelatorioProfissional() {
               </div>
             )}
 
-{/* SEÇÃO FINAL - ASSINATURA */}
-<div className="nexus-assinatura-final">
-  {/* Esta linha abaixo é o "gatilho" para o CSS desenhar o traço */}
-  <div className="nexus-linha-assinatura"></div>
-  
-  <p className="nexus-texto-assinatura"><strong>Eng. Henrique de Lima Paiva</strong></p>
-  <p className="nexus-texto-assinatura">Consultor Sênior - Nexus Engenharia Aplicada</p>
-  <p className="nexus-texto-contato">Contato: henrique@nexus.com.br | (11) 99999-9999</p>
+{/* SEÇÃO FINAL - ASSINATURA CENTRALIZADA */}
+<div className="assinatura-rodape">
+  <div className="linha-assinatura-central"></div>
+  <p className="nome-assinatura">Eng. Henrique de Lima Paiva</p>
+  <p className="cargo-assinatura">Consultor Sênior - Nexus Engenharia Aplicada</p>
+  <p className="contato-assinatura">
+    Contato: henrique@nexus.com.br | (11) 99999-9999
+  </p>
 </div>
 
             <style>{`
