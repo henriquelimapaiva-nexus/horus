@@ -134,10 +134,13 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-  /* Esconde todos os elementos de interface */
+  /* 1. Esconde a interface completa, incluindo menus laterais e barras de navegação */
   header,
   nav,
+  aside,
   footer,
+  .sidebar,
+  .sidebar-container,
   .no-print,
   button,
   select,
@@ -150,14 +153,26 @@ button:focus {
     display: none !important;
   }
 
-  /* Mostra apenas o relatório */
+  /* 2. Força o container principal a ocupar 100% da largura (remove o espaço do menu) */
+  html, 
+  body, 
+  #root, 
+  main, 
+  .app-container {
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: block !important;
+  }
+
+  /* 3. Configura o Relatório para preencher a folha A4 */
   .relatorio-print {
     display: block !important;
     visibility: visible !important;
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
+    position: static !important;
     width: 100% !important;
+    max-width: 100% !important;
     height: auto !important;
     background: white !important;
     padding: 0 !important;
@@ -165,186 +180,31 @@ button:focus {
     overflow: visible !important;
   }
 
-  /* Configuração da página A4 */
   @page {
     size: A4;
-    margin: 2.5cm 2cm 2cm 2cm;
-    /* superior, direita, inferior, esquerda */
+    margin: 1.5cm; /* Margem padrão de contrato */
   }
 
-  /* Remove fundos e sombras */
-  body,
-  html,
-  #root,
-  .relatorio-print,
-  .relatorio-print * {
+  /* Remove fundos e força cores para economia de tinta e clareza */
+  body, .relatorio-print, .relatorio-print * {
     background: white !important;
     box-shadow: none !important;
-    text-shadow: none !important;
     color: black !important;
   }
 
-  /* Ajustes de tipografia para impressão */
-  body {
-    background: white !important;
-    font-size: 12pt;
-    line-height: 1.5;
-  }
-
-  h1 {
-    font-size: 24pt;
-    color: #1e3a8a !important;
-    margin-top: 0;
-    margin-bottom: 10pt;
-  }
-
-  h2 {
-    font-size: 18pt;
-    color: #1e3a8a !important;
-    border-bottom: 1pt solid #1e3a8a;
-    padding-bottom: 5pt;
-    margin-top: 20pt;
-    margin-bottom: 15pt;
-  }
-
-  h3 {
-    font-size: 14pt;
-    color: #333 !important;
-    margin-top: 15pt;
-    margin-bottom: 10pt;
-  }
-
-  h4 {
-    font-size: 12pt;
-    color: #666 !important;
-    margin-top: 10pt;
-    margin-bottom: 5pt;
-  }
-
-  p {
-    font-size: 11pt;
-    line-height: 1.5;
-    margin-bottom: 8pt;
-  }
-
-  /* Estilos para tabelas */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 15pt 0;
-    page-break-inside: avoid;
-    font-size: 10pt;
-  }
-
-  th {
-    background-color: #1e3a8a !important;
-    color: white !important;
-    font-weight: bold;
-    padding: 8pt;
-    border: 1pt solid #ddd;
-    text-align: center;
-  }
-
-  td {
-    padding: 6pt 8pt;
-    border: 1pt solid #ddd;
-    text-align: center;
-  }
-
-  tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
-  }
-
-  /* Mantém a marca d'água visível */
-  .relatorio-print > div:first-child {
-    display: block !important;
-    opacity: 0.1 !important;
-    color: #1e3a8a !important;
-    font-size: 80pt !important;
-    z-index: 999 !important;
-  }
-
-  /* Garante que o conteúdo fique acima da marca d'água */
-  .relatorio-print > div:last-child {
-    position: relative !important;
-    z-index: 1000 !important;
-  }
-
-  /* Quebras de página automáticas */
-  .page-break {
-    page-break-before: always;
-  }
-
-  .page-break-after {
-    page-break-after: always;
-  }
-
-  /* Evita quebras dentro de cards importantes */
-  .card,
-  .resumo-card,
-  [class*="card"] {
-    page-break-inside: avoid;
-  }
-
-  /* Remove cores de fundo de badges e tags */
-  [style*="background-color"] {
-    background: transparent !important;
-    color: black !important;
-  }
-
-  /* Mantém ícones básicos */
-  .print-only {
-    display: block !important;
-  }
-
-  /* Ajustes para listas */
-  ul,
-  ol {
-    margin-left: 20pt;
-    margin-bottom: 10pt;
-  }
-
-  li {
-    font-size: 11pt;
-    margin-bottom: 3pt;
-  }
+  /* Tipografia Profissional */
+  body { font-size: 11pt; line-height: 1.4; }
+  h1 { font-size: 20pt; color: #1e3a8a !important; margin-bottom: 10pt; }
+  h2 { font-size: 16pt; border-bottom: 1pt solid #1e3a8a; padding-bottom: 4pt; margin-top: 15pt; }
+  
+  /* Tabelas */
+  table { width: 100%; border-collapse: collapse; margin: 15pt 0; page-break-inside: avoid; }
+  th { background-color: #f3f4f6 !important; color: black !important; font-weight: bold; padding: 6pt; border: 1pt solid #000; }
+  td { padding: 5pt; border: 1pt solid #000; }
 
   /* Assinatura */
-  .assinatura {
-    margin-top: 40pt;
-    text-align: center;
-  }
-
-  .assinatura p {
-    margin: 0;
-    font-size: 11pt;
-  }
-
-  .assinatura .linha {
-    width: 200pt;
-    height: 1pt;
-    background: black !important;
-    margin: 10pt auto;
-  }
-
-  /* Esconde elementos interativos */
-  input,
-  select,
-  textarea,
-  button {
-    display: none !important;
-  }
-
-  /* Remove links */
-  a {
-    text-decoration: none;
-    color: black !important;
-  }
-
-  a[href]:after {
-    content: none !important;
-  }
+  .assinatura { margin-top: 50pt; text-align: center; page-break-inside: avoid; }
+  .assinatura .linha { width: 250pt; height: 1pt; background: black !important; margin: 10pt auto; }
 }
 
 /* ========================================
