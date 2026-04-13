@@ -134,72 +134,49 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-  /* 1. Esconde a interface completa */
+  /* 1. ESCONDER INTERFACE (SEM CHANCE DE VOLTAR) */
   header, nav, aside, footer, .sidebar, .sidebar-container, .no-print,
-  button, select, input, textarea, [class*="btn"], [role="button"],
-  [type="button"], [type="submit"] {
+  [class*="sidebar"], [class*="menu"], [class*="nav"],
+  button, select, input, textarea {
     display: none !important;
   }
 
-  /* 2. RESET VERTICAL: Puxa o conteúdo para o topo absoluto */
+  /* 2. RESET DE ALTURA E POSIÇÃO (O que faz o logo subir) */
   html, body, #root, main, .app-container {
+    display: block !important;
     width: 100% !important;
-    height: auto !important;
+    height: auto !important;      /* Mata o 100vh que centraliza o conteúdo */
+    min-height: 0 !important;     /* Remove qualquer altura mínima herdada */
     margin: 0 !important;
     padding: 0 !important;
-    display: block !important; /* Mantém block para evitar centralização flex */
+    position: static !important;  /* Garante que nada seja posicionado relativamente */
   }
 
-  /* 3. Ajuste do Relatório: Remove espaços internos no topo */
+  /* 3. O RELATÓRIO (Ocupando a folha toda) */
   .relatorio-print {
     display: block !important;
-    visibility: visible !important;
-    position: static !important;
     width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 !important; /* Remove o padding de 30px que você tem na linha 283 */
     margin: 0 !important;
+    padding: 0 !important;        /* Remove os 30px que empurram o logo */
   }
 
-  /* 4. MARGENS DA PÁGINA: Reduzi o topo para 1cm e laterais para 1.5cm */
+  /* 4. MARGENS DA PÁGINA (Ajuste fino) */
   @page {
     size: A4;
-    margin: 1cm 1.5cm 1.5cm 1.5cm; /* Superior | Direita | Inferior | Esquerda */
+    margin: 0.7cm 1.5cm 1.5cm 1.5cm; /* Superior bem curto para o logo subir */
   }
 
-  /* 5. Força o cabeçalho do contrato a grudar no topo */
-  .relatorio-print > header, 
-  .relatorio-print > div:first-child,
-  .relatorio-print img {
+  /* 5. FORÇAR TOPO NO CONTEÚDO */
+  h1, .relatorio-print img, .relatorio-print header {
     margin-top: 0 !important;
     padding-top: 0 !important;
   }
 
-  @page {
-    size: A4;
-    margin: 2cm 0cm 2cm 0cm; /* Margem padrão de contrato */
-  }
-
-  /* Remove fundos e força cores para economia de tinta e clareza */
-  body, .relatorio-print, .relatorio-print * {
-    background: white !important;
-    box-shadow: none !important;
-    color: black !important;
-  }
-
-  /* Tipografia Profissional */
-  body { font-size: 11pt; line-height: 1.4; }
-  h1 { font-size: 20pt; color: #1e3a8a !important; margin-bottom: 10pt; }
-  h2 { font-size: 16pt; border-bottom: 1pt solid #1e3a8a; padding-bottom: 4pt; margin-top: 15pt; }
-  
-  /* Tabelas */
-  table { width: 100%; border-collapse: collapse; margin: 15pt 0; page-break-inside: avoid; }
-  th { background-color: #f3f4f6 !important; color: black !important; font-weight: bold; padding: 6pt; border: 1pt solid #000; }
-  td { padding: 5pt; border: 1pt solid #000; }
-
-  /* Assinatura */
-  .assinatura { margin-top: 50pt; text-align: center; page-break-inside: avoid; }
-  .assinatura .linha { width: 250pt; height: 1pt; background: black !important; margin: 10pt auto; }
+  /* Mantenha seus estilos de tabela e assinatura abaixo... */
+  body { font-size: 11pt; line-height: 1.4; color: black; background: white; }
+  table { width: 100%; border-collapse: collapse; margin: 10pt 0; }
+  th, td { border: 1pt solid black; padding: 5pt; }
+  .assinatura { margin-top: 40pt; text-align: center; page-break-inside: avoid; }
 }
 
 /* ========================================
