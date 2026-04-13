@@ -6,6 +6,7 @@ import Card from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
 import api from '../../../api/api';
 import toast from 'react-hot-toast';
+import logo from '../../../assets/logo.png';
 
 export default function IAPrecificacao() {
   const navigate = useNavigate();
@@ -13,6 +14,10 @@ export default function IAPrecificacao() {
   const [carregandoContrato, setCarregandoContrato] = useState(false);
   const [empresas, setEmpresas] = useState([]);
   const [valoresFase1, setValoresFase1] = useState(null);
+  
+  // Estados para o contrato na mesma tela
+  const [modoContrato, setModoContrato] = useState(false);
+  const [contratoHtml, setContratoHtml] = useState('');
   
   // Estado para o modal de negociação
   const [mostrarModalNegociacao, setMostrarModalNegociacao] = useState(false);
@@ -32,6 +37,7 @@ export default function IAPrecificacao() {
   // Dados para o contrato
   const [dadosContrato, setDadosContrato] = useState({
     representante_nome: '',
+    representante_cargo: '',
     representante_nacionalidade: '',
     representante_estado_civil: '',
     representante_profissao: '',
@@ -74,7 +80,6 @@ export default function IAPrecificacao() {
       if (response.data.sucesso) {
         setValoresFase1(response.data.dados);
         
-        // Pré-calcular valores padrão para negociação
         const saldo = response.data.dados.saldo_fase2e3;
         const entradaPadrao = saldo * 0.5;
         const saldoParcelado = saldo - entradaPadrao;
@@ -158,101 +163,9 @@ export default function IAPrecificacao() {
       toast.success('Contrato gerado com sucesso!');
       setMostrarModalNegociacao(false);
       
-      // Abrir contrato em nova aba com formatação HTML
-      const win = window.open();
-      win.document.write(`
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <meta charset="UTF-8">
-            <title>Contrato - ${empresaSelecionada.nome}</title>
-            <style>
-              * { margin: 0; padding: 0; box-sizing: border-box; }
-              body {
-                font-family: 'Arial', sans-serif;
-                margin: 0;
-                padding: 40px;
-                line-height: 1.5;
-                color: #000000;
-                background-color: #ffffff;
-              }
-              .container {
-                max-width: 1100px;
-                margin: 0 auto;
-                background: white;
-              }
-              .header {
-                text-align: center;
-                margin-bottom: 40px;
-                padding-bottom: 20px;
-                border-bottom: 2px solid #1E3A8A;
-              }
-              .logo {
-                max-width: 180px;
-                margin-bottom: 15px;
-              }
-              .empresa-nome {
-                color: #1E3A8A;
-                font-size: 28px;
-                margin: 10px 0 5px 0;
-                font-weight: bold;
-              }
-              .subtitulo {
-                color: #666;
-                font-size: 16px;
-                font-weight: normal;
-                margin-top: 5px;
-              }
-              .conteudo {
-                font-size: 14px;
-                line-height: 1.6;
-                white-space: pre-line;
-              }
-              .btn-container {
-                text-align: center;
-                margin-top: 40px;
-                padding: 20px;
-                border-top: 1px solid #ccc;
-              }
-              button {
-                background-color: #1E3A8A;
-                color: white;
-                border: none;
-                padding: 10px 20px;
-                margin: 0 10px;
-                border-radius: 5px;
-                cursor: pointer;
-                font-size: 14px;
-              }
-              button:hover {
-                background-color: #152C6B;
-              }
-              @media print {
-                body { padding: 20px; margin: 0; }
-                .btn-container { display: none; }
-                .header { border-bottom: 2px solid #1E3A8A; }
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <img src="/logo.png" alt="Nexus Engenharia Aplicada" class="logo" onerror="this.style.display='none'">
-                <div class="empresa-nome">NEXUS ENGENHARIA APLICADA</div>
-                <div class="subtitulo">CONTRATO DE IMPLEMENTAÇÃO + ACOMPANHAMENTO</div>
-              </div>
-              <div class="conteudo">
-                ${response.data.contrato.replace(/\n/g, '<br>')}
-              </div>
-              <div class="btn-container">
-                <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-                <button onclick="window.close()">❌ Fechar</button>
-              </div>
-            </div>
-          </body>
-        </html>
-      `);
-      win.document.close();
+      // Renderizar contrato na mesma tela (não em nova aba)
+      setContratoHtml(response.data.contrato);
+      setModoContrato(true);
 
     } catch (error) {
       console.error('Erro ao gerar contrato:', error);
@@ -270,6 +183,72 @@ export default function IAPrecificacao() {
       minimumFractionDigits: 2
     }).format(valor || 0);
   };
+
+  // TELA DE CONTRATO (renderizada na mesma tela)
+  if (modoContrato && contratoHtml) {
+    return (
+      <div style={{ backgroundColor: "#f3f4f6", minHeight: "100vh", padding: "40px" }}>
+        
+        <div style={{ marginBottom: "20px" }}>
+          <Botao onClick={() => setModoContrato(false)}>
+            ← Voltar
+          </Botao>
+        </div>
+
+        <div
+          className="contrato-print"
+          style={{
+            backgroundColor: "#ffffff",
+            maxWidth: "1100px",
+            margin: "0 auto",
+            padding: "50px",
+            borderRadius: "10px",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
+            fontFamily: "Arial, sans-serif",
+            lineHeight: "1.6",
+            color: "#000"
+          }}
+        >
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+            
+            <img
+              src={logo}
+              alt="Nexus Engenharia Aplicada"
+              style={{
+                width: "180px",
+                marginBottom: "15px",
+                objectFit: "contain"
+              }}
+              onError={(e) => { e.target.style.display = 'none' }}
+            />
+
+            <h1 style={{
+              color: "#1E3A8A",
+              fontSize: "26px",
+              marginBottom: "5px"
+            }}>
+              NEXUS ENGENHARIA APLICADA
+            </h1>
+
+            <p style={{ color: "#666" }}>
+              CONTRATO DE IMPLEMENTAÇÃO + ACOMPANHAMENTO
+            </p>
+          </div>
+
+          <div
+            dangerouslySetInnerHTML={{ __html: contratoHtml.replace(/\n/g, '<br>') }}
+          />
+
+          <div style={{ marginTop: "30px", textAlign: "center" }}>
+            <Botao onClick={() => window.print()}>
+              🖨️ Imprimir / Salvar PDF
+            </Botao>
+          </div>
+
+        </div>
+      </div>
+    );
+  }
 
   // Modal de negociação
   const ModalNegociacao = () => {
@@ -327,7 +306,6 @@ export default function IAPrecificacao() {
             💰 Negociação do Contrato - Fase 2+3
           </h2>
 
-          {/* Discriminação dos valores */}
           <div style={{ 
             backgroundColor: "#f0fdf4", 
             padding: "15px", 
