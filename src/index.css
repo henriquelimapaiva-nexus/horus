@@ -194,6 +194,39 @@ button:focus {
     line-height: 1.6;
     margin-bottom: 8pt;
   }
+
+  /* Alinha as assinaturas lado a lado e impede quebras de página no meio */
+  .grid-assinaturas-print {
+    display: flex !important;
+    justify-content: space-between !important;
+    margin-top: 50pt !important;
+    gap: 40pt !important;
+    page-break-inside: avoid !important;
+  }
+
+  .campo-assinatura {
+    flex: 1;
+    text-align: center;
+    font-size: 10pt;
+  }
+
+  /* Cria o traço reto e profissional em vez de usar "_____" */
+  .linha-assinatura {
+    border-top: 1pt solid black !important;
+    margin-bottom: 5pt;
+    width: 100%;
+  }
+
+  .testemunhas-print {
+    margin-top: 40pt;
+  }
+
+  .linha-testemunha {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15pt;
+  }
+
 }
 
 /* ========================================
