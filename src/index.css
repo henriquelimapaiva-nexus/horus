@@ -134,41 +134,55 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-  /* 1. Reset de Layout: Mata qualquer sistema de colunas/flex */
-  html, body, #root, main, .app-container, .layout-wrapper {
-    display: block !important;
+  /* 1. Esconde a interface completa, incluindo menus laterais e barras de navegação */
+  header,
+  nav,
+  aside,
+  footer,
+  .sidebar,
+  .sidebar-container,
+  .no-print,
+  button,
+  select,
+  input,
+  textarea,
+  [class*="btn"],
+  [role="button"],
+  [type="button"],
+  [type="submit"] {
+    display: none !important;
+  }
+
+  /* 2. Força o container principal a ocupar 100% da largura (remove o espaço do menu) */
+  html, 
+  body, 
+  #root, 
+  main, 
+  .app-container {
     width: 100% !important;
+    height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
+    display: block !important;
+  }
+
+  /* 3. Configura o Relatório para preencher a folha A4 */
+  .relatorio-print {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
     overflow: visible !important;
   }
 
-  /* 2. Remove o Menu e qualquer coisa que não seja o contrato */
-  header, nav, aside, .sidebar, [class*="sidebar"], .no-print {
-    display: none !important;
-    width: 0 !important;
-  }
-
-  /* 3. Ajuste da Folha: Margens profissionais de 1,5cm */
   @page {
     size: A4;
-    margin: 1.5cm !important;
-  }
-
-  /* 4. O Contrato: Garante que ele ignore limites de largura da tela */
-  .relatorio-print {
-    display: block !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    position: static !important;
-  }
-}
-
-  @page {
-    size: A4;
-    margin: 2cm 1.5cm 2cm 1.5cm; /* Margem padrão de contrato */
+    margin: 1cm 1.5cm 1cm 1.5cm; /* Margem padrão de contrato */
   }
 
   /* Remove fundos e força cores para economia de tinta e clareza */
@@ -191,7 +205,7 @@ button:focus {
   /* Assinatura */
   .assinatura { margin-top: 50pt; text-align: center; page-break-inside: avoid; }
   .assinatura .linha { width: 250pt; height: 1pt; background: black !important; margin: 10pt auto; }
-
+}
 
 /* ========================================
    CLASSES AUXILIARES PARA IMPRESSÃO
