@@ -158,7 +158,7 @@ button:focus {
   @page {
     size: A4;
     /* Margens equilibradas: 1cm topo/base, 1.5cm laterais para furos/grampos */
-    margin: 1.0cm 1.5cm 1.5cm 1.5cm !important;
+    margin: 2cm 0cm 2cm 0cm !important;
   }
 
   /* 4. O COMPONENTE (Nexus Engenharia) */
