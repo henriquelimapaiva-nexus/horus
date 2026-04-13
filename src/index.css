@@ -134,56 +134,51 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-  /* 1. ESCONDER TUDO O QUE NÃO É CONTRATO */
+  /* 1. MATA TUDO QUE NÃO É CONTRATO */
   header, nav, aside, footer, .sidebar, .sidebar-container, .no-print,
   [class*="sidebar"], [class*="menu"], [class*="nav"],
   button, select, input, textarea {
     display: none !important;
+    height: 0 !important;
+    width: 0 !important;
   }
 
-  /* 2. RESET DE LARGURA E ALTURA (O "MARTELO") */
-  html, body, #root, main, section, article, 
-  div[class*="container"], 
-  div[class*="wrapper"],
-  div[class*="content"] {
+  /* 2. EXPLODE AS MARGENS E LARGURA (O fim do 'esmagado') */
+  html, body, #root, main, [class*="container"], [class*="layout"] {
     display: block !important;
     width: 100% !important;
-    max-width: none !important; /* Mata o limite que aperta as laterais */
-    min-width: 0 !important;
+    max-width: none !important; /* Isso abre as laterais à força */
     height: auto !important;
-    min-height: 0 !important;
+    min-height: 0 !important;   /* Isso mata o 100vh da linha 39 */
     margin: 0 !important;
     padding: 0 !important;
     position: static !important;
   }
 
-  /* 3. O RELATÓRIO: Força a expansão total */
+  /* 3. CONFIGURAÇÃO DA FOLHA A4 */
+  @page {
+    size: A4;
+    /* Topo: 0.5cm (Logo no teto) | Laterais: 1.0cm (Texto largo) */
+    margin: 0.5cm 1.0cm 1.5cm 1.0cm !important;
+  }
+
+  /* 4. O CONTRATO (Nexus Engenharia) */
   .relatorio-print {
     display: block !important;
     width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 !important;
     margin: 0 !important;
+    padding: 0 !important; /* Remove o padding de 30px da tela */
   }
 
-  /* 4. MARGENS FÍSICAS: 0.8cm no topo e 1.2cm nas laterais */
-  @page {
-    size: A4;
-    margin: 0.8cm 1.2cm 1.5cm 1.2cm;
-  }
-
-  /* 5. TIPOGRAFIA: Texto Justificado para parecer contrato real */
-  .relatorio-print p, 
-  .relatorio-print li, 
-  .relatorio-print div {
-    text-align: justify;
-    line-height: 1.5;
-  }
-
-  .relatorio-print img {
+  /* 5. FORÇA O LOGO NO TOPO */
+  .relatorio-print img, .relatorio-print h1 {
     margin-top: 0 !important;
-    max-height: 100px;
+    padding-top: 0 !important;
   }
+
+  /* Ajustes de tabela para ocupar 100% */
+  table { width: 100% !important; border-collapse: collapse; }
+  th, td { border: 1pt solid black; padding: 4pt; }
 }
 
 /* ========================================
