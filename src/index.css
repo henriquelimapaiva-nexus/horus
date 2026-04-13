@@ -134,49 +134,56 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-  /* 1. ESCONDER INTERFACE (SEM CHANCE DE VOLTAR) */
+  /* 1. ESCONDER TUDO O QUE NÃO É CONTRATO */
   header, nav, aside, footer, .sidebar, .sidebar-container, .no-print,
   [class*="sidebar"], [class*="menu"], [class*="nav"],
   button, select, input, textarea {
     display: none !important;
   }
 
-  /* 2. RESET DE ALTURA E POSIÇÃO (O que faz o logo subir) */
-  html, body, #root, main, .app-container {
+  /* 2. RESET DE LARGURA E ALTURA (O "MARTELO") */
+  html, body, #root, main, section, article, 
+  div[class*="container"], 
+  div[class*="wrapper"],
+  div[class*="content"] {
     display: block !important;
     width: 100% !important;
-    height: auto !important;      /* Mata o 100vh que centraliza o conteúdo */
-    min-height: 0 !important;     /* Remove qualquer altura mínima herdada */
+    max-width: none !important; /* Mata o limite que aperta as laterais */
+    min-width: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    position: static !important;  /* Garante que nada seja posicionado relativamente */
+    position: static !important;
   }
 
-  /* 3. O RELATÓRIO (Ocupando a folha toda) */
+  /* 3. O RELATÓRIO: Força a expansão total */
   .relatorio-print {
     display: block !important;
     width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
     margin: 0 !important;
-    padding: 0 !important;        /* Remove os 30px que empurram o logo */
   }
 
-  /* 4. MARGENS DA PÁGINA (Ajuste fino) */
+  /* 4. MARGENS FÍSICAS: 0.8cm no topo e 1.2cm nas laterais */
   @page {
     size: A4;
-    margin: 0.7cm 1.5cm 1.5cm 1.5cm; /* Superior bem curto para o logo subir */
+    margin: 0.8cm 1.2cm 1.5cm 1.2cm;
   }
 
-  /* 5. FORÇAR TOPO NO CONTEÚDO */
-  h1, .relatorio-print img, .relatorio-print header {
+  /* 5. TIPOGRAFIA: Texto Justificado para parecer contrato real */
+  .relatorio-print p, 
+  .relatorio-print li, 
+  .relatorio-print div {
+    text-align: justify;
+    line-height: 1.5;
+  }
+
+  .relatorio-print img {
     margin-top: 0 !important;
-    padding-top: 0 !important;
+    max-height: 100px;
   }
-
-  /* Mantenha seus estilos de tabela e assinatura abaixo... */
-  body { font-size: 11pt; line-height: 1.4; color: black; background: white; }
-  table { width: 100%; border-collapse: collapse; margin: 10pt 0; }
-  th, td { border: 1pt solid black; padding: 5pt; }
-  .assinatura { margin-top: 40pt; text-align: center; page-break-inside: avoid; }
 }
 
 /* ========================================
