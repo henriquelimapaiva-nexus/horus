@@ -255,6 +255,7 @@ export default function IAPrecificacaoPreContrato() {
 
         {/* CONTRATO */}
         <div
+          id="contrato-print"
           className="contrato-print"
           style={{
             backgroundColor: "#ffffff",
