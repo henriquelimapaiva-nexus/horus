@@ -348,11 +348,6 @@ if (modoContrato && contratoHtml) {
               page-break-inside: avoid;
             }
             
-            /* Evita que a assinatura seja cortada */
-            .assinatura {
-              page-break-inside: avoid;
-            }
-            
             /* Configuração da página */
             @page {
               size: A4;
@@ -363,6 +358,68 @@ if (modoContrato && contratoHtml) {
             .contrato-print {
               font-size: 11pt;
               line-height: 1.4;
+            }
+
+            /* ========================================
+               ESTILOS PARA ASSINATURAS
+               ======================================== */
+            
+            /* Container principal das assinaturas */
+            .assinatura-container {
+              display: flex;
+              justify-content: space-between;
+              gap: 40px;
+              margin-top: 50px;
+              page-break-inside: avoid;
+            }
+
+            /* Cada box de assinatura */
+            .assinatura-box {
+              flex: 1;
+              text-align: center;
+            }
+
+            /* Linha da assinatura */
+            .assinatura-linha {
+              border-top: 1px solid #000;
+              margin: 30px 0 10px 0;
+              width: 100%;
+            }
+
+            /* Nome da pessoa/empresa */
+            .assinatura-nome {
+              font-weight: bold;
+              margin-top: 10px;
+              font-size: 11pt;
+            }
+
+            /* Cargo da pessoa */
+            .assinatura-cargo {
+              font-size: 10pt;
+              color: #555;
+              margin-top: 5px;
+            }
+
+            /* Seção de testemunhas */
+            .testemunhas {
+              margin-top: 40px;
+              page-break-inside: avoid;
+            }
+
+            .testemunha {
+              margin-top: 20px;
+            }
+
+            .testemunha-linha {
+              border-top: 1px solid #000;
+              margin: 15px 0 5px 0;
+              width: 100%;
+            }
+
+            /* Força a assinatura a ficar na mesma página */
+            .assinaturas-section {
+              page-break-inside: avoid;
+              margin-top: 40px;
             }
           }
         `}</style>
