@@ -4,32 +4,29 @@ import { useNavigate } from 'react-router-dom';
 import Botao from '../../../components/ui/Botao';
 import Card from '../../../components/ui/Card';
 import Input from '../../../components/ui/Input';
-import Select from '../../../components/ui/Select';
 import api from '../../../api/api';
 import toast from 'react-hot-toast';
 
 export default function IAPrecificacao() {
   const navigate = useNavigate();
   const [carregando, setCarregando] = useState(false);
-  const [carregandoDados, setCarregandoDados] = useState(false);
   const [carregandoContrato, setCarregandoContrato] = useState(false);
-  const [resultado, setResultado] = useState(null);
   const [empresas, setEmpresas] = useState([]);
+  const [valoresFase1, setValoresFase1] = useState(null);
   
   // Estado para o modal de negociação
   const [mostrarModalNegociacao, setMostrarModalNegociacao] = useState(false);
   const [opcaoNegociacao, setOpcaoNegociacao] = useState('aceitar');
   const [valorNegociado, setValorNegociado] = useState('');
   const [motivoNegociacao, setMotivoNegociacao] = useState('');
+  const [formaPagamento, setFormaPagamento] = useState('cinquenta_cinquenta');
+  const [numParcelas, setNumParcelas] = useState(6);
+  const [valorParcela, setValorParcela] = useState(0);
+  const [valorEntrada, setValorEntrada] = useState(0);
   
-  const [dadosCliente, setDadosCliente] = useState({
-    empresaId: '',
-    empresaNome: '',
-    perdaMensal: '',
-    urgencia: 'normal',
-    complexidade: 'media',
-    porte: 'medio',
-    linhas: 1
+  const [empresaSelecionada, setEmpresaSelecionada] = useState({
+    id: '',
+    nome: ''
   });
 
   // Dados para o contrato
@@ -41,9 +38,7 @@ export default function IAPrecificacao() {
     representante_rg: '',
     representante_cpf: '',
     representante_endereco: '',
-    email_contratante: '',
-    prazo_implementacao_semanas: 6,
-    prazo_acompanhamento_meses: 3
+    email_contratante: ''
   });
 
   // Buscar empresas ao carregar
@@ -56,195 +51,68 @@ export default function IAPrecificacao() {
       });
   }, []);
 
-  // Quando selecionar uma empresa, buscar dados reais
+  // Quando selecionar uma empresa, buscar valores da Fase 1
   const handleEmpresaChange = async (empresaId) => {
     const empresa = empresas.find(e => e.id === parseInt(empresaId));
     
-    setDadosCliente(prev => ({
-      ...prev,
-      empresaId,
-      empresaNome: empresa?.nome || ''
-    }));
+    setEmpresaSelecionada({
+      id: empresaId,
+      nome: empresa?.nome || ''
+    });
 
-    if (!empresaId) return;
-
-    setCarregandoDados(true);
-    toast.loading('Buscando dados da empresa...', { id: 'busca' });
-
-    try {
-      const linhasRes = await api.get(`/lines/${empresaId}`);
-      const linhas = linhasRes.data;
-      
-      let perdasTotais = 0;
-      
-      for (const linha of linhas) {
-        try {
-          const postosRes = await api.get(`/work-stations/${linha.id}`).catch(() => ({ data: [] }));
-          const postos = postosRes.data;
-          
-          const perdasRes = await api.get(`/losses/${linha.id}`).catch(() => ({ data: [] }));
-          const perdas = perdasRes.data;
-          
-          for (const posto of postos) {
-            if (posto.cargo_id) {
-              const cargosRes = await api.get(`/roles/${empresaId}`).catch(() => ({ data: [] }));
-              const cargo = cargosRes.data.find(c => c.id === posto.cargo_id);
-              if (cargo) {
-                const salario = parseFloat(cargo.salario_base) || 0;
-                const encargos = parseFloat(cargo.encargos_percentual) || 70;
-                const custoMensal = salario * (1 + encargos / 100);
-                perdasTotais += custoMensal * 0.2;
-              }
-            }
-          }
-          
-          perdas.forEach(perda => {
-            perdasTotais += (perda.microparadas_minutos || 0) * 10;
-            perdasTotais += (perda.refugo_pecas || 0) * 50;
-          });
-          
-        } catch (err) {
-          console.error(`Erro ao processar linha ${linha.id}:`, err);
-        }
-      }
-
-      const porte = linhas.length > 5 ? 'grande' : linhas.length > 2 ? 'medio' : 'pequeno';
-
-      setDadosCliente(prev => ({
-        ...prev,
-        perdaMensal: Math.round(perdasTotais).toString(),
-        linhas: linhas.length,
-        porte
-      }));
-
-      toast.success('Dados carregados com sucesso!', { id: 'busca' });
-
-    } catch (error) {
-      console.error('Erro ao buscar dados:', error);
-      toast.error('Erro ao carregar dados da empresa', { id: 'busca' });
-    } finally {
-      setCarregandoDados(false);
-    }
-  };
-
-  const calcularPreco = (dados) => {
-    const perdaMensal = Number(dados.perdaMensal);
-    const beneficioMensal = perdaMensal * 0.3;
-    const beneficioAnual = beneficioMensal * 12;
-    let precoBase = beneficioAnual * 0.3;
-    
-    const multiplicadores = {
-      urgencia: { baixa: 0.95, normal: 1.0, alta: 1.05 },
-      complexidade: { baixa: 0.95, media: 1.0, alta: 1.05 },
-      porte: { pequeno: 0.9, medio: 1.0, grande: 1.05 },
-      linhas: dados.linhas > 1 ? 0.95 : 1.0
-    };
-    
-    const multUrgencia = multiplicadores.urgencia[dados.urgencia] || 1.0;
-    const multComplexidade = multiplicadores.complexidade[dados.complexidade] || 1.0;
-    const multPorte = multiplicadores.porte[dados.porte] || 1.0;
-    const multLinhas = dados.linhas > 3 ? 0.9 : dados.linhas > 1 ? 0.95 : 1.0;
-    
-    let precoFinal = precoBase * multUrgencia * multComplexidade * multPorte * multLinhas;
-    
-    const percentualCobrado = (precoFinal / beneficioAnual) * 100;
-    if (percentualCobrado > 30) {
-      precoFinal = beneficioAnual * 0.3;
-    }
-    
-    const ganhoLiquidoCliente = beneficioAnual - precoFinal;
-    const roiCliente = (ganhoLiquidoCliente / precoFinal) * 100;
-    const paybackMeses = precoFinal / beneficioMensal;
-    
-    const dadosParaProposta = {
-      empresa: dados.empresaNome,
-      honorarios: Math.round(precoFinal),
-      percentualReducao: 30,
-      mesesAcompanhamento: 3,
-      perdaMensal,
-      linhas: dados.linhas
-    };
-    
-    localStorage.setItem('precoJustoProposta', JSON.stringify(dadosParaProposta));
-    
-    return {
-      preco: Math.round(precoFinal),
-      precoMinimo: Math.round(precoFinal * 0.85),
-      precoPremium: Math.round(precoFinal * 1.15),
-      
-      beneficios: {
-        mensal: Math.round(beneficioMensal),
-        anual: Math.round(beneficioAnual),
-        liquido: Math.round(ganhoLiquidoCliente),
-        roi: roiCliente.toFixed(0) + '%',
-        payback: paybackMeses.toFixed(1) + ' meses'
-      },
-      
-      etica: {
-        clienteFica: ((ganhoLiquidoCliente / beneficioAnual) * 100).toFixed(0) + '%',
-        nexusGanha: ((precoFinal / beneficioAnual) * 100).toFixed(0) + '%',
-        justo: percentualCobrado <= 30
-      },
-      
-      pagamento: {
-        aVista: Math.round(precoFinal * 0.95),
-        parcelado6x: Math.round(precoFinal / 6 * 1.05),
-        parcelado12x: Math.round(precoFinal / 12 * 1.10)
-      },
-      
-      resumo: `
-        📊 ANÁLISE HÓRUS - PRECIFICAÇÃO
-        
-        Investimento sugerido: R$ ${Math.round(precoFinal).toLocaleString()}
-        
-        Benefícios para sua empresa:
-        • Ganho mensal projetado: R$ ${Math.round(beneficioMensal).toLocaleString()}
-        • Ganho anual projetado: R$ ${Math.round(beneficioAnual).toLocaleString()}
-        • ROI projetado: ${roiCliente.toFixed(0)}%
-        • Payback: ${paybackMeses.toFixed(1)} meses
-        
-        Sua empresa fica com ${((ganhoLiquidoCliente / beneficioAnual) * 100).toFixed(0)}% do benefício.
-        É uma parceria justa e sustentável.
-      `
-    };
-  };
-
-  const handleCalcular = () => {
-    if (!dadosCliente.empresaId) {
-      toast.error('Selecione uma empresa');
-      return;
-    }
-    
-    if (!dadosCliente.perdaMensal || dadosCliente.perdaMensal < 1000) {
-      toast.error('Perda mensal mínima de R$ 1.000');
+    if (!empresaId) {
+      setValoresFase1(null);
       return;
     }
 
     setCarregando(true);
-    
-    setTimeout(() => {
-      const resultado = calcularPreco(dadosCliente);
-      setResultado(resultado);
-      setValorNegociado(resultado.preco.toString());
+    toast.loading('Buscando dados do contrato Fase 1...', { id: 'busca' });
+
+    try {
+      const response = await api.get(`/projeto/valores/${empresaId}`);
+      
+      if (response.data.sucesso) {
+        setValoresFase1(response.data.dados);
+        
+        // Pré-calcular valores padrão para negociação
+        const saldo = response.data.dados.saldo_fase2e3;
+        const entradaPadrao = saldo * 0.5;
+        const saldoParcelado = saldo - entradaPadrao;
+        const parcelasPadrao = Math.min(12, Math.max(3, Math.ceil(saldoParcelado / 5000)));
+        const valorParcelaPadrao = Math.ceil(saldoParcelado / parcelasPadrao / 100) * 100;
+        
+        setValorNegociado(saldo.toString());
+        setValorEntrada(entradaPadrao);
+        setNumParcelas(parcelasPadrao);
+        setValorParcela(valorParcelaPadrao);
+        
+        toast.success('Dados carregados com sucesso!', { id: 'busca' });
+      } else {
+        toast.error(response.data.erro || 'Erro ao buscar dados da Fase 1', { id: 'busca' });
+      }
+    } catch (error) {
+      console.error('Erro ao buscar dados:', error);
+      toast.error(error.response?.data?.erro || 'Erro ao carregar dados da Fase 1', { id: 'busca' });
+      setValoresFase1(null);
+    } finally {
       setCarregando(false);
-      toast.success('Precificação calculada!');
-    }, 500);
+    }
   };
 
   const handleAbrirModalNegociacao = () => {
-    if (!dadosCliente.empresaId) {
+    if (!empresaSelecionada.id) {
       toast.error('Selecione uma empresa primeiro');
       return;
     }
-    if (!resultado) {
-      toast.error('Calcule o preço primeiro');
+    if (!valoresFase1) {
+      toast.error('Aguardando carregamento dos dados');
       return;
     }
     setMostrarModalNegociacao(true);
   };
 
   const handleGerarContrato = async () => {
-    let valorFinal = resultado.preco;
+    let valorFinal = valoresFase1.saldo_fase2e3;
     
     if (opcaoNegociacao === 'negociar') {
       const novoValor = parseFloat(valorNegociado);
@@ -260,12 +128,16 @@ export default function IAPrecificacao() {
 
     try {
       const payload = {
-        empresa_id: parseInt(dadosCliente.empresaId),
+        empresa_id: parseInt(empresaSelecionada.id),
         valor_total: valorFinal,
-        prazo_implementacao_semanas: dadosContrato.prazo_implementacao_semanas,
-        prazo_acompanhamento_meses: dadosContrato.prazo_acompanhamento_meses,
+        forma_pagamento: formaPagamento,
+        motivo_negociacao: motivoNegociacao || null,
+        num_parcelas: formaPagamento === 'parcelado' ? numParcelas : 0,
+        valor_parcela: formaPagamento === 'parcelado' ? valorParcela : 0,
+        valor_entrada: formaPagamento === 'parcelado' ? valorEntrada : 0,
         representante: {
           nome: dadosContrato.representante_nome || '[NOME DO REPRESENTANTE]',
+          cargo: dadosContrato.representante_cargo || '[CARGO]',
           nacionalidade: dadosContrato.representante_nacionalidade || '[NACIONALIDADE]',
           estado_civil: dadosContrato.representante_estado_civil || '[ESTADO CIVIL]',
           profissao: dadosContrato.representante_profissao || '[PROFISSÃO]',
@@ -275,7 +147,7 @@ export default function IAPrecificacao() {
         },
         contato: {
           email_contratante: dadosContrato.email_contratante || '[E-MAIL DA CONTRATANTE]',
-          email_contratada: 'seu-email@nexus.com.br'
+          email_contratada: 'contato@nexusengenharia.com.br'
         },
         data_assinatura: new Date().toLocaleDateString('pt-BR')
       };
@@ -286,9 +158,101 @@ export default function IAPrecificacao() {
       toast.success('Contrato gerado com sucesso!');
       setMostrarModalNegociacao(false);
       
-      navigate('/consultor/contrato-implementacao', {
-        state: { contratoData: response.data }
-      });
+      // Abrir contrato em nova aba com formatação HTML
+      const win = window.open();
+      win.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Contrato - ${empresaSelecionada.nome}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body {
+                font-family: 'Arial', sans-serif;
+                margin: 0;
+                padding: 40px;
+                line-height: 1.5;
+                color: #000000;
+                background-color: #ffffff;
+              }
+              .container {
+                max-width: 1100px;
+                margin: 0 auto;
+                background: white;
+              }
+              .header {
+                text-align: center;
+                margin-bottom: 40px;
+                padding-bottom: 20px;
+                border-bottom: 2px solid #1E3A8A;
+              }
+              .logo {
+                max-width: 180px;
+                margin-bottom: 15px;
+              }
+              .empresa-nome {
+                color: #1E3A8A;
+                font-size: 28px;
+                margin: 10px 0 5px 0;
+                font-weight: bold;
+              }
+              .subtitulo {
+                color: #666;
+                font-size: 16px;
+                font-weight: normal;
+                margin-top: 5px;
+              }
+              .conteudo {
+                font-size: 14px;
+                line-height: 1.6;
+                white-space: pre-line;
+              }
+              .btn-container {
+                text-align: center;
+                margin-top: 40px;
+                padding: 20px;
+                border-top: 1px solid #ccc;
+              }
+              button {
+                background-color: #1E3A8A;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                margin: 0 10px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+              }
+              button:hover {
+                background-color: #152C6B;
+              }
+              @media print {
+                body { padding: 20px; margin: 0; }
+                .btn-container { display: none; }
+                .header { border-bottom: 2px solid #1E3A8A; }
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <img src="/logo.png" alt="Nexus Engenharia Aplicada" class="logo" onerror="this.style.display='none'">
+                <div class="empresa-nome">NEXUS ENGENHARIA APLICADA</div>
+                <div class="subtitulo">CONTRATO DE IMPLEMENTAÇÃO + ACOMPANHAMENTO</div>
+              </div>
+              <div class="conteudo">
+                ${response.data.contrato.replace(/\n/g, '<br>')}
+              </div>
+              <div class="btn-container">
+                <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+                <button onclick="window.close()">❌ Fechar</button>
+              </div>
+            </div>
+          </body>
+        </html>
+      `);
+      win.document.close();
 
     } catch (error) {
       console.error('Erro ao gerar contrato:', error);
@@ -303,13 +267,39 @@ export default function IAPrecificacao() {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 0
+      minimumFractionDigits: 2
     }).format(valor || 0);
   };
 
   // Modal de negociação
   const ModalNegociacao = () => {
     if (!mostrarModalNegociacao) return null;
+
+    const saldo = valoresFase1?.saldo_fase2e3 || 0;
+    const valorImplementacao = valoresFase1?.valor_implementacao || 0;
+    const valorAcompanhamentoMensal = valoresFase1?.valor_acompanhamento_mensal || 0;
+    const meses = valoresFase1?.meses_acompanhamento || 6;
+
+    const handleFormaPagamentoChange = (tipo) => {
+      setFormaPagamento(tipo);
+      
+      if (tipo === 'a_vista') {
+        setValorNegociado(saldo.toString());
+      } else if (tipo === 'cinquenta_cinquenta') {
+        setValorNegociado(saldo.toString());
+      } else if (tipo === 'parcelado') {
+        const entrada = saldo * 0.5;
+        const saldoParcelado = saldo - entrada;
+        let parcelas = Math.ceil(saldoParcelado / 5000);
+        parcelas = Math.min(12, Math.max(3, parcelas));
+        const valorParcelaCalc = Math.ceil(saldoParcelado / parcelas / 100) * 100;
+        
+        setValorEntrada(entrada);
+        setNumParcelas(parcelas);
+        setValorParcela(valorParcelaCalc);
+        setValorNegociado(saldo.toString());
+      }
+    };
 
     return (
       <div style={{
@@ -328,41 +318,55 @@ export default function IAPrecificacao() {
           backgroundColor: "white",
           borderRadius: "8px",
           padding: "30px",
-          maxWidth: "500px",
+          maxWidth: "550px",
           width: "90%",
           maxHeight: "90vh",
           overflow: "auto"
         }}>
           <h2 style={{ color: "#1E3A8A", marginBottom: "20px" }}>
-            💰 Negociação do Contrato
+            💰 Negociação do Contrato - Fase 2+3
           </h2>
 
-          <p style={{ marginBottom: "15px" }}>
-            <strong>Preço sugerido pela IA:</strong> {formatarMoeda(resultado?.preco)}
-          </p>
-          <p style={{ marginBottom: "20px", fontSize: "14px", color: "#666" }}>
-            Faixa de negociação: {formatarMoeda(resultado?.precoMinimo)} - {formatarMoeda(resultado?.precoPremium)}
-          </p>
+          {/* Discriminação dos valores */}
+          <div style={{ 
+            backgroundColor: "#f0fdf4", 
+            padding: "15px", 
+            borderRadius: "8px",
+            marginBottom: "20px",
+            border: "1px solid #10b981"
+          }}>
+            <h4 style={{ marginBottom: "10px", color: "#166534" }}>📊 Discriminação do Saldo</h4>
+            <p><strong>Saldo total Fase 2+3:</strong> {formatarMoeda(saldo)}</p>
+            <p><strong>Implementação (Fase 2):</strong> {formatarMoeda(valorImplementacao)} (80%)</p>
+            <p><strong>Acompanhamento (Fase 3):</strong> {formatarMoeda(valorAcompanhamentoMensal * meses)}</p>
+            <p style={{ marginLeft: "20px", fontSize: "13px", color: "#555" }}>
+              └─ {meses} meses × {formatarMoeda(valorAcompanhamentoMensal)}/mês
+            </p>
+          </div>
 
           <div style={{ marginBottom: "20px" }}>
-            <label style={{ display: "block", marginBottom: "10px" }}>
+            <p style={{ marginBottom: "10px" }}>
+              <strong>Valor base do contrato:</strong> {formatarMoeda(saldo)}
+            </p>
+          </div>
+
+          <div style={{ marginBottom: "20px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
               <input
                 type="radio"
                 value="aceitar"
                 checked={opcaoNegociacao === 'aceitar'}
                 onChange={(e) => setOpcaoNegociacao(e.target.value)}
-                style={{ marginRight: "8px" }}
               />
-              Aceitar preço sugerido: {formatarMoeda(resultado?.preco)}
+              Aceitar valor sugerido: {formatarMoeda(saldo)}
             </label>
 
-            <label style={{ display: "block", marginBottom: "10px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <input
                 type="radio"
                 value="negociar"
                 checked={opcaoNegociacao === 'negociar'}
                 onChange={(e) => setOpcaoNegociacao(e.target.value)}
-                style={{ marginRight: "8px" }}
               />
               Negociar novo valor
             </label>
@@ -374,7 +378,7 @@ export default function IAPrecificacao() {
                   type="number"
                   value={valorNegociado}
                   onChange={(e) => setValorNegociado(e.target.value)}
-                  placeholder="Ex: 45000"
+                  placeholder="Digite o novo valor"
                   required
                 />
                 <Input
@@ -389,14 +393,110 @@ export default function IAPrecificacao() {
 
           <hr style={{ margin: "20px 0" }} />
 
+          <h3 style={{ fontSize: "16px", marginBottom: "15px" }}>💳 Forma de Pagamento</h3>
+          
+          <div style={{ marginBottom: "20px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+              <input
+                type="radio"
+                name="forma_pagamento"
+                value="a_vista"
+                checked={formaPagamento === 'a_vista'}
+                onChange={() => handleFormaPagamentoChange('a_vista')}
+              />
+              <strong>À vista</strong> - 100% na assinatura: {formatarMoeda(saldo)}
+            </label>
+
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+              <input
+                type="radio"
+                name="forma_pagamento"
+                value="cinquenta_cinquenta"
+                checked={formaPagamento === 'cinquenta_cinquenta'}
+                onChange={() => handleFormaPagamentoChange('cinquenta_cinquenta')}
+              />
+              <strong>50/50</strong> - 50% na assinatura + 50% na entrega da Fase 2
+            </label>
+
+            <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              <input
+                type="radio"
+                name="forma_pagamento"
+                value="parcelado"
+                checked={formaPagamento === 'parcelado'}
+                onChange={() => handleFormaPagamentoChange('parcelado')}
+              />
+              <strong>50% + Parcelas</strong> - 50% entrada + saldo parcelado (máx R$ 5.000/parcela)
+            </label>
+          </div>
+
+          {formaPagamento === 'parcelado' && (
+            <div style={{ 
+              marginTop: "15px", 
+              padding: "15px", 
+              backgroundColor: "#f0fdf4", 
+              borderRadius: "8px",
+              border: "1px solid #10b981"
+            }}>
+              <h4 style={{ marginBottom: "10px", color: "#166534" }}>📋 Detalhes do Parcelamento</h4>
+              <p><strong>Valor total:</strong> {formatarMoeda(parseFloat(valorNegociado))}</p>
+              <p><strong>Entrada (50%):</strong> {formatarMoeda(valorEntrada)}</p>
+              <p><strong>Saldo a parcelar:</strong> {formatarMoeda(parseFloat(valorNegociado) - valorEntrada)}</p>
+              
+              <div style={{ marginTop: "10px" }}>
+                <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>Número de parcelas:</label>
+                <select
+                  value={numParcelas}
+                  onChange={(e) => {
+                    const parcelas = parseInt(e.target.value);
+                    const saldoParcelado = parseFloat(valorNegociado) - valorEntrada;
+                    const valorParcelaCalc = Math.ceil(saldoParcelado / parcelas / 100) * 100;
+                    setNumParcelas(parcelas);
+                    setValorParcela(valorParcelaCalc);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    border: "1px solid #ccc",
+                    fontSize: "14px"
+                  }}
+                >
+                  {[3,4,5,6,7,8,9,10,11,12].map(n => (
+                    <option key={n} value={n}>{n} parcela{n > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <p style={{ marginTop: "10px" }}>
+                <strong>Valor da parcela:</strong> {formatarMoeda(valorParcela)}
+              </p>
+              <p style={{ fontSize: "12px", color: "#666", marginTop: "10px" }}>
+                ✓ Parcela máxima de R$ 5.000<br />
+                ✓ Máximo de 12 parcelas<br />
+                ✓ Sem juros<br />
+                ✓ Os valores da Fase 3 (Acompanhamento) estão incluídos nas parcelas
+              </p>
+            </div>
+          )}
+
+          <hr style={{ margin: "20px 0" }} />
+
           <h3 style={{ fontSize: "16px", marginBottom: "15px" }}>📋 Dados para o Contrato</h3>
 
-          <div style={{ maxHeight: "400px", overflow: "auto", marginBottom: "20px" }}>
+          <div style={{ maxHeight: "300px", overflow: "auto", marginBottom: "20px" }}>
             <Input
               label="Nome do Representante"
               value={dadosContrato.representante_nome}
               onChange={(e) => setDadosContrato({...dadosContrato, representante_nome: e.target.value})}
               placeholder="Nome completo"
+            />
+            <Input
+              label="Cargo do Representante"
+              value={dadosContrato.representante_cargo}
+              onChange={(e) => setDadosContrato({...dadosContrato, representante_cargo: e.target.value})}
+              placeholder="Ex: Diretor, Gerente, etc."
+              style={{ marginTop: "10px" }}
             />
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
               <Input
@@ -420,20 +520,6 @@ export default function IAPrecificacao() {
               placeholder="contato@empresa.com.br"
               style={{ marginTop: "10px" }}
             />
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "10px" }}>
-              <Input
-                label="Prazo Implementação (semanas)"
-                type="number"
-                value={dadosContrato.prazo_implementacao_semanas}
-                onChange={(e) => setDadosContrato({...dadosContrato, prazo_implementacao_semanas: parseInt(e.target.value) || 6})}
-              />
-              <Input
-                label="Prazo Acompanhamento (meses)"
-                type="number"
-                value={dadosContrato.prazo_acompanhamento_meses}
-                onChange={(e) => setDadosContrato({...dadosContrato, prazo_acompanhamento_meses: parseInt(e.target.value) || 3})}
-              />
-            </div>
           </div>
 
           <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}>
@@ -456,22 +542,22 @@ export default function IAPrecificacao() {
 
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ color: '#1E3A8A', marginBottom: '10px' }}>
-          🤖 IA de Precificação
+          🤖 IA de Precificação - Fase 2+3
         </h1>
         <p style={{ color: '#666' }}>
-          Selecione uma empresa e calcule o preço justo baseado nos dados reais.
+          Selecione uma empresa que já possui contrato de Diagnóstico (Fase 1) assinado.
         </p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
         
-        <Card titulo="📋 Dados do Cliente">
+        <Card titulo="📋 Dados da Empresa">
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             
             <div>
               <label style={{ display: 'block', marginBottom: '5px', fontWeight: 500 }}>Empresa *</label>
               <select
-                value={dadosCliente.empresaId}
+                value={empresaSelecionada.id}
                 onChange={(e) => handleEmpresaChange(e.target.value)}
                 style={{
                   width: '100%',
@@ -480,133 +566,62 @@ export default function IAPrecificacao() {
                   border: '1px solid #d1d5db',
                   fontSize: '14px'
                 }}
-                disabled={carregandoDados}
+                disabled={carregando}
               >
                 <option value="">Selecione uma empresa...</option>
                 {empresas.map(emp => (
                   <option key={emp.id} value={emp.id}>{emp.nome}</option>
                 ))}
               </select>
-              {carregandoDados && <small style={{ color: '#666' }}>Carregando dados...</small>}
+              {carregando && <small style={{ color: '#666' }}>Carregando dados da Fase 1...</small>}
             </div>
 
-            <Input
-              label="Perda Mensal (R$)"
-              type="number"
-              value={dadosCliente.perdaMensal}
-              onChange={(e) => setDadosCliente({...dadosCliente, perdaMensal: e.target.value})}
-              placeholder="Calculado automaticamente"
-              help="Baseado nos dados da empresa"
-              required
-            />
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <Select
-                label="Urgência"
-                value={dadosCliente.urgencia}
-                onChange={(e) => setDadosCliente({...dadosCliente, urgencia: e.target.value})}
-                options={[
-                  { value: 'baixa', label: 'Baixa' },
-                  { value: 'normal', label: 'Normal' },
-                  { value: 'alta', label: 'Alta' }
-                ]}
-              />
-              
-              <Select
-                label="Complexidade"
-                value={dadosCliente.complexidade}
-                onChange={(e) => setDadosCliente({...dadosCliente, complexidade: e.target.value})}
-                options={[
-                  { value: 'baixa', label: 'Baixa' },
-                  { value: 'media', label: 'Média' },
-                  { value: 'alta', label: 'Alta' }
-                ]}
-              />
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <Select
-                label="Porte"
-                value={dadosCliente.porte}
-                onChange={(e) => setDadosCliente({...dadosCliente, porte: e.target.value})}
-                options={[
-                  { value: 'pequeno', label: 'Pequeno' },
-                  { value: 'medio', label: 'Médio' },
-                  { value: 'grande', label: 'Grande' }
-                ]}
-              />
-              
-              <Input
-                label="Linhas"
-                type="number"
-                min="1"
-                value={dadosCliente.linhas}
-                onChange={(e) => setDadosCliente({...dadosCliente, linhas: parseInt(e.target.value) || 1})}
-              />
-            </div>
-
-            <Botao
-              variant="primary"
-              size="lg"
-              onClick={handleCalcular}
-              disabled={carregando || carregandoDados}
-              loading={carregando}
-              fullWidth
-            >
-              {carregando ? 'Calculando...' : '💰 Calcular Preço'}
-            </Botao>
+            {valoresFase1 && (
+              <div style={{ 
+                backgroundColor: "#f9fafb", 
+                padding: "15px", 
+                borderRadius: "8px",
+                marginTop: "10px"
+              }}>
+                <h4 style={{ marginBottom: "10px", color: "#1E3A8A" }}>📊 Valores do Projeto</h4>
+                <p><strong>Total do Projeto:</strong> {formatarMoeda(valoresFase1.valor_total_projeto)}</p>
+                <p><strong>Fase 1 (Diagnóstico):</strong> {formatarMoeda(valoresFase1.valor_fase1)}</p>
+                <p><strong>Saldo para Fase 2+3:</strong> {formatarMoeda(valoresFase1.saldo_fase2e3)}</p>
+                <hr style={{ margin: "10px 0" }} />
+                <p><strong>Implementação (Fase 2):</strong> {formatarMoeda(valoresFase1.valor_implementacao)} (80%)</p>
+                <p><strong>Acompanhamento (Fase 3):</strong> {formatarMoeda(valoresFase1.valor_acompanhamento_mensal * 6)}</p>
+                <p style={{ marginLeft: "20px", fontSize: "13px" }}>
+                  └─ 6 meses × {formatarMoeda(valoresFase1.valor_acompanhamento_mensal)}/mês
+                </p>
+              </div>
+            )}
           </div>
         </Card>
 
-        <Card titulo="💰 Resultado">
-          {!resultado ? (
+        <Card titulo="💰 Próximo Passo">
+          {!valoresFase1 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#999', background: '#f9fafb', borderRadius: '8px' }}>
-              <span style={{ fontSize: '48px', display: 'block', marginBottom: '20px' }}>🤖</span>
-              <p>Selecione uma empresa e calcule o preço</p>
+              <span style={{ fontSize: '48px', display: 'block', marginBottom: '20px' }}>📄</span>
+              <p>Selecione uma empresa que já possui</p>
+              <p>contrato de Diagnóstico (Fase 1) assinado.</p>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               <div style={{ background: '#1E3A8A', color: 'white', padding: '30px', borderRadius: '8px', textAlign: 'center' }}>
-                <div style={{ fontSize: '14px', opacity: 0.9 }}>PREÇO SUGERIDO</div>
-                <div style={{ fontSize: '48px', fontWeight: 'bold' }}>{formatarMoeda(resultado.preco)}</div>
-                <div style={{ fontSize: '14px', opacity: 0.9 }}>ou 12x {formatarMoeda(resultado.pagamento.parcelado12x)}</div>
-              </div>
-
-              <div style={{ background: resultado.etica.justo ? '#16a34a20' : '#dc262620', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                <span style={{ color: resultado.etica.justo ? '#16a34a' : '#dc2626', fontWeight: 'bold' }}>
-                  {resultado.etica.justo ? '✅ Proposta justa' : '⚠️ Alerta'}
-                </span>
-                <div style={{ fontSize: '14px', color: '#666' }}>
-                  Cliente fica com {resultado.etica.clienteFica}
+                <div style={{ fontSize: '14px', opacity: 0.9 }}>VALOR DA FASE 2+3</div>
+                <div style={{ fontSize: '36px', fontWeight: 'bold' }}>{formatarMoeda(valoresFase1.saldo_fase2e3)}</div>
+                <div style={{ fontSize: '12px', opacity: 0.8, marginTop: '10px' }}>
+                  Inclui Implementação + {valoresFase1.meses_acompanhamento || 6} meses de Acompanhamento
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#166534' }}>Ganho Mensal</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>
-                    {formatarMoeda(resultado.beneficios.mensal)}
-                  </div>
-                </div>
-                <div style={{ background: '#f0fdf4', padding: '15px', borderRadius: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '12px', color: '#166534' }}>ROI</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#166534' }}>
-                    {resultado.beneficios.roi}
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ background: '#f3f4f6', padding: '15px', borderRadius: '8px' }}>
-                <div style={{ fontSize: '13px', color: '#666', marginBottom: '10px' }}>Negociação:</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#991b1b', fontWeight: 'bold' }}>{formatarMoeda(resultado.precoMinimo)}</span>
-                  <span style={{ color: '#166534', fontWeight: 'bold' }}>{formatarMoeda(resultado.precoPremium)}</span>
-                </div>
-              </div>
-
-              <div style={{ background: '#f9fafb', padding: '15px', borderRadius: '8px', whiteSpace: 'pre-line', fontSize: '13px' }}>
-                {resultado.resumo}
+              <div style={{ background: '#f9fafb', padding: '15px', borderRadius: '8px' }}>
+                <p style={{ marginBottom: "10px" }}><strong>⚠️ Importante:</strong></p>
+                <p style={{ fontSize: "13px", color: "#555" }}>
+                  Este contrato é complementar ao Diagnóstico (Fase 1). 
+                  Os valores aqui apresentados são calculados com base no contrato original.
+                </p>
               </div>
 
               <Botao
@@ -615,7 +630,7 @@ export default function IAPrecificacao() {
                 onClick={handleAbrirModalNegociacao}
                 fullWidth
               >
-                📄 Gerar Contrato de Implementação (com negociação)
+                💰 Negociar e Gerar Contrato
               </Botao>
             </div>
           )}
