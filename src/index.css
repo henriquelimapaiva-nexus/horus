@@ -182,7 +182,7 @@ button:focus {
 
   @page {
     size: A4;
-    margin: 1cm 1.5cm 1cm 1.5cm; /* Margem padrão de contrato */
+    margin: 2cm 1cm 2cm 1cm; /* Margem padrão de contrato */
   }
 
   /* Remove fundos e força cores para economia de tinta e clareza */
