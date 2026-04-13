@@ -134,43 +134,39 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-  /* 1. Esconde a interface completa */
-  header, nav, aside, footer, .sidebar, .sidebar-container, .no-print,
-  button, select, input, textarea, [class*="btn"], [role="button"],
-  [type="button"], [type="submit"] {
-    display: none !important;
-  }
-
-  /* 2. RESET VERTICAL: Puxa o conteúdo para o topo absoluto */
-  html, body, #root, main, .app-container {
+  /* 1. RESET DE ESTRUTURA: O segredo para o logo subir */
+  html, 
+  body, 
+  #root, 
+  main, 
+  .app-container {
+    display: block !important;
     width: 100% !important;
-    height: auto !important;
+    height: auto !important;      /* Mata a altura 100vh do monitor */
+    min-height: 0 !important;     /* Garante que não haja altura mínima */
     margin: 0 !important;
     padding: 0 !important;
-    display: block !important; /* Mantém block para evitar centralização flex */
+    position: static !important;  /* Remove qualquer centralização absoluta */
   }
 
-  /* 3. Ajuste do Relatório: Remove espaços internos no topo */
-  .relatorio-print {
-    display: block !important;
-    visibility: visible !important;
-    position: static !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 !important; /* Remove o padding de 30px que você tem na linha 283 */
-    margin: 0 !important;
-  }
-
-  /* 4. MARGENS DA PÁGINA: Reduzi o topo para 1cm e laterais para 1.5cm */
+  /* 2. MARGENS DA PÁGINA: Forçando o topo para 0.5cm */
   @page {
     size: A4;
-    margin: 1cm 1.5cm 1.5cm 1.5cm; /* Superior | Direita | Inferior | Esquerda */
+    margin: 0.5cm 1.5cm 1.5cm 1.5cm; /* Superior bem pequeno | Direita | Inferior | Esquerda */
   }
 
-  /* 5. Força o cabeçalho do contrato a grudar no topo */
-  .relatorio-print > header, 
-  .relatorio-print > div:first-child,
-  .relatorio-print img {
+  /* 3. O RELATÓRIO: Removendo o 'respiro' de tela */
+  .relatorio-print {
+    display: block !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;   /* Mata os 30px da linha 283 */
+    width: 100% !important;
+  }
+
+  /* 4. CABEÇALHO: Garante que o logo seja o primeiro item da folha */
+  .relatorio-print img, 
+  .relatorio-print header, 
+  .relatorio-print h1 {
     margin-top: 0 !important;
     padding-top: 0 !important;
   }
