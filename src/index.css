@@ -115,6 +115,51 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
+
+  /* ESTRATÉGIA AGRESSIVA: esconde TUDO que não for .contrato-print ou .relatorio-print */
+  body * {
+    display: none !important;
+  }
+
+  /* Mostra apenas o contrato (nova classe) */
+  .contrato-print,
+  .contrato-print * {
+    display: block !important;
+  }
+
+  /* Mostra apenas o relatório (manter compatibilidade) */
+  .relatorio-print,
+  .relatorio-print * {
+    display: block !important;
+  }
+
+  /* Ajusta o layout do contrato para impressão */
+  .contrato-print {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    background: white !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* Ajusta o layout do relatório para impressão */
+  .relatorio-print {
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
   /* Esconde todos os elementos de interface */
   header, 
   nav, 
@@ -131,21 +176,6 @@ button:focus {
     display: none !important;
   }
 
-  /* Mostra apenas o relatório */
-  .relatorio-print {
-    display: block !important;
-    visibility: visible !important;
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    background: white !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-  }
-
   /* Configuração da página A4 */
   @page {
     size: A4;
@@ -156,6 +186,8 @@ button:focus {
   body, 
   html, 
   #root,
+  .contrato-print,
+  .contrato-print *,
   .relatorio-print,
   .relatorio-print * {
     background: white !important;
@@ -305,11 +337,6 @@ button:focus {
     height: 1pt;
     background: black !important;
     margin: 10pt auto;
-  }
-
-  /* Esconde elementos interativos */
-  input, select, textarea, button {
-    display: none !important;
   }
 
   /* Remove links */
