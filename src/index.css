@@ -134,50 +134,45 @@ button:focus {
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-  /* 1. Esconde a interface completa, incluindo menus laterais e barras de navegação */
-  header,
-  nav,
-  aside,
-  footer,
-  .sidebar,
-  .sidebar-container,
-  .no-print,
-  button,
-  select,
-  input,
-  textarea,
-  [class*="btn"],
-  [role="button"],
-  [type="button"],
-  [type="submit"] {
+  /* 1. Esconde a interface completa */
+  header, nav, aside, footer, .sidebar, .sidebar-container, .no-print,
+  button, select, input, textarea, [class*="btn"], [role="button"],
+  [type="button"], [type="submit"] {
     display: none !important;
   }
 
-  /* 2. Força o container principal a ocupar 100% da largura (remove o espaço do menu) */
-  html, 
-  body, 
-  #root, 
-  main, 
-  .app-container {
+  /* 2. RESET VERTICAL: Puxa o conteúdo para o topo absoluto */
+  html, body, #root, main, .app-container {
     width: 100% !important;
     height: auto !important;
     margin: 0 !important;
     padding: 0 !important;
-    display: block !important;
+    display: block !important; /* Mantém block para evitar centralização flex */
   }
 
-  /* 3. Configura o Relatório para preencher a folha A4 */
+  /* 3. Ajuste do Relatório: Remove espaços internos no topo */
   .relatorio-print {
     display: block !important;
     visibility: visible !important;
     position: static !important;
     width: 100% !important;
     max-width: 100% !important;
-    height: auto !important;
-    background: white !important;
-    padding: 0 !important;
+    padding: 0 !important; /* Remove o padding de 30px que você tem na linha 283 */
     margin: 0 !important;
-    overflow: visible !important;
+  }
+
+  /* 4. MARGENS DA PÁGINA: Reduzi o topo para 1cm e laterais para 1.5cm */
+  @page {
+    size: A4;
+    margin: 1cm 1.5cm 1.5cm 1.5cm; /* Superior | Direita | Inferior | Esquerda */
+  }
+
+  /* 5. Força o cabeçalho do contrato a grudar no topo */
+  .relatorio-print > header, 
+  .relatorio-print > div:first-child,
+  .relatorio-print img {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
   }
 
   @page {
