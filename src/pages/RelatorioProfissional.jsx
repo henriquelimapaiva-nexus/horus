@@ -1425,12 +1425,19 @@ export default function RelatorioProfissional() {
               </div>
             )}
 
-{/* SEÇÃO FINAL - ASSINATURA CENTRALIZADA */}
-<div className="assinatura-rodape">
-  <div className="linha-assinatura-central"></div>
-  <p className="nome-assinatura">Eng. Henrique de Lima Paiva</p>
-  <p className="cargo-assinatura">Consultor Sênior - Nexus Engenharia Aplicada</p>
-  <p className="contato-assinatura">
+{/* SEÇÃO FINAL - ASSINATURA DIRETA */}
+<div style={{ textAlign: 'center', marginTop: '60px' }}>
+  
+  {/* A LINHA: Um elemento simples com borda superior */}
+  <div style={{ 
+    borderTop: '2px solid black', 
+    width: '300px', 
+    margin: '0 auto 10px auto' 
+  }}></div>
+
+  <p style={{ margin: '0', fontWeight: 'bold' }}>Eng. Henrique de Lima Paiva</p>
+  <p style={{ margin: '0', fontSize: '14px' }}>Consultor Sênior - Nexus Engenharia Aplicada</p>
+  <p style={{ margin: '0', fontSize: '12px', color: '#666' }}>
     Contato: henrique@nexus.com.br | (11) 99999-9999
   </p>
 </div>
