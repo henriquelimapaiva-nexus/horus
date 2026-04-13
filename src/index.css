@@ -2,11 +2,9 @@
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   color-scheme: light dark;
   color: #111827;
   background-color: #f1f5f9;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -21,7 +19,9 @@
 }
 
 /* FAZ O APP OCUPAR 100% DA TELA */
-html, body, #root {
+html,
+body,
+#root {
   width: 100%;
   height: 100%;
 }
@@ -70,22 +70,41 @@ button:focus {
    ANIMAÇÕES GLOBAIS
    ======================================== */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes slideIn {
-  from { transform: translateX(-20px); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  from {
+    transform: translateX(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Classes de animação */
@@ -108,61 +127,16 @@ button:focus {
 
 .hover-lift:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* ========================================
    ESTILOS PARA IMPRESSÃO PROFISSIONAL
    ======================================== */
 @media print {
-
-  /* ESTRATÉGIA AGRESSIVA: esconde TUDO que não for .contrato-print ou .relatorio-print */
-  body * {
-    display: none !important;
-  }
-
-  /* Mostra apenas o contrato (nova classe) */
-  .contrato-print,
-  .contrato-print * {
-    display: block !important;
-  }
-
-  /* Mostra apenas o relatório (manter compatibilidade) */
-  .relatorio-print,
-  .relatorio-print * {
-    display: block !important;
-  }
-
-  /* Ajusta o layout do contrato para impressão */
-  .contrato-print {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 !important;
-    padding: 20px !important;
-    background: white !important;
-    box-shadow: none !important;
-    border-radius: 0 !important;
-  }
-
-  /* Ajusta o layout do relatório para impressão */
-  .relatorio-print {
-    position: relative !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    background: white !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-  }
-
   /* Esconde todos os elementos de interface */
-  header, 
-  nav, 
+  header,
+  nav,
   footer,
   .no-print,
   button,
@@ -176,18 +150,32 @@ button:focus {
     display: none !important;
   }
 
+  /* Mostra apenas o relatório */
+  .relatorio-print {
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
   /* Configuração da página A4 */
   @page {
     size: A4;
-    margin: 2.5cm 2cm 2cm 2cm; /* superior, direita, inferior, esquerda */
+    margin: 2.5cm 2cm 2cm 2cm;
+    /* superior, direita, inferior, esquerda */
   }
 
   /* Remove fundos e sombras */
-  body, 
-  html, 
+  body,
+  html,
   #root,
-  .contrato-print,
-  .contrato-print *,
   .relatorio-print,
   .relatorio-print * {
     background: white !important;
@@ -205,15 +193,15 @@ button:focus {
 
   h1 {
     font-size: 24pt;
-    color: #1E3A8A !important;
+    color: #1e3a8a !important;
     margin-top: 0;
     margin-bottom: 10pt;
   }
 
   h2 {
     font-size: 18pt;
-    color: #1E3A8A !important;
-    border-bottom: 1pt solid #1E3A8A;
+    color: #1e3a8a !important;
+    border-bottom: 1pt solid #1e3a8a;
     padding-bottom: 5pt;
     margin-top: 20pt;
     margin-bottom: 15pt;
@@ -249,7 +237,7 @@ button:focus {
   }
 
   th {
-    background-color: #1E3A8A !important;
+    background-color: #1e3a8a !important;
     color: white !important;
     font-weight: bold;
     padding: 8pt;
@@ -272,7 +260,7 @@ button:focus {
   .relatorio-print > div:first-child {
     display: block !important;
     opacity: 0.1 !important;
-    color: #1E3A8A !important;
+    color: #1e3a8a !important;
     font-size: 80pt !important;
     z-index: 999 !important;
   }
@@ -293,7 +281,7 @@ button:focus {
   }
 
   /* Evita quebras dentro de cards importantes */
-  .card, 
+  .card,
   .resumo-card,
   [class*="card"] {
     page-break-inside: avoid;
@@ -311,7 +299,8 @@ button:focus {
   }
 
   /* Ajustes para listas */
-  ul, ol {
+  ul,
+  ol {
     margin-left: 20pt;
     margin-bottom: 10pt;
   }
@@ -339,6 +328,14 @@ button:focus {
     margin: 10pt auto;
   }
 
+  /* Esconde elementos interativos */
+  input,
+  select,
+  textarea,
+  button {
+    display: none !important;
+  }
+
   /* Remove links */
   a {
     text-decoration: none;
@@ -361,7 +358,7 @@ button:focus {
   .print-only {
     display: block !important;
   }
-  
+
   .screen-only {
     display: none !important;
   }
@@ -374,7 +371,7 @@ button:focus {
   background: white;
   padding: 30px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* Melhorias para tabelas em tela */
@@ -383,7 +380,7 @@ table {
 }
 
 th {
-  background-color: #1E3A8A;
+  background-color: #1e3a8a;
   color: white;
   padding: 12px;
 }
@@ -398,14 +395,14 @@ td {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  border-left: 4px solid #1E3A8A;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #1e3a8a;
   transition: transform 0.2s;
 }
 
 .card-resumo:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
 /* Grid responsivo */
@@ -429,7 +426,7 @@ td {
   left: 50%;
   transform: translateX(-50%);
   padding: 4px 8px;
-  background: #1E3A8A;
+  background: #1e3a8a;
   color: white;
   font-size: 12px;
   border-radius: 4px;
