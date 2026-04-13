@@ -521,7 +521,7 @@ if (modoContrato && contratoHtml) {
 
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ color: '#1E3A8A', marginBottom: '10px' }}>
-          🤖 IA de Precificação - Fase 2+3
+          Sistema de Inteligência Comercial (SIC) - Fase 2+3
         </h1>
         <p style={{ color: '#666' }}>
           Selecione uma empresa que já possui contrato de Diagnóstico (Fase 1) assinado.
