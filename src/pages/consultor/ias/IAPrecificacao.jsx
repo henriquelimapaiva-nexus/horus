@@ -184,69 +184,72 @@ export default function IAPrecificacao() {
     }).format(valor || 0);
   };
 
-  // TELA DE CONTRATO (renderizada na mesma tela)
-  if (modoContrato && contratoHtml) {
-    return (
-      <div style={{ backgroundColor: "#f3f4f6", minHeight: "100vh", padding: "40px" }}>
-        
-        <div style={{ marginBottom: "20px" }}>
-          <Botao onClick={() => setModoContrato(false)}>
-            ← Voltar
-          </Botao>
-        </div>
-
-        <div
-          className="contrato-print"
-          style={{
-            backgroundColor: "#ffffff",
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "50px",
-            fontFamily: "Arial, sans-serif",
-            lineHeight: "1.6",
-            color: "#000"
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
-            
-            <img
-              src={logo}
-              alt="Nexus Engenharia Aplicada"
-              style={{
-                width: "180px",
-                marginBottom: "15px",
-                objectFit: "contain"
-              }}
-              onError={(e) => { e.target.style.display = 'none' }}
-            />
-
-            <h1 style={{
-              color: "#1E3A8A",
-              fontSize: "26px",
-              marginBottom: "5px"
-            }}>
-              NEXUS ENGENHARIA APLICADA
-            </h1>
-
-            <p style={{ color: "#666" }}>
-              CONTRATO DE IMPLEMENTAÇÃO + ACOMPANHAMENTO
-            </p>
-          </div>
-
-          <div
-            dangerouslySetInnerHTML={{ __html: contratoHtml.replace(/\n/g, '<br>') }}
-          />
-
-          <div style={{ marginTop: "30px", textAlign: "center" }}>
-            <Botao onClick={() => window.print()}>
-              🖨️ Imprimir / Salvar PDF
-            </Botao>
-          </div>
-
-        </div>
+  // TELA DE CONTRATO
+if (modoContrato && contratoHtml) {
+  return (
+    <div style={{ backgroundColor: "#f3f4f6", minHeight: "100vh", padding: "40px" }}>
+      
+      <div style={{ marginBottom: "20px" }}>
+        <Botao onClick={() => setModoContrato(false)}>
+          ← Voltar
+        </Botao>
       </div>
-    );
-  }
+
+      <div
+        className="contrato-print"
+        style={{
+          backgroundColor: "#ffffff",
+          maxWidth: "1100px",
+          margin: "0 auto",
+          padding: "50px",
+          fontFamily: "Arial, sans-serif",
+          lineHeight: "1.6",
+          color: "#000"
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: "40px" }}>
+          <img src={logo} alt="..." style={{ width: "180px", marginBottom: "15px", objectFit: "contain" }} />
+          <h1 style={{ color: "#1E3A8A", fontSize: "26px", marginBottom: "5px" }}>NEXUS ENGENHARIA APLICADA</h1>
+          <p style={{ color: "#666" }}>CONTRATO DE IMPLEMENTAÇÃO + ACOMPANHAMENTO</p>
+        </div>
+
+        <div dangerouslySetInnerHTML={{ __html: contratoHtml.replace(/\n/g, '<br>') }} />
+
+        <div style={{ marginTop: "30px", textAlign: "center" }}>
+          <Botao onClick={() => window.print()}>🖨️ Imprimir / Salvar PDF</Botao>
+        </div>
+
+        {/* CSS PARA AJUSTAR ASSINATURAS */}
+        <style>{`
+          .assinatura-linha {
+            border-top: 1px solid #000;
+            margin: 8px 0 5px 0 !important;
+          }
+          .grid-assinaturas-print {
+            display: flex;
+            justify-content: space-between;
+            gap: 30px;
+            margin-top: 20px !important;
+          }
+          .campo-assinatura {
+            flex: 1;
+            text-align: center;
+          }
+          .testemunhas-print {
+            margin-top: 25px !important;
+          }
+          .testemunhas-print div {
+            gap: 30px !important;
+          }
+          .testemunhas-print p {
+            margin: 3px 0 !important;
+          }
+        `}</style>
+
+      </div>
+    </div>
+  );
+}
 
   // Modal de negociação
   const ModalNegociacao = () => {
