@@ -202,8 +202,6 @@ export default function IAPrecificacao() {
             maxWidth: "1100px",
             margin: "0 auto",
             padding: "50px",
-            borderRadius: "10px",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.1)",
             fontFamily: "Arial, sans-serif",
             lineHeight: "1.6",
             color: "#000"
