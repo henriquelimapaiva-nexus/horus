@@ -31,7 +31,7 @@ export default function SideMenu({ onFiltroChange }) {
   }, [periodo]); // Só executa quando período mudar
 
   return (
-    <div style={{
+    <div className="no-print" style={{
       width: "250px",
       background: "#f1f5f9",
       padding: "20px",
