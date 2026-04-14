@@ -49,12 +49,14 @@ export default function IASugestoes() {
       const response = await api.get(url);
       
       // Ajuste: extrair a estrutura correta
-      const dados = response.data;
-      setResultado({
-        empresa: dados.empresa,
-        data_analise: dados.data_analise,
-        sugestoes: dados.sugestoes
-      });
+const dados = response.data;
+const empresaNome = empresas.find(e => e.id === parseInt(empresaSelecionada))?.nome || dados.empresa || 'Empresa';
+
+setResultado({
+  empresa: empresaNome,
+  data_analise: new Date().toLocaleDateString('pt-BR'),
+  sugestoes: dados.sugestoes
+});
       toast.success('Análise concluída!');
     } catch (error) {
       console.error('Erro ao analisar:', error);
