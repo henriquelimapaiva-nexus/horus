@@ -48,15 +48,15 @@ export default function IASugestoes() {
       const url = `/ia/sugestoes/${empresaSelecionada}${linhaSelecionada ? `?linha_id=${linhaSelecionada}` : ''}`;
       const response = await api.get(url);
       
-      // Ajuste: extrair a estrutura correta
-const dados = response.data;
-const empresaNome = empresas.find(e => e.id === parseInt(empresaSelecionada))?.nome || dados.empresa || 'Empresa';
-
-setResultado({
-  empresa: empresaNome,
-  data_analise: new Date().toLocaleDateString('pt-BR'),
-  sugestoes: dados.sugestoes
-});
+      const dados = response.data;
+      
+      setResultado({
+        empresa: dados.empresa,
+        data_analise: dados.data_analise,
+        resumo: dados.resumo,
+        diagnosticos: dados.diagnosticos,
+        projecoes: dados.projecoes
+      });
       toast.success('Análise concluída!');
     } catch (error) {
       console.error('Erro ao analisar:', error);
@@ -75,6 +75,15 @@ setResultado({
     }
   };
 
+  const getPrioridadeBg = (prioridade) => {
+    switch(prioridade) {
+      case 'alta': return '#fee2e2';
+      case 'media': return '#fef3c7';
+      case 'baixa': return '#dcfce7';
+      default: return '#f3f4f6';
+    }
+  };
+
   const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -82,15 +91,6 @@ setResultado({
       minimumFractionDigits: 2
     }).format(valor || 0);
   };
-
-  // Extrair dados da estrutura correta
-  const sugestoes = resultado?.sugestoes;
-  const acoes = sugestoes?.acoes || [];
-  const projecoes = sugestoes?.projecoes || {};
-
-  const altaPrioridade = acoes.filter(a => a.prioridade === 'alta');
-  const mediaPrioridade = acoes.filter(a => a.prioridade === 'media');
-  const baixaPrioridade = acoes.filter(a => a.prioridade === 'baixa');
 
   return (
     <div style={{ padding: '30px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -169,7 +169,7 @@ setResultado({
         </div>
       )}
 
-      {resultado && sugestoes && (
+      {resultado && (
         <>
           {/* Resumo Executivo */}
           <Card titulo={`📊 Diagnóstico - ${resultado.empresa}`} style={{ marginTop: '30px' }}>
@@ -180,16 +180,16 @@ setResultado({
               marginBottom: '20px'
             }}>
               <p><strong>Data da análise:</strong> {resultado.data_analise}</p>
-              <p><strong>Resumo:</strong> {sugestoes.resumo}</p>
+              <p><strong>Total de diagnósticos:</strong> {resultado.resumo?.total_diagnosticos || 0}</p>
               <div style={{ display: 'flex', gap: '20px', marginTop: '15px', flexWrap: 'wrap' }}>
                 <span style={{ backgroundColor: '#fee2e2', padding: '4px 12px', borderRadius: '20px', fontSize: '12px' }}>
-                  🔴 {altaPrioridade.length} críticos
+                  🔴 {resultado.resumo?.alta_prioridade || 0} críticos
                 </span>
                 <span style={{ backgroundColor: '#fef3c7', padding: '4px 12px', borderRadius: '20px', fontSize: '12px' }}>
-                  🟠 {mediaPrioridade.length} médios
+                  🟠 {resultado.resumo?.media_prioridade || 0} médios
                 </span>
                 <span style={{ backgroundColor: '#dcfce7', padding: '4px 12px', borderRadius: '20px', fontSize: '12px' }}>
-                  🟢 {baixaPrioridade.length} baixos
+                  🟢 {resultado.resumo?.baixa_prioridade || 0} baixos
                 </span>
               </div>
             </div>
@@ -203,19 +203,19 @@ setResultado({
               <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#666' }}>Ganho Total Estimado</div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#16a34a' }}>
-                  {projecoes.ganhoMensal || 'R$ 0'}<span style={{ fontSize: '12px' }}>/mês</span>
+                  {resultado.projecoes?.ganho_mensal || 'R$ 0'}<span style={{ fontSize: '12px' }}>/mês</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#666' }}>OEE Projetado</div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1E3A8A' }}>
-                  {projecoes.novoOEE || 'N/A'}
+                  {resultado.projecoes?.novo_oee || 'N/A'}
                 </div>
               </div>
               <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#666' }}>Tempo Estimado</div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1E3A8A' }}>
-                  {projecoes.tempoEstimado || 'N/A'}
+                  {resultado.projecoes?.tempo_estimado || 'N/A'}
                 </div>
               </div>
             </div>
@@ -225,23 +225,23 @@ setResultado({
           <Card titulo="🎯 Plano de Ação" style={{ marginTop: '30px' }}>
             
             {/* Alta Prioridade */}
-            {altaPrioridade.length > 0 && (
+            {resultado.diagnosticos?.alta?.length > 0 && (
               <>
                 <h3 style={{ color: '#dc2626', marginBottom: '15px', borderBottom: '2px solid #dc2626', paddingBottom: '5px' }}>
                   🔴 Críticos (Alta Prioridade)
                 </h3>
-                {altaPrioridade.map((diag, idx) => (
+                {resultado.diagnosticos.alta.map((diag, idx) => (
                   <div key={idx} style={{ 
-                    backgroundColor: '#fee2e2',
+                    backgroundColor: getPrioridadeBg(diag.prioridade),
                     padding: '20px',
                     borderRadius: '8px',
                     marginBottom: '15px',
-                    borderLeft: '6px solid #dc2626'
+                    borderLeft: `6px solid ${getPrioridadeCor(diag.prioridade)}`
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' }}>
-                      <h4 style={{ margin: 0, fontSize: '16px' }}>{diag.titulo}</h4>
+                      <h4 style={{ margin: 0, fontSize: '16px' }}>{diag.problema}</h4>
                       <span style={{ 
-                        backgroundColor: '#dc2626',
+                        backgroundColor: getPrioridadeCor(diag.prioridade),
                         color: 'white',
                         padding: '4px 12px',
                         borderRadius: '20px',
@@ -252,7 +252,25 @@ setResultado({
                       </span>
                     </div>
                     
-                    <p style={{ margin: '10px 0', color: '#444' }}>{diag.descricao}</p>
+                    <p style={{ margin: '10px 0', color: '#444' }}>
+                      <strong>Linha:</strong> {diag.linha_nome} | 
+                      <strong> Valor real:</strong> {diag.valor_real} | 
+                      <strong> Limite:</strong> {diag.valor_limite}
+                    </p>
+                    
+                    <div style={{ 
+                      backgroundColor: 'white',
+                      padding: '15px',
+                      borderRadius: '8px',
+                      marginTop: '10px'
+                    }}>
+                      <strong>🛠️ Ferramenta sugerida: {diag.ferramenta}</strong>
+                      <div style={{ marginTop: '10px', fontSize: '14px' }}>
+                        {diag.passo_a_passo?.map((passo, i) => (
+                          <div key={i} style={{ margin: '5px 0' }}>✓ {passo}</div>
+                        ))}
+                      </div>
+                    </div>
                     
                     <div style={{ 
                       display: 'flex', 
@@ -263,15 +281,11 @@ setResultado({
                     }}>
                       <div>
                         <strong>📈 Ganho estimado:</strong>
-                        <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{diag.ganho}</div>
+                        <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{formatarMoeda(diag.ganho_estimado)}/mês</div>
                       </div>
                       <div>
-                        <strong>⏱️ Esforço:</strong>
-                        <div>{diag.esforco}</div>
-                      </div>
-                      <div>
-                        <strong>💰 Investimento:</strong>
-                        <div>{diag.investimento}</div>
+                        <strong>⏱️ Esforço estimado:</strong>
+                        <div>{diag.esforco_semanas} semanas</div>
                       </div>
                     </div>
                   </div>
@@ -280,23 +294,23 @@ setResultado({
             )}
 
             {/* Média Prioridade */}
-            {mediaPrioridade.length > 0 && (
+            {resultado.diagnosticos?.media?.length > 0 && (
               <>
                 <h3 style={{ color: '#f59e0b', marginBottom: '15px', borderBottom: '2px solid #f59e0b', paddingBottom: '5px', marginTop: '30px' }}>
                   🟠 Médios (Média Prioridade)
                 </h3>
-                {mediaPrioridade.map((diag, idx) => (
+                {resultado.diagnosticos.media.map((diag, idx) => (
                   <div key={idx} style={{ 
-                    backgroundColor: '#fef3c7',
+                    backgroundColor: getPrioridadeBg(diag.prioridade),
                     padding: '20px',
                     borderRadius: '8px',
                     marginBottom: '15px',
-                    borderLeft: '6px solid #f59e0b'
+                    borderLeft: `6px solid ${getPrioridadeCor(diag.prioridade)}`
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' }}>
-                      <h4 style={{ margin: 0, fontSize: '16px' }}>{diag.titulo}</h4>
+                      <h4 style={{ margin: 0, fontSize: '16px' }}>{diag.problema}</h4>
                       <span style={{ 
-                        backgroundColor: '#f59e0b',
+                        backgroundColor: getPrioridadeCor(diag.prioridade),
                         color: 'white',
                         padding: '4px 12px',
                         borderRadius: '20px',
@@ -307,7 +321,25 @@ setResultado({
                       </span>
                     </div>
                     
-                    <p style={{ margin: '10px 0', color: '#444' }}>{diag.descricao}</p>
+                    <p style={{ margin: '10px 0', color: '#444' }}>
+                      <strong>Linha:</strong> {diag.linha_nome} | 
+                      <strong> Valor real:</strong> {diag.valor_real} | 
+                      <strong> Limite:</strong> {diag.valor_limite}
+                    </p>
+                    
+                    <div style={{ 
+                      backgroundColor: 'white',
+                      padding: '15px',
+                      borderRadius: '8px',
+                      marginTop: '10px'
+                    }}>
+                      <strong>🛠️ Ferramenta sugerida: {diag.ferramenta}</strong>
+                      <div style={{ marginTop: '10px', fontSize: '14px' }}>
+                        {diag.passo_a_passo?.map((passo, i) => (
+                          <div key={i} style={{ margin: '5px 0' }}>✓ {passo}</div>
+                        ))}
+                      </div>
+                    </div>
                     
                     <div style={{ 
                       display: 'flex', 
@@ -318,15 +350,11 @@ setResultado({
                     }}>
                       <div>
                         <strong>📈 Ganho estimado:</strong>
-                        <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{diag.ganho}</div>
+                        <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{formatarMoeda(diag.ganho_estimado)}/mês</div>
                       </div>
                       <div>
-                        <strong>⏱️ Esforço:</strong>
-                        <div>{diag.esforco}</div>
-                      </div>
-                      <div>
-                        <strong>💰 Investimento:</strong>
-                        <div>{diag.investimento}</div>
+                        <strong>⏱️ Esforço estimado:</strong>
+                        <div>{diag.esforco_semanas} semanas</div>
                       </div>
                     </div>
                   </div>
@@ -335,26 +363,27 @@ setResultado({
             )}
 
             {/* Baixa Prioridade */}
-            {baixaPrioridade.length > 0 && (
+            {resultado.diagnosticos?.baixa?.length > 0 && (
               <>
                 <h3 style={{ color: '#16a34a', marginBottom: '15px', borderBottom: '2px solid #16a34a', paddingBottom: '5px', marginTop: '30px' }}>
                   🟢 Baixos (Baixa Prioridade)
                 </h3>
-                {baixaPrioridade.map((diag, idx) => (
+                {resultado.diagnosticos.baixa.map((diag, idx) => (
                   <div key={idx} style={{ 
-                    backgroundColor: '#dcfce7',
+                    backgroundColor: getPrioridadeBg(diag.prioridade),
                     padding: '15px',
                     borderRadius: '8px',
                     marginBottom: '10px',
-                    borderLeft: '6px solid #16a34a'
+                    borderLeft: `6px solid ${getPrioridadeCor(diag.prioridade)}`
                   }}>
-                    <p><strong>{diag.titulo}</strong> - {diag.descricao}</p>
+                    <p><strong>{diag.problema}</strong> - {diag.ferramenta}</p>
                   </div>
                 ))}
               </>
             )}
 
-            {acoes.length === 0 && (
+            {(!resultado.diagnosticos?.alta || resultado.diagnosticos.alta.length === 0) && 
+             (!resultado.diagnosticos?.media || resultado.diagnosticos.media.length === 0) && (
               <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
                 <span style={{ fontSize: '48px', display: 'block', marginBottom: '20px' }}>✅</span>
                 <p>Nenhum desvio crítico encontrado!</p>
@@ -375,15 +404,15 @@ setResultado({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginTop: '20px' }}>
                 <div>
                   <div style={{ fontSize: '12px', color: '#666' }}>OEE Projetado</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{projecoes.novoOEE || 'N/A'}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes?.novo_oee || 'N/A'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#666' }}>Ganho Mensal Total</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{projecoes.ganhoMensal || 'R$ 0'}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes?.ganho_mensal || 'R$ 0'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#666' }}>Tempo Estimado</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{projecoes.tempoEstimado || 'N/A'}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes?.tempo_estimado || 'N/A'}</div>
                 </div>
               </div>
             </div>
