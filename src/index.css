@@ -250,6 +250,32 @@ div[style*="textAlign: center"] {
   text-align: center !important;
 }
 
+/* Estilos isolados para não quebrar outros relatórios */
+.nexus-assinatura-final {
+  display: block !important;
+  width: 100% !important;
+  text-align: center !important;
+  margin-top: 50pt !important;
+  page-break-inside: avoid !important;
+}
+
+.nexus-linha-assinatura {
+  border-top: 1.5pt solid #000 !important;
+  width: 250pt !important; /* Largura fixa para garantir o centro */
+  margin: 0 auto 10pt auto !important; /* CENTRALIZAÇÃO REAL */
+}
+
+.nexus-texto-assinatura {
+  text-align: center !important;
+  margin: 2pt 0 !important;
+}
+
+.nexus-texto-contato {
+  text-align: center !important;
+  font-size: 9pt !important;
+  color: #555 !important;
+}
+
 }
 
 /* ========================================

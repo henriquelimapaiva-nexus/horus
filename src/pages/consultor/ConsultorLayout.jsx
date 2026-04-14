@@ -35,7 +35,7 @@ export default function ConsultorLayout() {
     { path: "/consultor/relatorios", icon: "", label: "Relatórios" },    
     { path: "/consultor/ias/precificacao", icon: "", label: "Proposta de Implementação" },
     { path: "/consultor/ias/precificacao-pre-contrato", icon: "", label: "Proposta Diagnóstico Inicial" },
-    { path: "/consultor/ias/sugestoes", icon: "", label: "IA de Sugestões" },
+    { path: "/consultor/ias/sugestoes", icon: "", label: "Plano de Ação Estratégico (PAE)" },
     { path: "/consultor/checklist", icon: "", label: "Checklist" },
     { path: "/consultor/horas", icon: "", label: "Registro de Horas" },
     { path: "/consultor/leads", icon: "", label: "Leads"},
