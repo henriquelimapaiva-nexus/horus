@@ -392,7 +392,7 @@ export default function IASugestoes() {
             )}
           </Card>
 
-          {/* Projeção Final */}
+          {/* Projeção Final com Comparativo OEE */}
           <Card titulo="📈 Projeção de Resultados" style={{ marginTop: '30px' }}>
             <div style={{ 
               backgroundColor: '#f0fdf4', 
@@ -400,19 +400,41 @@ export default function IASugestoes() {
               borderRadius: '8px',
               textAlign: 'center'
             }}>
-              <h3 style={{ color: '#166534', marginBottom: '15px' }}>Com a implementação das sugestões acima</h3>
+              <h3 style={{ color: '#166534', marginBottom: '15px' }}>Comparativo de OEE</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginTop: '20px' }}>
                 <div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>OEE Atual (Real)</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#dc2626' }}>
+                    {resultado.resumo?.oee_atual ? `${resultado.resumo.oee_atual}%` : 'N/A'}
+                  </div>
+                </div>
+                <div>
                   <div style={{ fontSize: '12px', color: '#666' }}>OEE Projetado</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes?.novo_oee || 'N/A'}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#16a34a' }}>
+                    {resultado.projecoes?.novo_oee || 'N/A'}
+                  </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Ganho Mensal Total</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes?.ganho_mensal || 'R$ 0'}</div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>Ganho Estimado</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#1E3A8A' }}>
+                    {resultado.projecoes?.ganho_oee || 'N/A'}
+                  </div>
                 </div>
-                <div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Tempo Estimado</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes?.tempo_estimado || 'N/A'}</div>
+              </div>
+              <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ccc' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>Ganho Mensal Total</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#166534' }}>
+                      {resultado.projecoes?.ganho_mensal || 'R$ 0'}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: '#666' }}>Tempo Estimado</div>
+                    <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#166534' }}>
+                      {resultado.projecoes?.tempo_estimado || 'N/A'}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
