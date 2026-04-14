@@ -98,7 +98,7 @@ export default function IASugestoes() {
       {/* Cabeçalho */}
       <div style={{ marginBottom: '30px' }}>
         <h1 style={{ color: '#1E3A8A', marginBottom: '10px' }}>
-          🤖 IA de Sugestões de Melhoria
+          Plano de Ação Estratégico (PAE)
         </h1>
         <p style={{ color: '#666' }}>
           A IA analisa os dados reais da empresa e sugere ações prioritárias para otimizar processos.
