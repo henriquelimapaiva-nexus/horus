@@ -47,7 +47,14 @@ export default function IASugestoes() {
     try {
       const url = `/ia/sugestoes/${empresaSelecionada}${linhaSelecionada ? `?linha_id=${linhaSelecionada}` : ''}`;
       const response = await api.get(url);
-      setResultado(response.data);
+      
+      // Ajuste: extrair a estrutura correta
+      const dados = response.data;
+      setResultado({
+        empresa: dados.empresa,
+        data_analise: dados.data_analise,
+        sugestoes: dados.sugestoes
+      });
       toast.success('Análise concluída!');
     } catch (error) {
       console.error('Erro ao analisar:', error);
@@ -66,15 +73,6 @@ export default function IASugestoes() {
     }
   };
 
-  const getPrioridadeBg = (prioridade) => {
-    switch(prioridade) {
-      case 'alta': return '#fee2e2';
-      case 'media': return '#fef3c7';
-      case 'baixa': return '#dcfce7';
-      default: return '#f3f4f6';
-    }
-  };
-
   const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -82,6 +80,15 @@ export default function IASugestoes() {
       minimumFractionDigits: 2
     }).format(valor || 0);
   };
+
+  // Extrair dados da estrutura correta
+  const sugestoes = resultado?.sugestoes;
+  const acoes = sugestoes?.acoes || [];
+  const projecoes = sugestoes?.projecoes || {};
+
+  const altaPrioridade = acoes.filter(a => a.prioridade === 'alta');
+  const mediaPrioridade = acoes.filter(a => a.prioridade === 'media');
+  const baixaPrioridade = acoes.filter(a => a.prioridade === 'baixa');
 
   return (
     <div style={{ padding: '30px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -160,7 +167,7 @@ export default function IASugestoes() {
         </div>
       )}
 
-      {resultado && (
+      {resultado && sugestoes && (
         <>
           {/* Resumo Executivo */}
           <Card titulo={`📊 Diagnóstico - ${resultado.empresa}`} style={{ marginTop: '30px' }}>
@@ -171,16 +178,16 @@ export default function IASugestoes() {
               marginBottom: '20px'
             }}>
               <p><strong>Data da análise:</strong> {resultado.data_analise}</p>
-              <p><strong>Total de diagnósticos:</strong> {resultado.resumo.total_diagnosticos}</p>
+              <p><strong>Resumo:</strong> {sugestoes.resumo}</p>
               <div style={{ display: 'flex', gap: '20px', marginTop: '15px', flexWrap: 'wrap' }}>
                 <span style={{ backgroundColor: '#fee2e2', padding: '4px 12px', borderRadius: '20px', fontSize: '12px' }}>
-                  🔴 {resultado.resumo.alta_prioridade} críticos
+                  🔴 {altaPrioridade.length} críticos
                 </span>
                 <span style={{ backgroundColor: '#fef3c7', padding: '4px 12px', borderRadius: '20px', fontSize: '12px' }}>
-                  🟠 {resultado.resumo.media_prioridade} médios
+                  🟠 {mediaPrioridade.length} médios
                 </span>
                 <span style={{ backgroundColor: '#dcfce7', padding: '4px 12px', borderRadius: '20px', fontSize: '12px' }}>
-                  🟢 {resultado.resumo.baixa_prioridade} baixos
+                  🟢 {baixaPrioridade.length} baixos
                 </span>
               </div>
             </div>
@@ -194,19 +201,19 @@ export default function IASugestoes() {
               <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#666' }}>Ganho Total Estimado</div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#16a34a' }}>
-                  {formatarMoeda(resultado.resumo.ganho_total_mensal)}<span style={{ fontSize: '12px' }}>/mês</span>
+                  {projecoes.ganhoMensal || 'R$ 0'}<span style={{ fontSize: '12px' }}>/mês</span>
                 </div>
               </div>
               <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#666' }}>OEE Projetado</div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1E3A8A' }}>
-                  {resultado.projecoes.novo_oee}
+                  {projecoes.novoOEE || 'N/A'}
                 </div>
               </div>
               <div style={{ textAlign: 'center', padding: '15px', backgroundColor: '#f3f4f6', borderRadius: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#666' }}>Tempo Estimado</div>
                 <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1E3A8A' }}>
-                  {resultado.projecoes.tempo_estimado}
+                  {projecoes.tempoEstimado || 'N/A'}
                 </div>
               </div>
             </div>
@@ -216,23 +223,23 @@ export default function IASugestoes() {
           <Card titulo="🎯 Plano de Ação" style={{ marginTop: '30px' }}>
             
             {/* Alta Prioridade */}
-            {resultado.diagnosticos.alta.length > 0 && (
+            {altaPrioridade.length > 0 && (
               <>
                 <h3 style={{ color: '#dc2626', marginBottom: '15px', borderBottom: '2px solid #dc2626', paddingBottom: '5px' }}>
                   🔴 Críticos (Alta Prioridade)
                 </h3>
-                {resultado.diagnosticos.alta.map((diag, idx) => (
+                {altaPrioridade.map((diag, idx) => (
                   <div key={idx} style={{ 
-                    backgroundColor: getPrioridadeBg(diag.prioridade),
+                    backgroundColor: '#fee2e2',
                     padding: '20px',
                     borderRadius: '8px',
                     marginBottom: '15px',
-                    borderLeft: `6px solid ${getPrioridadeCor(diag.prioridade)}`
+                    borderLeft: '6px solid #dc2626'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' }}>
-                      <h4 style={{ margin: 0, fontSize: '16px' }}>{diag.problema}</h4>
+                      <h4 style={{ margin: 0, fontSize: '16px' }}>{diag.titulo}</h4>
                       <span style={{ 
-                        backgroundColor: getPrioridadeCor(diag.prioridade),
+                        backgroundColor: '#dc2626',
                         color: 'white',
                         padding: '4px 12px',
                         borderRadius: '20px',
@@ -243,25 +250,7 @@ export default function IASugestoes() {
                       </span>
                     </div>
                     
-                    <p style={{ margin: '10px 0', color: '#444' }}>
-                      <strong>Linha:</strong> {diag.linha_nome} | 
-                      <strong> Valor real:</strong> {diag.valor_real} | 
-                      <strong> Limite:</strong> {diag.valor_limite}
-                    </p>
-                    
-                    <div style={{ 
-                      backgroundColor: 'white',
-                      padding: '15px',
-                      borderRadius: '8px',
-                      marginTop: '10px'
-                    }}>
-                      <strong>🛠️ Ferramenta sugerida: {diag.ferramenta}</strong>
-                      <div style={{ marginTop: '10px', fontSize: '14px' }}>
-                        {diag.passo_a_passo?.map((passo, i) => (
-                          <div key={i} style={{ margin: '5px 0' }}>✓ {passo}</div>
-                        ))}
-                      </div>
-                    </div>
+                    <p style={{ margin: '10px 0', color: '#444' }}>{diag.descricao}</p>
                     
                     <div style={{ 
                       display: 'flex', 
@@ -272,11 +261,15 @@ export default function IASugestoes() {
                     }}>
                       <div>
                         <strong>📈 Ganho estimado:</strong>
-                        <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{formatarMoeda(diag.ganho_estimado)}/mês</div>
+                        <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{diag.ganho}</div>
                       </div>
                       <div>
-                        <strong>⏱️ Esforço estimado:</strong>
-                        <div>{diag.esforco_semanas} semanas</div>
+                        <strong>⏱️ Esforço:</strong>
+                        <div>{diag.esforco}</div>
+                      </div>
+                      <div>
+                        <strong>💰 Investimento:</strong>
+                        <div>{diag.investimento}</div>
                       </div>
                     </div>
                   </div>
@@ -285,23 +278,23 @@ export default function IASugestoes() {
             )}
 
             {/* Média Prioridade */}
-            {resultado.diagnosticos.media.length > 0 && (
+            {mediaPrioridade.length > 0 && (
               <>
                 <h3 style={{ color: '#f59e0b', marginBottom: '15px', borderBottom: '2px solid #f59e0b', paddingBottom: '5px', marginTop: '30px' }}>
                   🟠 Médios (Média Prioridade)
                 </h3>
-                {resultado.diagnosticos.media.map((diag, idx) => (
+                {mediaPrioridade.map((diag, idx) => (
                   <div key={idx} style={{ 
-                    backgroundColor: getPrioridadeBg(diag.prioridade),
+                    backgroundColor: '#fef3c7',
                     padding: '20px',
                     borderRadius: '8px',
                     marginBottom: '15px',
-                    borderLeft: `6px solid ${getPrioridadeCor(diag.prioridade)}`
+                    borderLeft: '6px solid #f59e0b'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap' }}>
-                      <h4 style={{ margin: 0, fontSize: '16px' }}>{diag.problema}</h4>
+                      <h4 style={{ margin: 0, fontSize: '16px' }}>{diag.titulo}</h4>
                       <span style={{ 
-                        backgroundColor: getPrioridadeCor(diag.prioridade),
+                        backgroundColor: '#f59e0b',
                         color: 'white',
                         padding: '4px 12px',
                         borderRadius: '20px',
@@ -312,25 +305,7 @@ export default function IASugestoes() {
                       </span>
                     </div>
                     
-                    <p style={{ margin: '10px 0', color: '#444' }}>
-                      <strong>Linha:</strong> {diag.linha_nome} | 
-                      <strong> Valor real:</strong> {diag.valor_real} | 
-                      <strong> Limite:</strong> {diag.valor_limite}
-                    </p>
-                    
-                    <div style={{ 
-                      backgroundColor: 'white',
-                      padding: '15px',
-                      borderRadius: '8px',
-                      marginTop: '10px'
-                    }}>
-                      <strong>🛠️ Ferramenta sugerida: {diag.ferramenta}</strong>
-                      <div style={{ marginTop: '10px', fontSize: '14px' }}>
-                        {diag.passo_a_passo?.map((passo, i) => (
-                          <div key={i} style={{ margin: '5px 0' }}>✓ {passo}</div>
-                        ))}
-                      </div>
-                    </div>
+                    <p style={{ margin: '10px 0', color: '#444' }}>{diag.descricao}</p>
                     
                     <div style={{ 
                       display: 'flex', 
@@ -341,11 +316,15 @@ export default function IASugestoes() {
                     }}>
                       <div>
                         <strong>📈 Ganho estimado:</strong>
-                        <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{formatarMoeda(diag.ganho_estimado)}/mês</div>
+                        <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{diag.ganho}</div>
                       </div>
                       <div>
-                        <strong>⏱️ Esforço estimado:</strong>
-                        <div>{diag.esforco_semanas} semanas</div>
+                        <strong>⏱️ Esforço:</strong>
+                        <div>{diag.esforco}</div>
+                      </div>
+                      <div>
+                        <strong>💰 Investimento:</strong>
+                        <div>{diag.investimento}</div>
                       </div>
                     </div>
                   </div>
@@ -354,26 +333,26 @@ export default function IASugestoes() {
             )}
 
             {/* Baixa Prioridade */}
-            {resultado.diagnosticos.baixa.length > 0 && (
+            {baixaPrioridade.length > 0 && (
               <>
                 <h3 style={{ color: '#16a34a', marginBottom: '15px', borderBottom: '2px solid #16a34a', paddingBottom: '5px', marginTop: '30px' }}>
                   🟢 Baixos (Baixa Prioridade)
                 </h3>
-                {resultado.diagnosticos.baixa.map((diag, idx) => (
+                {baixaPrioridade.map((diag, idx) => (
                   <div key={idx} style={{ 
-                    backgroundColor: getPrioridadeBg(diag.prioridade),
+                    backgroundColor: '#dcfce7',
                     padding: '15px',
                     borderRadius: '8px',
                     marginBottom: '10px',
-                    borderLeft: `6px solid ${getPrioridadeCor(diag.prioridade)}`
+                    borderLeft: '6px solid #16a34a'
                   }}>
-                    <p><strong>{diag.problema}</strong> - {diag.ferramenta}</p>
+                    <p><strong>{diag.titulo}</strong> - {diag.descricao}</p>
                   </div>
                 ))}
               </>
             )}
 
-            {resultado.diagnosticos.alta.length === 0 && resultado.diagnosticos.media.length === 0 && (
+            {acoes.length === 0 && (
               <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
                 <span style={{ fontSize: '48px', display: 'block', marginBottom: '20px' }}>✅</span>
                 <p>Nenhum desvio crítico encontrado!</p>
@@ -394,15 +373,15 @@ export default function IASugestoes() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginTop: '20px' }}>
                 <div>
                   <div style={{ fontSize: '12px', color: '#666' }}>OEE Projetado</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes.novo_oee}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{projecoes.novoOEE || 'N/A'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#666' }}>Ganho Mensal Total</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes.ganho_mensal}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{projecoes.ganhoMensal || 'R$ 0'}</div>
                 </div>
                 <div>
                   <div style={{ fontSize: '12px', color: '#666' }}>Tempo Estimado</div>
-                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{resultado.projecoes.tempo_estimado}</div>
+                  <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#166534' }}>{projecoes.tempoEstimado || 'N/A'}</div>
                 </div>
               </div>
             </div>
