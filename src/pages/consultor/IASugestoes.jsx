@@ -258,18 +258,34 @@ export default function IASugestoes() {
                       <strong> Limite:</strong> {diag.valor_limite}
                     </p>
                     
+                    {/* Plano de Ação Completo */}
                     <div style={{ 
                       backgroundColor: 'white',
                       padding: '15px',
                       borderRadius: '8px',
                       marginTop: '10px'
                     }}>
-                      <strong>🛠️ Ferramenta sugerida: {diag.ferramenta}</strong>
-                      <div style={{ marginTop: '10px', fontSize: '14px' }}>
-                        {diag.passo_a_passo?.map((passo, i) => (
-                          <div key={i} style={{ margin: '5px 0' }}>✓ {passo}</div>
-                        ))}
-                      </div>
+                      <strong>🛠️ Plano de Ação Sugerido:</strong>
+                      {diag.plano_acao?.map((item, i) => (
+                        <div key={i} style={{ marginTop: '15px', paddingTop: '10px', borderTop: i > 0 ? '1px solid #e5e7eb' : 'none' }}>
+                          <div style={{ fontWeight: 'bold', color: '#1E3A8A' }}>
+                            {item.ordem}. {item.ferramenta}
+                          </div>
+                          {item.descricao_extra && (
+                            <p style={{ margin: '5px 0', fontSize: '13px', color: '#444' }}>{item.descricao_extra}</p>
+                          )}
+                          {item.passo_a_passo && item.passo_a_passo.length > 0 && (
+                            <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                              {item.passo_a_passo.map((passo, j) => (
+                                <div key={j} style={{ margin: '3px 0' }}>✓ {passo}</div>
+                              ))}
+                            </div>
+                          )}
+                          <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
+                            ⏱️ Tempo estimado: {item.tempo_semanas} {item.tempo_semanas === 1 ? 'semana' : 'semanas'}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     
                     <div style={{ 
@@ -284,8 +300,8 @@ export default function IASugestoes() {
                         <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{formatarMoeda(diag.ganho_estimado)}/mês</div>
                       </div>
                       <div>
-                        <strong>⏱️ Esforço estimado:</strong>
-                        <div>{diag.esforco_semanas} semanas</div>
+                        <strong>⏱️ Esforço total:</strong>
+                        <div>{diag.esforco_semanas} {diag.esforco_semanas === 1 ? 'semana' : 'semanas'}</div>
                       </div>
                     </div>
                   </div>
@@ -327,18 +343,34 @@ export default function IASugestoes() {
                       <strong> Limite:</strong> {diag.valor_limite}
                     </p>
                     
+                    {/* Plano de Ação Completo */}
                     <div style={{ 
                       backgroundColor: 'white',
                       padding: '15px',
                       borderRadius: '8px',
                       marginTop: '10px'
                     }}>
-                      <strong>🛠️ Ferramenta sugerida: {diag.ferramenta}</strong>
-                      <div style={{ marginTop: '10px', fontSize: '14px' }}>
-                        {diag.passo_a_passo?.map((passo, i) => (
-                          <div key={i} style={{ margin: '5px 0' }}>✓ {passo}</div>
-                        ))}
-                      </div>
+                      <strong>🛠️ Plano de Ação Sugerido:</strong>
+                      {diag.plano_acao?.map((item, i) => (
+                        <div key={i} style={{ marginTop: '15px', paddingTop: '10px', borderTop: i > 0 ? '1px solid #e5e7eb' : 'none' }}>
+                          <div style={{ fontWeight: 'bold', color: '#1E3A8A' }}>
+                            {item.ordem}. {item.ferramenta}
+                          </div>
+                          {item.descricao_extra && (
+                            <p style={{ margin: '5px 0', fontSize: '13px', color: '#444' }}>{item.descricao_extra}</p>
+                          )}
+                          {item.passo_a_passo && item.passo_a_passo.length > 0 && (
+                            <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                              {item.passo_a_passo.map((passo, j) => (
+                                <div key={j} style={{ margin: '3px 0' }}>✓ {passo}</div>
+                              ))}
+                            </div>
+                          )}
+                          <div style={{ marginTop: '5px', fontSize: '12px', color: '#666' }}>
+                            ⏱️ Tempo estimado: {item.tempo_semanas} {item.tempo_semanas === 1 ? 'semana' : 'semanas'}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                     
                     <div style={{ 
@@ -353,8 +385,8 @@ export default function IASugestoes() {
                         <div style={{ color: '#16a34a', fontWeight: 'bold' }}>{formatarMoeda(diag.ganho_estimado)}/mês</div>
                       </div>
                       <div>
-                        <strong>⏱️ Esforço estimado:</strong>
-                        <div>{diag.esforco_semanas} semanas</div>
+                        <strong>⏱️ Esforço total:</strong>
+                        <div>{diag.esforco_semanas} {diag.esforco_semanas === 1 ? 'semana' : 'semanas'}</div>
                       </div>
                     </div>
                   </div>
@@ -376,7 +408,10 @@ export default function IASugestoes() {
                     marginBottom: '10px',
                     borderLeft: `6px solid ${getPrioridadeCor(diag.prioridade)}`
                   }}>
-                    <p><strong>{diag.problema}</strong> - {diag.ferramenta}</p>
+                    <p><strong>{diag.problema}</strong></p>
+                    <div style={{ marginTop: '8px', fontSize: '13px' }}>
+                      <strong>Ferramentas sugeridas:</strong> {diag.plano_acao?.map(p => p.ferramenta).join(', ')}
+                    </div>
                   </div>
                 ))}
               </>
