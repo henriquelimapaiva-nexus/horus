@@ -421,6 +421,16 @@ if (modoContrato && contratoHtml) {
               page-break-inside: avoid;
               margin-top: 40px;
             }
+
+            /* 🔥 Força assinaturas e testemunhas a ficarem na mesma página */
+            .assinaturas-section,
+            .grid-assinaturas-print,
+            .campo-assinatura,
+            .testemunhas-print,
+            div[style*="margin-top: 40px"] {
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
           }
         `}</style>
 
