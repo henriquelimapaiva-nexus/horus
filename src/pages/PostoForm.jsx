@@ -20,7 +20,7 @@ export default function PostoForm() {
     linha_id: linhaId || "",
     tempo_ciclo_segundos: "",
     tempo_setup_minutos: "",
-    disponibilidade_percentual: "95",
+    disponibilidade_percentual: "",
     cargo_id: "",
     ordem_fluxo: ""
   });
@@ -180,7 +180,7 @@ export default function PostoForm() {
           nome: form.nome,
           tempo_ciclo_segundos: parseFloat(form.tempo_ciclo_segundos) || 0,
           tempo_setup_minutos: parseFloat(form.tempo_setup_minutos) || 0,
-          disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 95,
+          disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 100,
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null,
           ordem_fluxo: form.ordem_fluxo ? parseInt(form.ordem_fluxo) : null
         });
@@ -198,7 +198,7 @@ export default function PostoForm() {
           nome: form.nome,
           tempo_ciclo_segundos: parseFloat(form.tempo_ciclo_segundos) || 0,
           tempo_setup_minutos: parseFloat(form.tempo_setup_minutos) || 0,
-          disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 95,
+          disponibilidade_percentual: parseFloat(form.disponibilidade_percentual) || 100,
           cargo_id: form.cargo_id ? parseInt(form.cargo_id) : null
         });
         
@@ -210,7 +210,7 @@ export default function PostoForm() {
           linha_id: linhaId || "",
           tempo_ciclo_segundos: "",
           tempo_setup_minutos: "",
-          disponibilidade_percentual: "95",
+          disponibilidade_percentual: "",
           cargo_id: "",
           ordem_fluxo: ""
         });
