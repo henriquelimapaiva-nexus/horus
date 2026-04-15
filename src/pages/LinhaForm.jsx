@@ -66,10 +66,10 @@ export default function LinhaForm() {
       const linha = res.data.find(l => l.id === parseInt(id));
       
       if (linha) {
-        // Formatar horas
-        const horasFormatadas = linha.horas_produtivas 
-          ? parseFloat(linha.horas_produtivas_dia).toString() 
-          : "16";
+// Formatar horas - usa o campo correto do backend
+const horasFormatadas = linha.horas_disponiveis 
+  ? parseFloat(linha.horas_disponiveis).toString() 
+  : "8";  // Fallback padrão para linha nova
 
         setForm({
           nome: linha.nome || "",
