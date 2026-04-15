@@ -27,7 +27,7 @@ export default function IAPrecificacaoPreContrato() {
     forma_pagamento: "cinquenta_cinquenta",
     num_parcelas: 0,
     valor_parcela: 0,
-    entrada_percentual: 50,
+    entrada_percentual: 0,
     valor_entrada: 0,
     desconto: 0,
     motivo_desconto: ""
@@ -756,8 +756,8 @@ if (modoContrato && contratoHtml) {
                     ...negociacao,
                     forma_pagamento: e.target.value,
                     // NÃO FORÇAR valores padrão - manter os que já estão ou definir como 0
-                    num_parcelas: negociacao.num_parcelas || 0,
-                    entrada_percentual: negociacao.entrada_percentual || 0,
+                    num_parcelas: 0,
+                    entrada_percentual: 0,
                     valor_entrada: 0
                   });
                 }}
@@ -831,29 +831,28 @@ if (modoContrato && contratoHtml) {
               <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
                 Percentual de entrada (%)
               </label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="5"
-                value={negociacao.entrada_percentual}
-                onChange={(e) => {
-                  const percent = parseFloat(e.target.value) || 0;
-                  const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
-                  const valorEntradaCalc = (valorComDesconto * percent) / 100;
-                  const saldoParcelado = valorComDesconto - valorEntradaCalc;
-                  let parcelas = negociacao.num_parcelas;
-                  if (parcelas === 0) parcelas = 0;
-                  const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
-                  
-                  setNegociacao({
-                    ...negociacao,
-                    entrada_percentual: percent,
-                    valor_entrada: valorEntradaCalc,
-                    num_parcelas: parcelas,
-                    valor_parcela: valorParcelaCalc
-                  });
-                }}
+<input
+  type="number"
+  min="0"
+  max="100"
+  step="5"
+  placeholder="Digite o percentual"
+  value={negociacao.entrada_percentual === 0 ? "" : negociacao.entrada_percentual}
+  onChange={(e) => {
+    const percent = parseFloat(e.target.value) || 0;
+    const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
+    const valorEntradaCalc = (valorComDesconto * percent) / 100;
+    const saldoParcelado = valorComDesconto - valorEntradaCalc;
+    const parcelas = negociacao.num_parcelas;
+    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
+    
+    setNegociacao({
+      ...negociacao,
+      entrada_percentual: percent,
+      valor_entrada: valorEntradaCalc,
+      valor_parcela: valorParcelaCalc
+    });
+  }}
                 style={{
                   width: "100%",
                   padding: "8px",
@@ -869,32 +868,25 @@ if (modoContrato && contratoHtml) {
               <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
                 Número de parcelas
               </label>
-              <select
-                value={negociacao.num_parcelas}
-                onChange={(e) => {
-                  const parcelas = parseInt(e.target.value);
-                  const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
-                  const saldoParcelado = valorComDesconto - negociacao.valor_entrada;
-                  const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
-                  setNegociacao({
-                    ...negociacao,
-                    num_parcelas: parcelas,
-                    valor_parcela: valorParcelaCalc
-                  });
-                }}
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  borderRadius: "4px",
-                  border: "1px solid #ccc",
-                  fontSize: "14px"
-                }}
-              >
-                <option value="0">À vista (sem parcelas)</option>
-                {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                  <option key={n} value={n}>{n} parcela{n > 1 ? 's' : ''}</option>
-                ))}
-              </select>
+<select
+  value={negociacao.num_parcelas === 0 ? "" : negociacao.num_parcelas}
+  onChange={(e) => {
+    const parcelas = parseInt(e.target.value);
+    const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
+    const saldoParcelado = valorComDesconto - negociacao.valor_entrada;
+    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
+    setNegociacao({
+      ...negociacao,
+      num_parcelas: parcelas,
+      valor_parcela: valorParcelaCalc
+    });
+  }}
+>
+  <option value="" disabled selected>Selecione o número de parcelas</option>
+  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+    <option key={n} value={n}>{n} parcela{n > 1 ? 's' : ''}</option>
+  ))}
+</select>
             </div>
 
             <div style={{ 
