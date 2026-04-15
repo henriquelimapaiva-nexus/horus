@@ -25,10 +25,10 @@ export default function IAPrecificacao() {
   const [valorNegociado, setValorNegociado] = useState('');
   const [motivoNegociacao, setMotivoNegociacao] = useState('');
   const [formaPagamento, setFormaPagamento] = useState('cinquenta_cinquenta');
-  const [numParcelas, setNumParcelas] = useState(6);
+  const [numParcelas, setNumParcelas] = useState(0);
   const [valorParcela, setValorParcela] = useState(0);
   const [valorEntrada, setValorEntrada] = useState(0);
-  const [entradaPercentual, setEntradaPercentual] = useState(50);
+  const [entradaPercentual, setEntradaPercentual] = useState(0);
   
   const [empresaSelecionada, setEmpresaSelecionada] = useState({
     id: '',
@@ -275,7 +275,7 @@ if (modoContrato && contratoHtml) {
         const saldoParcelado = saldo - entrada;
         let parcelas = Math.ceil(saldoParcelado / 5000);
         parcelas = Math.min(12, Math.max(3, parcelas));
-        const valorParcelaCalc = Math.ceil(saldoParcelado / parcelas / 100) * 100;
+        const valorParcelaCalc = (saldoParcelado / parcelas);
         
         setEntradaPercentual(50);
         setValorEntrada(entrada);
@@ -493,34 +493,26 @@ if (modoContrato && contratoHtml) {
                 <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
                   Percentual de entrada (%)
                 </label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="5"
-                  value={entradaPercentual}
-                  onChange={(e) => {
-                    const percent = parseFloat(e.target.value) || 0;
-                    const valorComDesconto = parseFloat(valorNegociado);
-                    const valorEntradaCalc = (valorComDesconto * percent) / 100;
-                    const saldoParcelado = valorComDesconto - valorEntradaCalc;
-                    let parcelas = numParcelas;
-                    if (parcelas === 0) parcelas = 0;
-                    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
-                    
-                    setEntradaPercentual(percent);
-                    setValorEntrada(valorEntradaCalc);
-                    setNumParcelas(parcelas);
-                    setValorParcela(valorParcelaCalc);
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    borderRadius: "4px",
-                    border: "1px solid #ccc",
-                    fontSize: "14px"
-                  }}
-                />
+<input
+  type="number"
+  min="0"
+  max="100"
+  step="5"
+  placeholder="Digite o percentual"
+  value={entradaPercentual === 0 ? "" : entradaPercentual}
+  onChange={(e) => {
+    const percent = parseFloat(e.target.value) || 0;
+    const valorComDesconto = parseFloat(valorNegociado);
+    const valorEntradaCalc = (valorComDesconto * percent) / 100;
+    const saldoParcelado = valorComDesconto - valorEntradaCalc;
+    const parcelas = numParcelas;
+    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
+    
+    setEntradaPercentual(percent);
+    setValorEntrada(valorEntradaCalc);
+    setValorParcela(valorParcelaCalc);
+  }}
+/>
                 <small style={{ color: "#666" }}>Digite o percentual desejado (ex: 30 para 30%)</small>
               </div>
 
@@ -528,28 +520,21 @@ if (modoContrato && contratoHtml) {
                 <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
                   Número de parcelas
                 </label>
-                <select
-                  value={numParcelas}
-                  onChange={(e) => {
-                    const parcelas = parseInt(e.target.value);
-                    const saldoParcelado = parseFloat(valorNegociado) - valorEntrada;
-                    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
-                    setNumParcelas(parcelas);
-                    setValorParcela(valorParcelaCalc);
-                  }}
-                  style={{
-                    width: "100%",
-                    padding: "8px",
-                    borderRadius: "4px",
-                    border: "1px solid #ccc",
-                    fontSize: "14px"
-                  }}
-                >
-                  <option value="0">À vista (sem parcelas)</option>
-                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                    <option key={n} value={n}>{n} parcela{n > 1 ? 's' : ''}</option>
-                  ))}
-                </select>
+<select
+  value={numParcelas === 0 ? "" : numParcelas}
+  onChange={(e) => {
+    const parcelas = parseInt(e.target.value);
+    const saldoParcelado = parseFloat(valorNegociado) - valorEntrada;
+    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
+    setNumParcelas(parcelas);
+    setValorParcela(valorParcelaCalc);
+  }}
+>
+  <option value="" disabled selected>Selecione o número de parcelas</option>
+  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+    <option key={n} value={n}>{n} parcela{n > 1 ? 's' : ''}</option>
+  ))}
+</select>
               </div>
 
               <div style={{ 
