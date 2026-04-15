@@ -744,7 +744,7 @@ if (modoContrato && contratoHtml) {
               <span><strong>Parcelado</strong> - 50% entrada + parcelas mensais (máx R$ 5.000/parcela)</span>
             </label>
 
-            {/* NOVA OPÇÃO: Condições Especiais */}
+            {/* NOVA OPÇÃO: Condições Especiais - CORRIGIDA */}
             <label style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
               <input
                 type="radio"
@@ -755,9 +755,10 @@ if (modoContrato && contratoHtml) {
                   setNegociacao({
                     ...negociacao,
                     forma_pagamento: e.target.value,
-                    num_parcelas: 6,
-                    entrada_percentual: 30,
-                    valor_entrada: (parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto)) * 0.3
+                    // NÃO FORÇAR valores padrão - manter os que já estão ou definir como 0
+                    num_parcelas: negociacao.num_parcelas || 0,
+                    entrada_percentual: negociacao.entrada_percentual || 0,
+                    valor_entrada: 0
                   });
                 }}
               />
@@ -815,7 +816,7 @@ if (modoContrato && contratoHtml) {
           </div>
         )}
 
-        {/* CONDIÇÕES ESPECIAIS */}
+        {/* CONDIÇÕES ESPECIAIS - CORRIGIDO (sem arredondamento) */}
         {negociacao.forma_pagamento === "especial" && (
           <div style={{ 
             marginTop: "15px", 
@@ -842,8 +843,8 @@ if (modoContrato && contratoHtml) {
                   const valorEntradaCalc = (valorComDesconto * percent) / 100;
                   const saldoParcelado = valorComDesconto - valorEntradaCalc;
                   let parcelas = negociacao.num_parcelas;
-                  if (parcelas === 0) parcelas = 6;
-                  const valorParcelaCalc = parcelas > 0 ? Math.ceil(saldoParcelado / parcelas / 100) * 100 : 0;
+                  if (parcelas === 0) parcelas = 0;
+                  const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
                   
                   setNegociacao({
                     ...negociacao,
@@ -874,7 +875,7 @@ if (modoContrato && contratoHtml) {
                   const parcelas = parseInt(e.target.value);
                   const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
                   const saldoParcelado = valorComDesconto - negociacao.valor_entrada;
-                  const valorParcelaCalc = parcelas > 0 ? Math.ceil(saldoParcelado / parcelas / 100) * 100 : 0;
+                  const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
                   setNegociacao({
                     ...negociacao,
                     num_parcelas: parcelas,
