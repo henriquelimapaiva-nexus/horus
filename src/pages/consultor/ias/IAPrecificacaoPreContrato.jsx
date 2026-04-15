@@ -743,6 +743,26 @@ if (modoContrato && contratoHtml) {
               />
               <span><strong>Parcelado</strong> - 50% entrada + parcelas mensais (máx R$ 5.000/parcela)</span>
             </label>
+
+            {/* NOVA OPÇÃO: Condições Especiais */}
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
+              <input
+                type="radio"
+                name="forma_pagamento"
+                value="especial"
+                checked={negociacao.forma_pagamento === "especial"}
+                onChange={(e) => {
+                  setNegociacao({
+                    ...negociacao,
+                    forma_pagamento: e.target.value,
+                    num_parcelas: 6,
+                    entrada_percentual: 30,
+                    valor_entrada: (parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto)) * 0.3
+                  });
+                }}
+              />
+              <span><strong>🎯 Condições Especiais</strong> - Negociar entrada e parcelas</span>
+            </label>
           </div>
         </div>
         
@@ -791,6 +811,111 @@ if (modoContrato && contratoHtml) {
               ✓ Parcela máxima de R$ 5.000<br />
               ✓ Máximo de 12 parcelas<br />
               ✓ Sem juros
+            </p>
+          </div>
+        )}
+
+        {/* CONDIÇÕES ESPECIAIS */}
+        {negociacao.forma_pagamento === "especial" && (
+          <div style={{ 
+            marginTop: "15px", 
+            padding: "15px", 
+            backgroundColor: "#f0fdf4", 
+            borderRadius: "8px",
+            border: "1px solid #10b981"
+          }}>
+            <h4 style={{ marginBottom: "10px", color: "#166534" }}>📋 Negociação Personalizada</h4>
+            
+            <div style={{ marginBottom: "10px" }}>
+              <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                Percentual de entrada (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="5"
+                value={negociacao.entrada_percentual}
+                onChange={(e) => {
+                  const percent = parseFloat(e.target.value) || 0;
+                  const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
+                  const valorEntradaCalc = (valorComDesconto * percent) / 100;
+                  const saldoParcelado = valorComDesconto - valorEntradaCalc;
+                  let parcelas = negociacao.num_parcelas;
+                  if (parcelas === 0) parcelas = 6;
+                  const valorParcelaCalc = parcelas > 0 ? Math.ceil(saldoParcelado / parcelas / 100) * 100 : 0;
+                  
+                  setNegociacao({
+                    ...negociacao,
+                    entrada_percentual: percent,
+                    valor_entrada: valorEntradaCalc,
+                    num_parcelas: parcelas,
+                    valor_parcela: valorParcelaCalc
+                  });
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #ccc",
+                  fontSize: "14px"
+                }}
+              />
+              <small style={{ color: "#666" }}>Digite o percentual desejado (ex: 30 para 30%)</small>
+            </div>
+
+            <div style={{ marginBottom: "10px" }}>
+              <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                Número de parcelas
+              </label>
+              <select
+                value={negociacao.num_parcelas}
+                onChange={(e) => {
+                  const parcelas = parseInt(e.target.value);
+                  const valorComDesconto = parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto);
+                  const saldoParcelado = valorComDesconto - negociacao.valor_entrada;
+                  const valorParcelaCalc = parcelas > 0 ? Math.ceil(saldoParcelado / parcelas / 100) * 100 : 0;
+                  setNegociacao({
+                    ...negociacao,
+                    num_parcelas: parcelas,
+                    valor_parcela: valorParcelaCalc
+                  });
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #ccc",
+                  fontSize: "14px"
+                }}
+              >
+                <option value="0">À vista (sem parcelas)</option>
+                {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                  <option key={n} value={n}>{n} parcela{n > 1 ? 's' : ''}</option>
+                ))}
+              </select>
+            </div>
+
+            <div style={{ 
+              marginTop: "15px", 
+              padding: "10px", 
+              backgroundColor: "#e6f7e6", 
+              borderRadius: "4px"
+            }}>
+              <p><strong>Resumo da negociação:</strong></p>
+              <p>💵 Valor total: {formatarMoeda(parseFloat(negociacao.novo_valor) - parseFloat(negociacao.desconto))}</p>
+              <p>💰 Entrada ({negociacao.entrada_percentual}%): {formatarMoeda(negociacao.valor_entrada)}</p>
+              {negociacao.num_parcelas > 0 && (
+                <p>📅 {negociacao.num_parcelas}x de {formatarMoeda(negociacao.valor_parcela)}</p>
+              )}
+              <p><strong>Total a pagar:</strong> {formatarMoeda(negociacao.valor_entrada + (negociacao.num_parcelas * negociacao.valor_parcela))}</p>
+            </div>
+
+            <p style={{ fontSize: "12px", color: "#666", marginTop: "10px" }}>
+              ✓ Parcela máxima de R$ 5.000<br />
+              ✓ Máximo de 12 parcelas<br />
+              ✓ Sem juros<br />
+              ✓ Condições especiais serão refletidas no contrato
             </p>
           </div>
         )}
@@ -1017,10 +1142,14 @@ if (modoContrato && contratoHtml) {
             <p><strong>Forma de pagamento:</strong> {
               negociacao.forma_pagamento === 'a_vista' ? 'À vista' :
               negociacao.forma_pagamento === 'cinquenta_cinquenta' ? '50/50' :
-              'Parcelado'
+              negociacao.forma_pagamento === 'parcelado' ? 'Parcelado' :
+              'Condições Especiais'
             }</p>
             {negociacao.forma_pagamento === 'parcelado' && (
               <p><strong>Parcelas:</strong> {negociacao.num_parcelas}x de {formatarMoeda(negociacao.valor_parcela)}</p>
+            )}
+            {negociacao.forma_pagamento === 'especial' && (
+              <p><strong>Entrada:</strong> {negociacao.entrada_percentual}% ({formatarMoeda(negociacao.valor_entrada)}) + {negociacao.num_parcelas}x de {formatarMoeda(negociacao.valor_parcela)}</p>
             )}
             <p><strong>Motivo da negociação:</strong> {negociacao.motivo || "Não informado"}</p>
           </div>
