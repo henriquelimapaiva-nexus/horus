@@ -283,10 +283,7 @@ if (modoContrato && contratoHtml) {
         setValorParcela(valorParcelaCalc);
         setValorNegociado(saldo.toString());
       } else if (tipo === 'especial') {
-        if (entradaPercentual === 0) {
-          setEntradaPercentual(30);
-          setValorEntrada(saldo * 0.3);
-        }
+        // NÃO definir valores padrão
         setValorNegociado(saldo.toString());
       }
     };
@@ -418,7 +415,7 @@ if (modoContrato && contratoHtml) {
               <strong>50% + Parcelas</strong> - 50% entrada + saldo parcelado (máx R$ 5.000/parcela)
             </label>
 
-            {/* NOVA OPÇÃO: Condições Especiais */}
+            {/* NOVA OPÇÃO: Condições Especiais - CORRIGIDA */}
             <label style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
               <input
                 type="radio"
@@ -451,7 +448,7 @@ if (modoContrato && contratoHtml) {
                   onChange={(e) => {
                     const parcelas = parseInt(e.target.value);
                     const saldoParcelado = parseFloat(valorNegociado) - valorEntrada;
-                    const valorParcelaCalc = Math.ceil(saldoParcelado / parcelas / 100) * 100;
+                    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
                     setNumParcelas(parcelas);
                     setValorParcela(valorParcelaCalc);
                   }}
@@ -481,7 +478,7 @@ if (modoContrato && contratoHtml) {
             </div>
           )}
 
-          {/* CONDIÇÕES ESPECIAIS */}
+          {/* CONDIÇÕES ESPECIAIS - CORRIGIDO (sem arredondamento e sem valores padrão) */}
           {formaPagamento === 'especial' && (
             <div style={{ 
               marginTop: "15px", 
@@ -508,8 +505,8 @@ if (modoContrato && contratoHtml) {
                     const valorEntradaCalc = (valorComDesconto * percent) / 100;
                     const saldoParcelado = valorComDesconto - valorEntradaCalc;
                     let parcelas = numParcelas;
-                    if (parcelas === 0) parcelas = 6;
-                    const valorParcelaCalc = parcelas > 0 ? Math.ceil(saldoParcelado / parcelas / 100) * 100 : 0;
+                    if (parcelas === 0) parcelas = 0;
+                    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
                     
                     setEntradaPercentual(percent);
                     setValorEntrada(valorEntradaCalc);
@@ -536,7 +533,7 @@ if (modoContrato && contratoHtml) {
                   onChange={(e) => {
                     const parcelas = parseInt(e.target.value);
                     const saldoParcelado = parseFloat(valorNegociado) - valorEntrada;
-                    const valorParcelaCalc = parcelas > 0 ? Math.ceil(saldoParcelado / parcelas / 100) * 100 : 0;
+                    const valorParcelaCalc = parcelas > 0 ? (saldoParcelado / parcelas) : 0;
                     setNumParcelas(parcelas);
                     setValorParcela(valorParcelaCalc);
                   }}
