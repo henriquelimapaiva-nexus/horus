@@ -28,6 +28,7 @@ export default function IAPrecificacao() {
   const [numParcelas, setNumParcelas] = useState(6);
   const [valorParcela, setValorParcela] = useState(0);
   const [valorEntrada, setValorEntrada] = useState(0);
+  const [entradaPercentual, setEntradaPercentual] = useState(50);
   
   const [empresaSelecionada, setEmpresaSelecionada] = useState({
     id: '',
@@ -90,6 +91,7 @@ export default function IAPrecificacao() {
         setValorEntrada(entradaPadrao);
         setNumParcelas(parcelasPadrao);
         setValorParcela(valorParcelaPadrao);
+        setEntradaPercentual(50);
         
         toast.success('Dados carregados com sucesso!', { id: 'busca' });
       } else {
@@ -137,9 +139,10 @@ export default function IAPrecificacao() {
         valor_total: valorFinal,
         forma_pagamento: formaPagamento,
         motivo_negociacao: motivoNegociacao || null,
-        num_parcelas: formaPagamento === 'parcelado' ? numParcelas : 0,
-        valor_parcela: formaPagamento === 'parcelado' ? valorParcela : 0,
-        valor_entrada: formaPagamento === 'parcelado' ? valorEntrada : 0,
+        num_parcelas: (formaPagamento === 'parcelado' || formaPagamento === 'especial') ? numParcelas : 0,
+        valor_parcela: (formaPagamento === 'parcelado' || formaPagamento === 'especial') ? valorParcela : 0,
+        valor_entrada: (formaPagamento === 'parcelado' || formaPagamento === 'especial') ? valorEntrada : 0,
+        entrada_percentual: formaPagamento === 'especial' ? entradaPercentual : null,
         representante: {
           nome: dadosContrato.representante_nome || '[NOME DO REPRESENTANTE]',
           cargo: dadosContrato.representante_cargo || '[CARGO]',
@@ -274,9 +277,16 @@ if (modoContrato && contratoHtml) {
         parcelas = Math.min(12, Math.max(3, parcelas));
         const valorParcelaCalc = Math.ceil(saldoParcelado / parcelas / 100) * 100;
         
+        setEntradaPercentual(50);
         setValorEntrada(entrada);
         setNumParcelas(parcelas);
         setValorParcela(valorParcelaCalc);
+        setValorNegociado(saldo.toString());
+      } else if (tipo === 'especial') {
+        if (entradaPercentual === 0) {
+          setEntradaPercentual(30);
+          setValorEntrada(saldo * 0.3);
+        }
         setValorNegociado(saldo.toString());
       }
     };
@@ -397,7 +407,7 @@ if (modoContrato && contratoHtml) {
               <strong>50/50</strong> - 50% na assinatura + 50% na entrega da Fase 2
             </label>
 
-            <label style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
               <input
                 type="radio"
                 name="forma_pagamento"
@@ -406,6 +416,18 @@ if (modoContrato && contratoHtml) {
                 onChange={() => handleFormaPagamentoChange('parcelado')}
               />
               <strong>50% + Parcelas</strong> - 50% entrada + saldo parcelado (máx R$ 5.000/parcela)
+            </label>
+
+            {/* NOVA OPÇÃO: Condições Especiais */}
+            <label style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
+              <input
+                type="radio"
+                name="forma_pagamento"
+                value="especial"
+                checked={formaPagamento === 'especial'}
+                onChange={() => handleFormaPagamentoChange('especial')}
+              />
+              <strong>🎯 Condições Especiais</strong> - Negociar entrada e parcelas
             </label>
           </div>
 
@@ -455,6 +477,104 @@ if (modoContrato && contratoHtml) {
                 ✓ Máximo de 12 parcelas<br />
                 ✓ Sem juros<br />
                 ✓ Os valores da Fase 3 (Acompanhamento) estão incluídos nas parcelas
+              </p>
+            </div>
+          )}
+
+          {/* CONDIÇÕES ESPECIAIS */}
+          {formaPagamento === 'especial' && (
+            <div style={{ 
+              marginTop: "15px", 
+              padding: "15px", 
+              backgroundColor: "#f0fdf4", 
+              borderRadius: "8px",
+              border: "1px solid #10b981"
+            }}>
+              <h4 style={{ marginBottom: "10px", color: "#166534" }}>📋 Negociação Personalizada</h4>
+              
+              <div style={{ marginBottom: "10px" }}>
+                <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                  Percentual de entrada (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={entradaPercentual}
+                  onChange={(e) => {
+                    const percent = parseFloat(e.target.value) || 0;
+                    const valorComDesconto = parseFloat(valorNegociado);
+                    const valorEntradaCalc = (valorComDesconto * percent) / 100;
+                    const saldoParcelado = valorComDesconto - valorEntradaCalc;
+                    let parcelas = numParcelas;
+                    if (parcelas === 0) parcelas = 6;
+                    const valorParcelaCalc = parcelas > 0 ? Math.ceil(saldoParcelado / parcelas / 100) * 100 : 0;
+                    
+                    setEntradaPercentual(percent);
+                    setValorEntrada(valorEntradaCalc);
+                    setNumParcelas(parcelas);
+                    setValorParcela(valorParcelaCalc);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    border: "1px solid #ccc",
+                    fontSize: "14px"
+                  }}
+                />
+                <small style={{ color: "#666" }}>Digite o percentual desejado (ex: 30 para 30%)</small>
+              </div>
+
+              <div style={{ marginBottom: "10px" }}>
+                <label style={{ display: "block", marginBottom: "5px", fontWeight: "500" }}>
+                  Número de parcelas
+                </label>
+                <select
+                  value={numParcelas}
+                  onChange={(e) => {
+                    const parcelas = parseInt(e.target.value);
+                    const saldoParcelado = parseFloat(valorNegociado) - valorEntrada;
+                    const valorParcelaCalc = parcelas > 0 ? Math.ceil(saldoParcelado / parcelas / 100) * 100 : 0;
+                    setNumParcelas(parcelas);
+                    setValorParcela(valorParcelaCalc);
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    borderRadius: "4px",
+                    border: "1px solid #ccc",
+                    fontSize: "14px"
+                  }}
+                >
+                  <option value="0">À vista (sem parcelas)</option>
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                    <option key={n} value={n}>{n} parcela{n > 1 ? 's' : ''}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ 
+                marginTop: "15px", 
+                padding: "10px", 
+                backgroundColor: "#e6f7e6", 
+                borderRadius: "4px"
+              }}>
+                <p><strong>Resumo da negociação:</strong></p>
+                <p>💵 Valor total: {formatarMoeda(parseFloat(valorNegociado))}</p>
+                <p>💰 Entrada ({entradaPercentual}%): {formatarMoeda(valorEntrada)}</p>
+                {numParcelas > 0 && (
+                  <p>📅 {numParcelas}x de {formatarMoeda(valorParcela)}</p>
+                )}
+                <p><strong>Total a pagar:</strong> {formatarMoeda(valorEntrada + (numParcelas * valorParcela))}</p>
+              </div>
+
+              <p style={{ fontSize: "12px", color: "#666", marginTop: "10px" }}>
+                ✓ Parcela máxima de R$ 5.000<br />
+                ✓ Máximo de 12 parcelas<br />
+                ✓ Sem juros<br />
+                ✓ Condições especiais serão refletidas no contrato
               </p>
             </div>
           )}
