@@ -133,24 +133,29 @@ export default function IAPrecificacaoPreContrato() {
   };
 
   const formatarMoeda = (valor) => {
+    const numero = parseFloat(valor);
+    if (isNaN(numero)) return 'R$ 0,00';
+    const valorArredondado = Math.round(numero * 100) / 100;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 2
-    }).format(valor || 0);
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(valorArredondado);
   };
 
   const abrirNegociacao = () => {
     const valorOriginal = resultado?.precos.diagnostico || 0;
+    const valorArredondado = Math.round(valorOriginal * 100) / 100;
     
     setNegociacao({
-      novo_valor: valorOriginal,
+      novo_valor: valorArredondado,
       motivo: "",
       forma_pagamento: "cinquenta_cinquenta",
       num_parcelas: 0,
       valor_parcela: 0,
       entrada_percentual: 50,
-      valor_entrada: valorOriginal * 0.5,
+      valor_entrada: valorArredondado * 0.5,
       desconto: 0,
       motivo_desconto: ""
     });
@@ -630,14 +635,15 @@ if (modoContrato && contratoHtml) {
         <Input
           label="Novo valor base do diagnóstico (R$)"
           type="number"
+          step="0.01"
           placeholder="Digite o novo valor"
-          value={negociacao.novo_valor}
+          value={typeof negociacao.novo_valor === 'number' ? negociacao.novo_valor.toFixed(2) : negociacao.novo_valor}
           onChange={(e) => {
             const novoValor = parseFloat(e.target.value) || 0;
             const entrada = novoValor * 0.5;
             setNegociacao({
               ...negociacao,
-              novo_valor: e.target.value,
+              novo_valor: novoValor,
               valor_entrada: entrada
             });
           }}
