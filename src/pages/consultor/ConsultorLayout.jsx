@@ -32,7 +32,8 @@ export default function ConsultorLayout() {
   const menuItems = [
     { path: "/consultor", icon: "", label: "Dashboard" },
     { path: "/consultor/clientes", icon: "", label: "Clientes" },
-    { path: "/consultor/relatorios", icon: "", label: "Relatórios" },    
+    { path: "/consultor/relatorios", icon: "", label: "Relatórios" },
+    { path: "/consultor/renovacao-acompanhamento", icon: "", label: "Renovação de Acompanhamento" },    
     { path: "/consultor/ias/precificacao", icon: "", label: "Proposta de Implementação" },
     { path: "/consultor/ias/precificacao-pre-contrato", icon: "", label: "Proposta Diagnóstico Inicial" },
     { path: "/consultor/ias/sugestoes", icon: "", label: "Plano de Ação Estratégico (PAE)" },
