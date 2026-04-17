@@ -77,6 +77,9 @@ import IAPrecificacao from "./pages/consultor/ias/IAPrecificacao";
 // 🟢 IMPORT - IA DE PRECIFICAÇÃO PRÉ-CONTRATO
 import IAPrecificacaoPreContrato from "./pages/consultor/ias/IAPrecificacaoPreContrato";
 
+// 🟢 IMPORT - IA DE RENOVAÇÃO DE ACOMPANHAMENTO
+import IARenovacaoAcompanhamento from "./pages/consultor/ias/IARenovacaoAcompanhamento";
+
 // 🟢 IMPORT - PROPOSTA COMERCIAL PRÉ-CONTRATO
 import PropostaComercialPreContrato from "./pages/consultor/PropostaComercialPreContrato";
 
@@ -166,6 +169,7 @@ function App() {
                 <Route path="horas" element={<RegistroHoras />} />
                 {/* 🟢 NOVA ROTA - LEADS (PROSPECÇÃO COMERCIAL) */}
                 <Route path="leads" element={<Leads />} />
+                <Route path="renovacao-acompanhamento" element={<IARenovacaoAcompanhamento />} />
               </Route>
             </Route>
             
