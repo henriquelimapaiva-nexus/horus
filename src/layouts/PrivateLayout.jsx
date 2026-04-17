@@ -272,20 +272,6 @@ function PrivateLayout() {
               )}
             </div>
 
-            {/* ✅ Menu Contratos */}
-            <div style={{ position: "relative" }}>
-              <div style={menuItemStyle} onClick={(e) => toggleMenu('contratos', e)}>
-                Contratos {menuAberto === 'contratos' ? '▼' : '▶'}
-              </div>
-              {menuAberto === 'contratos' && (
-                <div style={submenuStyle}>
-                  <Link to="/renovacao-acompanhamento" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>
-                  🔄 Renovação de Acompanhamento
-                  </Link>
-                </div>
-              )}
-            </div>
-
             {/* Menu Cadastros */}
             <div style={{ position: "relative" }}>
               <div style={menuItemStyle} onClick={(e) => toggleMenu('cadastros', e)}>
