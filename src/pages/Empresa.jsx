@@ -49,6 +49,7 @@ const CampoComOlho = ({ empresaId, valor, campo, visivel, onToggle }) => {
 
 // Opções para o campo status
 const statusOptions = [
+  { value: "", label: "🔍 Selecione o processo..." },
   { value: "diagnostico", label: "🔍 Diagnóstico" },
   { value: "implementacao", label: "⚙️ Implementação" },
   { value: "acompanhamento", label: "📊 Acompanhamento" },
@@ -78,7 +79,7 @@ export default function Empresa() {
     turnos: "",
     dias_produtivos_mes: "",
     meta_mensal: "",
-    status: "diagnostico",           // 👈 NOVO
+    status: "",                       // 👈 NOVO
     valor_contrato: "",               // 👈 NOVO
     data_inicio: "",                  // 👈 NOVO
     data_previsao_fim: ""             // 👈 NOVO
@@ -153,7 +154,7 @@ export default function Empresa() {
         turnos: "",
         dias_produtivos_mes: "",
         meta_mensal: "",
-        status: "diagnostico",
+        status: "",
         valor_contrato: "",
         data_inicio: "",
         data_previsao_fim: ""
@@ -180,7 +181,7 @@ export default function Empresa() {
       turnos: empresa.turnos || "",
       dias_produtivos_mes: empresa.dias_produtivos_mes || "",
       meta_mensal: empresa.meta_mensal || "",
-      status: empresa.status || "diagnostico",
+      status: empresa.status || "",
       valor_contrato: empresa.valor_contrato || "",
       data_inicio: empresa.data_inicio ? empresa.data_inicio.split('T')[0] : "",
       data_previsao_fim: empresa.data_previsao_fim ? empresa.data_previsao_fim.split('T')[0] : ""
