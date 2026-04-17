@@ -63,14 +63,13 @@ export default function IAPrecificacaoPreContrato() {
   const [formData, setFormData] = useState({
     empresa_nome: "",
     setor: "",
-    numero_funcionarios: "",
-    faturamento_anual: "",
+    numero_funcionarios: "",    
     numero_linhas: "",
+    numero_postos: "",
     problemas: [],
     urgencia: "",
     complexidade: "",
-    gestor_dedicado: "",
-    acesso_dados: "",
+    gestor_dedicado: "",    
     projeto_piloto: false,
     tem_viagem: false
   });
@@ -473,19 +472,20 @@ if (modoContrato && contratoHtml) {
               onChange={(e) => setFormData({...formData, numero_funcionarios: e.target.value})}
             />
             <Input
-              label="Faturamento Anual (R$) *"
-              type="number"
-              value={formData.faturamento_anual}
-              onChange={(e) => setFormData({...formData, faturamento_anual: e.target.value})}
-              required
-            />
-            <Input
               label="Número de Linhas"
               type="number"
               placeholder="Ex: 1"
               value={formData.numero_linhas}
               onChange={(e) => setFormData({...formData, numero_linhas: e.target.value})}
             />
+            <Input
+              label="Número de Postos"
+              type="number"
+              placeholder="Ex: 9"
+              value={formData.numero_postos}
+              onChange={(e) => setFormData({...formData, numero_postos: e.target.value})}
+            />
+
           </div>
 
           <div style={{ marginTop: "15px" }}>
@@ -543,17 +543,6 @@ if (modoContrato && contratoHtml) {
                 { value: "nao", label: "Não" },
                 { value: "parcial", label: "Parcial" },
                 { value: "sim", label: "Sim, dedicado" }
-              ]}
-            />
-            <Select
-              label="Acesso a Dados"
-              value={formData.acesso_dados}
-              onChange={(e) => setFormData({...formData, acesso_dados: e.target.value})}
-              options={[
-                { value: "", label: "Selecione..." },
-                { value: "restrito", label: "Restrito" },
-                { value: "mediado", label: "Mediado" },
-                { value: "imediato", label: "Imediato" }
               ]}
             />
           </div>
