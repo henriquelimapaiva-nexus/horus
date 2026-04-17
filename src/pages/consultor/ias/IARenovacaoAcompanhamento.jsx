@@ -22,8 +22,8 @@ export default function IARenovacaoAcompanhamento() {
   const [mostrarModal, setMostrarModal] = useState(false);
   
   const [formData, setFormData] = useState({
-    meses: 3,
-    forma_pagamento: "parcelado",
+    meses: "",
+    forma_pagamento: "",
     valor_mensal: "",
     ganho_mensal_estimado: "",
     data_termino_contrato_original: ""
@@ -288,6 +288,7 @@ export default function IARenovacaoAcompanhamento() {
               onChange={handleChange}
               style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid #ccc" }}
             >
+              <option value="">Selecione o período...</option>
               <option value={1}>1 mês</option>
               <option value={2}>2 meses</option>
               <option value={3}>3 meses (5% desconto)</option>
@@ -324,6 +325,7 @@ export default function IARenovacaoAcompanhamento() {
               onChange={handleChange}
               style={{ width: "100%", padding: "8px 12px", borderRadius: "4px", border: "1px solid #ccc" }}
             >
+              <option value="">Selecione a forma...</option>
               <option value="a_vista">À vista</option>
               <option value="parcelado">Parcelado</option>
             </select>
