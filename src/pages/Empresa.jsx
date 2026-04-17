@@ -49,11 +49,11 @@ const CampoComOlho = ({ empresaId, valor, campo, visivel, onToggle }) => {
 
 // Opções para o campo status
 const statusOptions = [
-  { value: "", label: "🔍 Selecione o processo..." },
-  { value: "diagnostico", label: "🔍 Diagnóstico" },
-  { value: "implementacao", label: "⚙️ Implementação" },
-  { value: "acompanhamento", label: "📊 Acompanhamento" },
-  { value: "concluido", label: "✅ Concluído" }
+  { value: "", label: "Selecione o processo..." },
+  { value: "diagnostico", label: "Diagnóstico" },
+  { value: "implementacao", label: "Implementação" },
+  { value: "acompanhamento", label: "Acompanhamento" },
+  { value: "concluido", label: "Concluído" }
 ];
 
 const getStatusLabel = (status) => {
