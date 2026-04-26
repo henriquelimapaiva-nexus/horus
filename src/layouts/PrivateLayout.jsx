@@ -271,10 +271,10 @@ function PrivateLayout() {
                   {/* ============================================================ */}
                   {/* 🟢 NOVOS LINKS - MÓDULOS DE QUALIDADE E CONFIABILIDADE */}
                   {/* ============================================================ */}
-                  <Link to="/capabilidade" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>📐 Capabilidade (Cp/Cpk)</Link>
-                  <Link to="/causa-raiz" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>🔎 Análise Causa Raiz</Link>
-                  <Link to="/confiabilidade" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>🔧 Confiabilidade (MTBF/MTTR)</Link>
-                  <Link to="/turnos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>🕐 Análise por Turno</Link>
+                  <Link to="/capabilidade" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Capabilidade (Cp/Cpk)</Link>
+                  <Link to="/causa-raiz" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Análise Causa Raiz</Link>
+                  <Link to="/confiabilidade" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Confiabilidade (MTBF/MTTR)</Link>
+                  <Link to="/turnos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>Análise por Turno</Link>
                 </div>
               )}
             </div>
