@@ -104,6 +104,14 @@ import RegistroHoras from "./pages/consultor/RegistroHoras";
 // 🟢 NOVO IMPORT - LEADS (PROSPECÇÃO COMERCIAL)
 import Leads from "./pages/consultor/Leads";
 
+// ============================================================
+// 🟢 NOVOS IMPORTS - MÓDULOS DE QUALIDADE E CONFIABILIDADE
+// ============================================================
+import Capabilidade from "./pages/Capabilidade";
+import CausaRaiz from "./pages/CausaRaiz";
+import Confiabilidade from "./pages/Confiabilidade";
+import Turnos from "./pages/Turnos";
+
 // 👇 NOVOS CONTEXTS
 import { AuthProvider } from "./context/AuthContext";
 import { ConsultorAuthProvider } from "./context/ConsultorAuthContext";
@@ -210,6 +218,14 @@ function App() {
               
               {/* 🟢 NOVA ROTA - VALIDAÇÃO DE RESULTADOS (ANTES X DEPOIS) */}
               <Route path="/validacao-resultados" element={<ValidacaoResultados />} />
+              
+              {/* ============================================================ */}
+              {/* 🟢 NOVAS ROTAS - MÓDULOS DE QUALIDADE E CONFIABILIDADE */}
+              {/* ============================================================ */}
+              <Route path="/capabilidade" element={<Capabilidade />} />
+              <Route path="/causa-raiz" element={<CausaRaiz />} />
+              <Route path="/confiabilidade" element={<Confiabilidade />} />
+              <Route path="/turnos" element={<Turnos />} />
             </Route>
           </Routes>
         </Router>

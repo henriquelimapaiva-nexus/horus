@@ -268,6 +268,13 @@ function PrivateLayout() {
                   <Link to="/spc" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>SPC - Controle de Qualidade</Link>
                   <Link to="/tpm" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>TPM - Manutenção</Link>
                   <Link to="/rh" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>RH - Treinamento</Link>
+                  {/* ============================================================ */}
+                  {/* 🟢 NOVOS LINKS - MÓDULOS DE QUALIDADE E CONFIABILIDADE */}
+                  {/* ============================================================ */}
+                  <Link to="/capabilidade" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>📐 Capabilidade (Cp/Cpk)</Link>
+                  <Link to="/causa-raiz" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>🔎 Análise Causa Raiz</Link>
+                  <Link to="/confiabilidade" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>🔧 Confiabilidade (MTBF/MTTR)</Link>
+                  <Link to="/turnos" style={submenuItemStyle} onClick={() => setMenuAberto(null)}>🕐 Análise por Turno</Link>
                 </div>
               )}
             </div>
